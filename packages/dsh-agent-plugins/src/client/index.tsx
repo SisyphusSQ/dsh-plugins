@@ -19,10 +19,12 @@ import type {} from '@deepseek-ai/dsh-client-runtime/client'
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface SlotMap {
-    'settings.plugins.tab': { kind: 'list'; scope: 'root' }
+    'sidebar.footer.action': { kind: 'list'; scope: 'root'; owner: { wide: boolean } }
   }
   interface LocaleNamespaceMap {
     'agentPlugins.panel':
+      | 'navLabel'
+      | 'close'
       | 'label'
       | 'subtitle'
       | 'filterName'
@@ -110,7 +112,10 @@ export interface AgentPluginsPanelFace {
 }
 
 /**
- * Mount the Agent Plugins panel as a tab inside the Plugins settings section.
+ * Mount the Agent Plugins panel: a sidebar-foot "插件" entry (beside
+ * Settings, per the app-shell design frame) that opens the panel in a
+ * floating layer (same pattern as the cordis-panel entry). The panel content
+ * is the design-aligned two-column overview.
  * @param ctx - the browser plugin context.
  */
 export function apply(ctx: Context): void {
@@ -118,6 +123,8 @@ export function apply(ctx: Context): void {
   const t = ctx.locale.bind(NS)
   ctx.effect(() => ctx.locale.register(NS, {
     zh: {
+      navLabel: '插件',
+      close: '关闭',
       label: 'Agent 插件',
       subtitle: '已装插件与 MCP servers · 安装 / 卸载 / 更新走 CLI',
       filterName: '筛选 name / 来源',
@@ -152,6 +159,8 @@ export function apply(ctx: Context): void {
       toggleError: '切换失败',
     },
     en: {
+      navLabel: 'Plugins',
+      close: 'Close',
       label: 'Agent Plugins',
       subtitle: 'Installed plugins & MCP servers · install / uninstall / update via CLI',
       filterName: 'Filter name / source',
@@ -186,17 +195,61 @@ export function apply(ctx: Context): void {
       toggleError: 'Failed to toggle',
     },
   }))
-  ctx.slots.inject('settings.plugins.tab', () => ctx.slots.register({
-    name: 'settings.plugins.tab',
+  ctx.slots.inject('sidebar.footer.action', () => ctx.slots.register({
+    name: 'sidebar.footer.action',
     id: 'agent-plugins',
-    order: 20,
-    label: () => t('label'),
+    order: 10,
     locale: NS,
     inject: (): AgentPluginsPanelFace => ({
       list: async () => rpc.call('/api', 'agentPlugins/list', { args: {} }),
       setEnabled: async (args) => rpc.call('/api', 'agentPlugins/setEnabled', { args }),
     }),
-  }, AgentPluginsPanel))
+  }, AgentPluginsFooterAction))
+}
+
+/** Footer-entry props: the sidebar column state plus the panel business face. */
+interface AgentPluginsFooterActionProps extends AgentPluginsPanelFace, PropsLocale<'agentPlugins.panel'> {
+  /** Whether the sidebar renders wide content (false = 56px rail). */
+  wide: boolean
+}
+
+/**
+ * Sidebar-foot "插件" entry: a button that toggles a floating panel hosting
+ * the design-aligned AgentPluginsPanel (mirrors the cordis-panel pattern).
+ */
+function AgentPluginsFooterAction({ wide, list, setEnabled, t }: AgentPluginsFooterActionProps) {
+  const [open, setOpen] = React.useState(false)
+  return (
+    <>
+      <button
+        type="button"
+        className="ap-nav"
+        data-wide={wide}
+        aria-label={t('navLabel')}
+        aria-expanded={open}
+        onClick={() => setOpen(!open)}
+      >
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <rect x="2" y="2" width="12" height="12" rx="2.5" stroke="currentColor" strokeWidth="1.4" />
+          <path d="M5 6.5h6M5 9.5h4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+        </svg>
+        {wide && <span className="ap-nav-label">{t('navLabel')}</span>}
+      </button>
+      {open && (
+        <div className="ap-float" role="dialog" aria-label={t('navLabel')}>
+          <div className="ap-float-head">
+            <span className="ap-float-title">{t('navLabel')}</span>
+            <button type="button" className="ap-float-close" aria-label={t('close')} onClick={() => setOpen(false)}>
+              ×
+            </button>
+          </div>
+          <div className="ap-float-body">
+            <AgentPluginsPanel list={list} setEnabled={setEnabled} t={t} />
+          </div>
+        </div>
+      )}
+    </>
+  )
 }
 
 /** Panel component props: the injected business face plus the locale `t` seat. */
@@ -249,6 +302,22 @@ const css = `
 .ap-empty-title{margin:0;font-size:18px;font-weight:700}
 .ap-empty-text{margin:0;font-size:13px;color:var(--dsw-alias-label-secondary);max-width:420px;line-height:1.6}
 .ap-error{color:var(--dsw-alias-label-error);font-size:12px;margin:0}
+.ap-nav{width:100%;height:36px;color:var(--dsw-alias-label-primary);cursor:pointer;background:transparent;border:none;border-radius:8px;display:inline-flex;align-items:center;gap:8px;padding:0 8px;font-family:inherit;font-size:14px;overflow:hidden}
+.ap-nav:hover{background:var(--dsw-alias-interactive-bg-hover-solid)}
+.ap-nav[data-active]{background:var(--dsw-alias-interactive-bg-hover)}
+.ap-nav[data-wide=false]{width:36px;height:36px;border-radius:50%;justify-content:center;padding:0}
+.ap-nav-label{text-overflow:ellipsis;white-space:nowrap;min-width:0;overflow:hidden}
+.ap-float{z-index:30;position:fixed;bottom:128px;left:12px;width:560px;max-width:calc(100vw - 24px);max-height:60vh;display:flex;flex-direction:column;overflow:hidden;border:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-base);border-radius:12px;box-shadow:var(--dsw-shadow-lv2);--dsh-scrollbar-thumb:var(--dsw-alias-scrollbar-bg-l2);--dsh-scrollbar-thumb-hover:var(--dsw-alias-scrollbar-hover-l2)}
+.ap-float-head{flex:none;min-height:44px;display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-base)}
+.ap-float-title{color:var(--dsw-alias-label-primary);font-size:13px;font-weight:500;line-height:20px}
+.ap-float-close{color:var(--dsw-alias-label-tertiary);cursor:pointer;background:transparent;border:none;font-size:18px;line-height:1;padding:2px 6px;border-radius:6px}
+.ap-float-close:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-secondary)}
+.ap-float-body{flex:1;min-height:0;overflow-y:auto;padding:12px}
+.ap-float-body .ap-panel{container-type:inline-size;max-width:none}
+@container (max-width: 700px) {
+  .ap-body{flex-direction:column}
+  .ap-right{width:100%}
+}
 `
 
 /** Switch per the design: 36×21 track (on #4D6BFE / off #D1D5DB) + 17×17 knob. */

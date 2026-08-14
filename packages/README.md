@@ -1,6 +1,10 @@
 # Packages
 
-This directory will contain independently installable DeepSeek Harness plugin packages. It intentionally contains no package scaffold yet.
+This directory contains independently installable DeepSeek Harness plugin packages. Packages remain experimental until their README records a completed DSH profile verification.
+
+## 实验中的包
+
+- [`dsh-thinking-collapse`](dsh-thinking-collapse/README.md)：聊天视图的 Codex 式思考折叠；开发目标为 DSH `0.1.0-rc.6`。
 
 ## 新增包的条件
 

@@ -1,19 +1,18 @@
 /**
- * dsh-agent-plugins client half — "Agent Plugins" settings panel (M5).
+ * dsh-agent-plugins client half — "Agent Plugins" settings panel (M5, design-aligned).
  *
- * Mounts one page into the Plugins settings section (`settings.plugins.tab`)
- * and talks to the host half through the typert Gateway RPC channel:
+ * Implements the OpenPencil design (agent-memory/ideas/designs/agent-plugins-panel.op):
+ * two-column overview (plugin list + MCP servers / CLI), filter box, plugin
+ * cards with component-level toggles, cascade grey-out, machine + project
+ * store sections, full CLI command block, and the designed empty state.
+ *
+ * Talks to the host half through the typert Gateway RPC channel:
  * `connection.rpc.call('/api', 'agentPlugins/<method>', { args })`.
- *
- * Panel scope (per the UI design decisions):
- * - read-only list + two-level enable toggles (plugin / skill / MCP server);
- * - install/uninstall/update stay CLI-only; no discovery tab (no market);
- * - cascade: plugin OFF greys out component toggles (states are preserved).
  */
 import React from 'react'
 import type { Context } from '@deepseek-ai/cordis'
 import type { ConnectionHandle } from '@deepseek-ai/dsh-client-connection/client'
-import type { PropsLocale } from '@deepseek-ai/dsh-client-ui-slots'
+import type { PropsLocale, TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
 // Activate the client-side Context augmentations (ctx.locale, ctx.slots).
 import type {} from '@deepseek-ai/dsh-client-locale/client'
 import type {} from '@deepseek-ai/dsh-client-runtime/client'
@@ -25,18 +24,35 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface LocaleNamespaceMap {
     'agentPlugins.panel':
       | 'label'
+      | 'subtitle'
+      | 'filterName'
+      | 'filterSource'
+      | 'all'
+      | 'machineStore'
+      | 'projectStore'
+      | 'mcpServers'
+      | 'mcpSubtitle'
+      | 'cli'
       | 'empty'
       | 'emptyHint'
-      | 'cliHint'
-      | 'source'
-      | 'skill'
+      | 'emptySupport'
+      | 'cliInstall'
+      | 'cliUpdate'
+      | 'cliEnable'
+      | 'cliUninstall'
+      | 'cliList'
+      | 'skills'
       | 'mcp'
-      | 'pluginState'
+      | 'source'
+      | 'author'
+      | 'installedAt'
+      | 'checksum'
+      | 'dataDir'
+      | 'componentList'
       | 'expand'
       | 'collapse'
-      | 'storeDir'
-      | 'dataDir'
-      | 'installedAt'
+      | 'updateCmd'
+      | 'uninstallCmd'
       | 'loadError'
       | 'toggleError'
   }
@@ -58,20 +74,31 @@ interface RpcResultEnvelope {
   error?: { code?: string; message?: string }
 }
 
-/** Panel data mirroring the host `agentPlugins/list` projection. */
+interface PanelMcpRow {
+  serverName: string
+  transport: 'stdio' | 'streamable-http'
+  rowId: string
+  enabled: boolean
+}
+
 interface PanelPlugin {
   name: string
   version: string
   source: 'dir' | 'zip' | 'git' | null
+  sourcePath: string | null
   installedAt: string | null
+  checksum: string | null
   enabled: boolean
   description: string | null
+  author: unknown
   skills: Array<{ name: string; enabled: boolean }>
-  mcp: Array<{ serverName: string; enabled: boolean }>
+  mcp: PanelMcpRow[]
 }
 
 interface PanelData {
   plugins: PanelPlugin[]
+  projectPlugins: PanelPlugin[]
+  projectStore: string | null
   stores: string[]
   dataRoot: string
 }
@@ -92,35 +119,69 @@ export function apply(ctx: Context): void {
   ctx.effect(() => ctx.locale.register(NS, {
     zh: {
       label: 'Agent 插件',
-      empty: '还没有安装任何 Agent 插件',
-      emptyHint: '使用 CLI 安装一个插件包，然后回到这里管理它',
-      cliHint: 'agent-plugins install <dir|zip|git-url>',
-      source: '来源',
-      skill: '技能',
+      subtitle: '已装插件与 MCP servers · 安装 / 卸载 / 更新走 CLI',
+      filterName: '筛选 name / 来源',
+      filterSource: '来源',
+      all: '全部',
+      machineStore: '已装插件 · 机器级 store',
+      projectStore: '项目级 store（仅技能）',
+      mcpServers: 'MCP servers',
+      mcpSubtitle: '可单独启停 · 插件禁用时全部停用',
+      cli: '命令行',
+      empty: '还没有安装插件',
+      emptyHint: '通过 CLI 安装 Agent Plugins 标准插件包后，技能与 MCP 工具会出现在这里和对话控制台。',
+      emptySupport: '支持 git 仓库、zip 包与本地目录 · 校验通过才入 store',
+      cliInstall: 'install <dir|zip|git-url>',
+      cliUpdate: 'update [name…|--all]',
+      cliEnable: 'enable | disable <name>',
+      cliUninstall: 'uninstall <name>',
+      cliList: 'list · doctor',
+      skills: '技能',
       mcp: 'MCP',
-      pluginState: '插件',
+      source: '来源',
+      author: '作者',
+      installedAt: '安装时间',
+      checksum: '校验和',
+      dataDir: 'PLUGIN_DATA',
+      componentList: '组件清单 · 可单独启停',
       expand: '展开详情',
       collapse: '收起',
-      storeDir: 'Store 目录',
-      dataDir: 'PLUGIN_DATA',
-      installedAt: '安装时间',
+      updateCmd: '$ agent-plugins update',
+      uninstallCmd: '$ agent-plugins uninstall',
       loadError: '加载失败',
       toggleError: '切换失败',
     },
     en: {
       label: 'Agent Plugins',
-      empty: 'No agent plugins installed yet',
-      emptyHint: 'Install a plugin package with the CLI, then manage it here',
-      cliHint: 'agent-plugins install <dir|zip|git-url>',
-      source: 'Source',
-      skill: 'Skill',
+      subtitle: 'Installed plugins & MCP servers · install / uninstall / update via CLI',
+      filterName: 'Filter name / source',
+      filterSource: 'Source',
+      all: 'All',
+      machineStore: 'Installed · machine store',
+      projectStore: 'Project store (skills only)',
+      mcpServers: 'MCP servers',
+      mcpSubtitle: 'Toggle individually · all stop when the plugin is disabled',
+      cli: 'Command line',
+      empty: 'No plugins installed yet',
+      emptyHint: 'Install an Agent Plugins standard package via the CLI; skills and MCP tools appear here and in the conversation console.',
+      emptySupport: 'Supports git repos, zip archives and local directories · validated before entering the store',
+      cliInstall: 'install <dir|zip|git-url>',
+      cliUpdate: 'update [name…|--all]',
+      cliEnable: 'enable | disable <name>',
+      cliUninstall: 'uninstall <name>',
+      cliList: 'list · doctor',
+      skills: 'Skills',
       mcp: 'MCP',
-      pluginState: 'Plugin',
+      source: 'Source',
+      author: 'Author',
+      installedAt: 'Installed',
+      checksum: 'Checksum',
+      dataDir: 'PLUGIN_DATA',
+      componentList: 'Components · toggle individually',
       expand: 'Show details',
       collapse: 'Collapse',
-      storeDir: 'Store',
-      dataDir: 'PLUGIN_DATA',
-      installedAt: 'Installed',
+      updateCmd: '$ agent-plugins update',
+      uninstallCmd: '$ agent-plugins uninstall',
       loadError: 'Failed to load',
       toggleError: 'Failed to toggle',
     },
@@ -141,27 +202,92 @@ export function apply(ctx: Context): void {
 /** Panel component props: the injected business face plus the locale `t` seat. */
 interface AgentPluginsPanelProps extends AgentPluginsPanelFace, PropsLocale<'agentPlugins.panel'> {}
 
-/** Small inline stylesheet injected once (kept minimal, no external CSS). */
+/** Design tokens from the OpenPencil design (agent-plugins-panel.op). */
 const css = `
-.ap-panel{display:flex;flex-direction:column;gap:14px;max-width:720px}
-.ap-empty{color:var(--dsw-alias-label-tertiary);margin:0;font-size:13px;line-height:1.6}
-.ap-cli{background:var(--dsw-alias-bg-layer-3);border:1px solid var(--dsw-alias-border-l2);border-radius:8px;padding:8px 12px;font-size:12px;line-height:1.5;margin:0}
-.ap-card{border:1px solid var(--dsw-alias-border-l2);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
-.ap-head{display:flex;align-items:center;gap:10px;min-width:0}
-.ap-title{flex:1;min-width:0;font-size:13px;font-weight:600;margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.ap-badge{white-space:nowrap;background:var(--dsw-alias-bg-module-platform);color:var(--dsw-alias-label-secondary);border-radius:999px;padding:1px 8px;font-size:11px}
-.ap-meta{color:var(--dsw-alias-label-tertiary);font-size:12px;margin:0}
-.ap-desc{color:var(--dsw-alias-label-secondary);font-size:12px;margin:0;line-height:1.5}
-.ap-row{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--dsw-alias-label-secondary)}
-.ap-row-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.ap-switch{font:inherit;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-layer-3);border:1px solid var(--dsw-alias-border-l2);border-radius:6px;padding:2px 10px;font-size:12px;cursor:pointer}
-.ap-switch:disabled{opacity:.45;cursor:default}
-.ap-divider{border:none;border-top:1px solid var(--dsw-alias-border-l2);margin:2px 0}
-.ap-sub{display:flex;flex-direction:column;gap:6px;padding-left:2px}
-.ap-sub-head{font-size:11px;font-weight:600;color:var(--dsw-alias-label-tertiary);margin:0;text-transform:uppercase;letter-spacing:.04em}
-.ap-detail{margin:0;font-size:12px;color:var(--dsw-alias-label-tertiary);white-space:pre-wrap;word-break:break-all;line-height:1.5}
+.ap-panel{display:flex;flex-direction:column;gap:16px;max-width:1100px;padding:4px 0}
+.ap-header{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.ap-title-row{display:flex;align-items:center;gap:10px}
+.ap-title{margin:0;font-size:20px;font-weight:700;line-height:1.2}
+.ap-badge{background:#EEF2FF;border-radius:999px;padding:2px 10px;font-size:11px;font-weight:600;color:#374151}
+.ap-subtitle{margin:3px 0 0;font-size:12px;color:var(--dsw-alias-label-tertiary)}
+.ap-filters{display:flex;align-items:center;gap:8px}
+.ap-filter{background:#FFFFFF;border:1px solid var(--dsw-alias-border-l2);border-radius:999px;height:34px;padding:0 12px;font:inherit;font-size:12px;color:var(--dsw-alias-label-primary);display:flex;align-items:center;gap:8px}
+.ap-filter-input{border:none;background:transparent;font:inherit;font-size:12px;outline:none;min-width:120px;color:var(--dsw-alias-label-primary)}
+.ap-filter-select{border:none;background:transparent;font:inherit;font-size:12px;outline:none;color:var(--dsw-alias-label-primary);cursor:pointer}
+.ap-body{display:flex;gap:16px;align-items:flex-start}
+.ap-left{flex:1;min-width:0;display:flex;flex-direction:column;gap:16px}
+.ap-right{width:300px;flex-shrink:0;display:flex;flex-direction:column;gap:16px}
+.ap-section-head{display:flex;align-items:baseline;gap:8px}
+.ap-section-title{margin:0;font-size:13px;font-weight:600}
+.ap-section-path{margin:0;font-size:11px;color:var(--dsw-alias-label-tertiary)}
+.ap-card{background:#FFFFFF;border:1px solid var(--dsw-alias-border-l2);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:12px}
+.ap-card-head{display:flex;align-items:center;gap:12px;min-width:0}
+.ap-icon{width:40px;height:40px;border-radius:10px;background:#F3F4F6;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#4B5563;flex-shrink:0}
+.ap-id{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.ap-name-row{display:flex;align-items:center;gap:8px;min-width:0}
+.ap-name{margin:0;font-size:15px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ap-pill{border-radius:999px;padding:1px 10px;font-size:11px;font-weight:600;white-space:nowrap}
+.ap-pill-version{background:#F3F4F6;color:#374151}
+.ap-pill-dir{background:#F3F4F6;color:#374151}
+.ap-pill-git{background:#ECFDF5;color:#065F46}
+.ap-pill-zip{background:#FFF7ED;color:#9A3412}
+.ap-meta-line{margin:0;font-size:12px;color:var(--dsw-alias-label-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ap-divider{border:none;border-top:1px solid #F3F4F6;margin:0}
+.ap-desc{margin:0;font-size:12px;color:var(--dsw-alias-label-secondary);line-height:1.6}
+.ap-meta-table{display:flex;flex-direction:column;gap:5px}
+.ap-meta-row{display:flex;gap:10px;font-size:11px;line-height:1.6}
+.ap-meta-key{color:var(--dsw-alias-label-tertiary);flex-shrink:0;width:76px}
+.ap-meta-val{color:var(--dsw-alias-label-secondary);min-width:0;word-break:break-all}
+.ap-comp-head{margin:0;font-size:11px;font-weight:600;color:var(--dsw-alias-label-tertiary);text-transform:uppercase;letter-spacing:.04em}
+.ap-comp{display:flex;flex-direction:column;gap:4px}
+.ap-comp-row{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--dsw-alias-label-secondary);min-width:0}
+.ap-comp-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ap-comp-sub{font-size:10px;color:var(--dsw-alias-label-tertiary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ap-cli-cmds{display:flex;flex-direction:column;gap:4px;margin:0;font-size:11px;color:var(--dsw-alias-label-tertiary)}
+.ap-box{background:#F9FAFB;border:1px solid var(--dsw-alias-border-l2);border-radius:8px;padding:10px}
+.ap-empty{text-align:center;padding:40px 20px;display:flex;flex-direction:column;gap:8px;align-items:center}
+.ap-empty-title{margin:0;font-size:18px;font-weight:700}
+.ap-empty-text{margin:0;font-size:13px;color:var(--dsw-alias-label-secondary);max-width:420px;line-height:1.6}
 .ap-error{color:var(--dsw-alias-label-error);font-size:12px;margin:0}
 `
+
+/** Switch per the design: 36×21 track (on #4D6BFE / off #D1D5DB) + 17×17 knob. */
+function Switch({ on, disabled, onClick }: { on: boolean; disabled?: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      aria-pressed={on}
+      disabled={disabled ?? false}
+      onClick={onClick}
+      style={{
+        width: 36,
+        height: 21,
+        borderRadius: 11,
+        background: on ? '#4D6BFE' : '#D1D5DB',
+        border: 'none',
+        padding: 2,
+        position: 'relative',
+        cursor: disabled ? 'default' : 'pointer',
+        opacity: disabled ? 0.5 : 1,
+        flexShrink: 0,
+      }}
+    >
+      <span
+        style={{
+          display: 'block',
+          width: 17,
+          height: 17,
+          borderRadius: 9,
+          background: '#FFFFFF',
+          position: 'absolute',
+          top: 2,
+          left: on ? 17 : 2,
+          transition: 'left .12s ease',
+        }}
+      />
+    </button>
+  )
+}
 
 /** Inject the stylesheet once per page (idempotent). */
 function ensureStyles(): void {
@@ -183,9 +309,113 @@ function rpcValue(result: unknown): { ok: true; value: PanelData } | { ok: false
   return { ok: false, message: envelope?.error?.message ?? String(result) }
 }
 
+/** One plugin card: header (icon/name/version/source/meta/switch) + optional details. */
+function PluginCard({
+  plugin,
+  expanded,
+  busy,
+  data,
+  t,
+  onTogglePlugin,
+  onToggleSkill,
+  onToggleMcp,
+  onExpand,
+}: {
+  plugin: PanelPlugin
+  expanded: boolean
+  busy: boolean
+  data: PanelData
+  t: TranslateNS<'agentPlugins.panel'>
+  onTogglePlugin: () => void
+  onToggleSkill: (skill: string, enabled: boolean) => void
+  onToggleMcp: (server: string, enabled: boolean) => void
+  onExpand: () => void
+}) {
+  const sourcePill = plugin.source === null ? null : (
+    <span className={`ap-pill ap-pill-${plugin.source}`}>{plugin.source}</span>
+  )
+  const meta = `${plugin.skills.length} skills · ${plugin.mcp.length} MCP${plugin.sourcePath !== null ? ` · ${plugin.sourcePath}` : ''}`
+  const author = typeof plugin.author === 'string' && plugin.author.length > 0 ? plugin.author : typeof plugin.author === 'object' && plugin.author !== null && 'name' in plugin.author && typeof (plugin.author as { name?: unknown }).name === 'string'
+    ? (plugin.author as { name: string }).name
+    : null
+  return (
+    <div className="ap-card">
+      <div className="ap-card-head">
+        <div className="ap-icon">{plugin.name.slice(0, 1).toUpperCase()}</div>
+        <div className="ap-id">
+          <div className="ap-name-row">
+            <p className="ap-name">{plugin.name}</p>
+            <span className="ap-pill ap-pill-version">v{plugin.version}</span>
+            {sourcePill}
+          </div>
+          <p className="ap-meta-line">{meta}</p>
+        </div>
+        <Switch on={plugin.enabled} disabled={busy} onClick={onTogglePlugin} />
+        <button
+          type="button"
+          onClick={onExpand}
+          style={{
+            font: 'inherit',
+            fontSize: 12,
+            color: 'var(--dsw-alias-label-secondary)',
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            padding: '4px 0',
+            flexShrink: 0,
+          }}
+        >
+          {expanded ? t('collapse') : t('expand')}
+        </button>
+      </div>
+      {expanded && (
+        <>
+          <hr className="ap-divider" />
+          {plugin.description !== null && <p className="ap-desc">{plugin.description}</p>}
+          <div className="ap-meta-table">
+            {plugin.sourcePath !== null && (
+              <div className="ap-meta-row"><span className="ap-meta-key">{t('source')}</span><span className="ap-meta-val">{plugin.sourcePath}</span></div>
+            )}
+            {author !== null && (
+              <div className="ap-meta-row"><span className="ap-meta-key">{t('author')}</span><span className="ap-meta-val">{author}</span></div>
+            )}
+            {plugin.installedAt !== null && (
+              <div className="ap-meta-row"><span className="ap-meta-key">{t('installedAt')}</span><span className="ap-meta-val">{plugin.installedAt}</span></div>
+            )}
+            {plugin.checksum !== null && (
+              <div className="ap-meta-row"><span className="ap-meta-key">{t('checksum')}</span><span className="ap-meta-val">sha256:{plugin.checksum.slice(0, 8)}…</span></div>
+            )}
+            <div className="ap-meta-row"><span className="ap-meta-key">{t('dataDir')}</span><span className="ap-meta-val">{data.dataRoot}/{plugin.name}</span></div>
+          </div>
+          <div className="ap-comp">
+            <p className="ap-comp-head">{t('componentList')}</p>
+            {plugin.skills.map((skill) => (
+              <div className="ap-comp-row" key={skill.name}>
+                <span className="ap-comp-name">{skill.name}</span>
+                <Switch on={skill.enabled} disabled={busy || !plugin.enabled} onClick={() => onToggleSkill(skill.name, !skill.enabled)} />
+              </div>
+            ))}
+            {plugin.mcp.map((server) => (
+              <div className="ap-comp-row" key={server.serverName}>
+                <span className="ap-comp-name">{server.serverName}</span>
+                <span className="ap-comp-sub">{server.transport}</span>
+                <Switch on={server.enabled} disabled={busy || !plugin.enabled} onClick={() => onToggleMcp(server.serverName, !server.enabled)} />
+              </div>
+            ))}
+          </div>
+          <div className="ap-box">
+            <p className="ap-cli-cmds">{t('updateCmd')} {plugin.name} · {t('uninstallCmd')} {plugin.name}</p>
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
 /**
- * Panel body: installed plugin list with two-level toggles, MCP list inline,
- * CLI hint, and an empty state.
+ * Panel body (design-aligned): header + filter, two-column body with plugin
+ * list (machine + project stores) and the MCP servers / CLI column, and the
+ * designed empty state.
  */
 function AgentPluginsPanel({ list, setEnabled, t }: AgentPluginsPanelProps) {
   const [data, setData] = React.useState<PanelData | null>(null)
@@ -193,6 +423,8 @@ function AgentPluginsPanel({ list, setEnabled, t }: AgentPluginsPanelProps) {
   const [expanded, setExpanded] = React.useState<string | null>(null)
   const [busy, setBusy] = React.useState(false)
   const [toggleError, setToggleError] = React.useState<string | null>(null)
+  const [filter, setFilter] = React.useState('')
+  const [sourceFilter, setSourceFilter] = React.useState<'all' | 'dir' | 'zip' | 'git'>('all')
 
   React.useEffect(() => {
     ensureStyles()
@@ -210,17 +442,21 @@ function AgentPluginsPanel({ list, setEnabled, t }: AgentPluginsPanelProps) {
     return () => { cancelled = true }
   }, [list])
 
+  const refresh = async (): Promise<void> => {
+    const fresh = rpcValue(await list())
+    if (fresh.ok) {
+      setData(fresh.value)
+      setError(null)
+    }
+  }
+
   const toggle = async (args: { name: string; skill?: string; mcp?: string; enabled: boolean }): Promise<void> => {
     setBusy(true)
     setToggleError(null)
     try {
       const result = rpcValue(await setEnabled(args))
       if (!result.ok) setToggleError(result.message)
-      const fresh = rpcValue(await list())
-      if (fresh.ok) {
-        setData(fresh.value)
-        setError(null)
-      }
+      await refresh()
     } catch (err) {
       setToggleError(String(err))
     } finally {
@@ -228,88 +464,142 @@ function AgentPluginsPanel({ list, setEnabled, t }: AgentPluginsPanelProps) {
     }
   }
 
+  const matches = (plugin: PanelPlugin): boolean => {
+    if (sourceFilter !== 'all' && plugin.source !== sourceFilter) return false
+    if (filter !== '' && !plugin.name.includes(filter)) return false
+    return true
+  }
+
+  const allMcp = data === null ? [] : [...data.plugins.flatMap((p) => p.mcp.map((m) => ({ ...m, plugin: p }))), ...data.projectPlugins.flatMap((p) => p.mcp.map((m) => ({ ...m, plugin: p })))]
+  const machinePlugins = data?.plugins.filter(matches) ?? []
+  const projectPlugins = data?.projectPlugins.filter(matches) ?? []
+
   return (
     <div className="ap-panel">
+      <div className="ap-header">
+        <div>
+          <div className="ap-title-row">
+            <p className="ap-title">插件</p>
+            <span className="ap-badge">Agent Plugins</span>
+          </div>
+          <p className="ap-subtitle">{t('subtitle')}</p>
+        </div>
+        <div className="ap-filters">
+          <label className="ap-filter">
+            <input
+              className="ap-filter-input"
+              placeholder={t('filterName')}
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+            />
+          </label>
+          <label className="ap-filter">
+            <select className="ap-filter-select" value={sourceFilter} onChange={(e) => setSourceFilter(e.target.value as 'all' | 'dir' | 'zip' | 'git')}>
+              <option value="all">{t('all')}</option>
+              <option value="dir">dir</option>
+              <option value="zip">zip</option>
+              <option value="git">git</option>
+            </select>
+          </label>
+        </div>
+      </div>
+
       {error !== null && <p className="ap-error">{t('loadError')}: {error}</p>}
       {toggleError !== null && <p className="ap-error">{t('toggleError')}: {toggleError}</p>}
-      {data !== null && data.plugins.length === 0 && (
-        <>
-          <p className="ap-empty">{t('empty')}</p>
-          <p className="ap-empty">{t('emptyHint')}</p>
-          <p className="ap-cli">{t('cliHint')}</p>
-        </>
+
+      {data !== null && data.plugins.length === 0 && data.projectPlugins.length === 0 && (
+        <div className="ap-card ap-empty">
+          <p className="ap-empty-title">{t('empty')}</p>
+          <p className="ap-empty-text">{t('emptyHint')}</p>
+          <div className="ap-box" style={{ marginTop: 8 }}>
+            <p className="ap-cli-cmds">$ {t('cliInstall')}</p>
+          </div>
+          <p className="ap-empty-text">{t('emptySupport')}</p>
+        </div>
       )}
-      {data?.plugins.map((plugin) => {
-        const open = expanded === plugin.name
-        return (
-          <div className="ap-card" key={plugin.name}>
-            <div className="ap-head">
-              <p className="ap-title">{plugin.name}@{plugin.version}</p>
-              {plugin.source !== null && <span className="ap-badge">{plugin.source}</span>}
-              <button
-                type="button"
-                className="ap-switch"
-                disabled={busy}
-                onClick={() => void toggle({ name: plugin.name, enabled: !plugin.enabled })}
-              >
-                {plugin.enabled ? `${t('pluginState')} ✓` : `${t('pluginState')} ✗`}
-              </button>
-              <button
-                type="button"
-                className="ap-switch"
-                onClick={() => setExpanded(open ? null : plugin.name)}
-              >
-                {open ? t('collapse') : t('expand')}
-              </button>
-            </div>
-            {open && (
+
+      {data !== null && (data.plugins.length > 0 || data.projectPlugins.length > 0) && (
+        <div className="ap-body">
+          <div className="ap-left">
+            {(machinePlugins.length > 0 || data.plugins.length > 0) && (
               <>
-                {plugin.description !== null && <p className="ap-desc">{plugin.description}</p>}
-                {plugin.installedAt !== null && <p className="ap-meta">{t('installedAt')}: {plugin.installedAt}</p>}
-                <div className="ap-sub">
-                  <p className="ap-sub-head">{t('skill')}</p>
-                  {plugin.skills.length === 0 && <p className="ap-meta">—</p>}
-                  {plugin.skills.map((skill) => (
-                    <div className="ap-row" key={skill.name}>
-                      <span className="ap-row-label">{skill.name}</span>
-                      <button
-                        type="button"
-                        className="ap-switch"
-                        disabled={busy || !plugin.enabled}
-                        onClick={() => void toggle({ name: plugin.name, skill: skill.name, enabled: !skill.enabled })}
-                      >
-                        {skill.enabled ? '✓' : '✗'}
-                      </button>
-                    </div>
-                  ))}
+                <div className="ap-section-head">
+                  <p className="ap-section-title">{t('machineStore')}</p>
+                  {data.stores[0] !== undefined && <p className="ap-section-path">{data.stores[0]}</p>}
                 </div>
-                <hr className="ap-divider" />
-                <div className="ap-sub">
-                  <p className="ap-sub-head">{t('mcp')}</p>
-                  {plugin.mcp.length === 0 && <p className="ap-meta">—</p>}
-                  {plugin.mcp.map((server) => (
-                    <div className="ap-row" key={server.serverName}>
-                      <span className="ap-row-label">{server.serverName}</span>
-                      <button
-                        type="button"
-                        className="ap-switch"
-                        disabled={busy || !plugin.enabled}
-                        onClick={() => void toggle({ name: plugin.name, mcp: server.serverName, enabled: !server.enabled })}
-                      >
-                        {server.enabled ? '✓' : '✗'}
-                      </button>
-                    </div>
-                  ))}
+                {machinePlugins.map((plugin) => (
+                  <PluginCard
+                    key={plugin.name}
+                    plugin={plugin}
+                    expanded={expanded === plugin.name}
+                    busy={busy}
+                    data={data}
+                    t={t}
+                    onTogglePlugin={() => void toggle({ name: plugin.name, enabled: !plugin.enabled })}
+                    onToggleSkill={(skill, enabled) => void toggle({ name: plugin.name, skill, enabled })}
+                    onToggleMcp={(mcp, enabled) => void toggle({ name: plugin.name, mcp, enabled })}
+                    onExpand={() => setExpanded(expanded === plugin.name ? null : plugin.name)}
+                  />
+                ))}
+                {machinePlugins.length === 0 && data.plugins.length > 0 && <p className="ap-meta-line">—</p>}
+              </>
+            )}
+            {data.projectStore !== null && (
+              <>
+                <div className="ap-section-head">
+                  <p className="ap-section-title">{t('projectStore')}</p>
+                  <p className="ap-section-path">{data.projectStore}</p>
                 </div>
-                <p className="ap-detail">{t('dataDir')}: {data.dataRoot}/{plugin.name}</p>
+                {projectPlugins.map((plugin) => (
+                  <PluginCard
+                    key={plugin.name}
+                    plugin={plugin}
+                    expanded={expanded === `project:${plugin.name}`}
+                    busy={busy}
+                    data={data}
+                    t={t}
+                    onTogglePlugin={() => void toggle({ name: plugin.name, enabled: !plugin.enabled })}
+                    onToggleSkill={(skill, enabled) => void toggle({ name: plugin.name, skill, enabled })}
+                    onToggleMcp={() => undefined}
+                    onExpand={() => setExpanded(expanded === `project:${plugin.name}` ? null : `project:${plugin.name}`)}
+                  />
+                ))}
               </>
             )}
           </div>
-        )
-      })}
-      {data !== null && data.plugins.length > 0 && <p className="ap-cli">{t('cliHint')}</p>}
-      {data !== null && (
-        <p className="ap-meta">{t('storeDir')}: {data.stores.join(', ')}</p>
+
+          <div className="ap-right">
+            <div className="ap-card">
+              <div>
+                <p className="ap-section-title">{t('mcpServers')}</p>
+                <p className="ap-subtitle">{t('mcpSubtitle')}</p>
+              </div>
+              <hr className="ap-divider" />
+              {allMcp.length === 0 && <p className="ap-meta-line">—</p>}
+              {allMcp.map((row) => (
+                <div className="ap-comp-row" key={row.rowId}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div className="ap-comp-name" style={{ fontSize: 12, fontWeight: 600 }}>{row.serverName}</div>
+                    <div className="ap-comp-sub">{row.plugin.name} · {row.transport} · {row.rowId}</div>
+                  </div>
+                  <Switch
+                    on={row.enabled}
+                    disabled={busy || !row.plugin.enabled}
+                    onClick={() => void toggle({ name: row.plugin.name, mcp: row.serverName, enabled: !row.enabled })}
+                  />
+                </div>
+              ))}
+            </div>
+            <div className="ap-card">
+              <p className="ap-section-title">{t('cli')}</p>
+              <div className="ap-box">
+                <p className="ap-cli-cmds">
+                  $ {t('cliInstall')}<br />$ {t('cliUpdate')}<br />$ {t('cliEnable')}<br />$ {t('cliUninstall')}<br />$ {t('cliList')}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

@@ -21,7 +21,7 @@ Agent Plugins 1.0.0 适配插件：让 [DeepSeek Harness (DSH)](https://github.c
 | M2 skills provider（含组件级启停） | 计划中 |
 | M3 MCP 映射 + patch 同步 + 热重载 E2E | ✅（真实 stdio server 注册/启停/卸载全通） |
 | M4 护栏 / doctor / 文档 | 计划中 |
-| M5 client 面板（列表 + 两级 toggle + MCP 同列） | ✅（浏览器实测：渲染/toggle/级联全通） |
+| M5 client 面板（列表 + 两级 toggle + MCP 同列） | ✅（按 OpenPencil 设计稿对齐：双栏/MCP 区/筛选/switch/分区/命令行/空态；浏览器实测全通） |
 
 设计文档见 [docs/design/dsh-agent-plugins.md](../../docs/design/dsh-agent-plugins.md)。
 

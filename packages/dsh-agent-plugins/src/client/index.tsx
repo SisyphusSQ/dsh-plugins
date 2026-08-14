@@ -1,13 +1,14 @@
 /**
- * dsh-agent-plugins client half — "Agent Plugins" settings panel (M0 skeleton).
+ * dsh-agent-plugins client half — "Agent Plugins" settings panel (M5).
  *
- * Mounts one page into the Plugins settings section (`settings.plugins.tab`
- * list slot, declared by dsh-client-ui-settings-plugins) and talks to the
- * host half through the typert Gateway RPC channel:
+ * Mounts one page into the Plugins settings section (`settings.plugins.tab`)
+ * and talks to the host half through the typert Gateway RPC channel:
  * `connection.rpc.call('/api', 'agentPlugins/<method>', { args })`.
  *
- * M0 scope: prove the mount point and the host→client channel end to end
- * (ping). M5 replaces the panel body with the full list + two-level toggles.
+ * Panel scope (per the UI design decisions):
+ * - read-only list + two-level enable toggles (plugin / skill / MCP server);
+ * - install/uninstall/update stay CLI-only; no discovery tab (no market);
+ * - cascade: plugin OFF greys out component toggles (states are preserved).
  */
 import React from 'react'
 import type { Context } from '@deepseek-ai/cordis'
@@ -24,11 +25,20 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface LocaleNamespaceMap {
     'agentPlugins.panel':
       | 'label'
-      | 'ping'
-      | 'pingResult'
-      | 'pingOk'
-      | 'pingFail'
-      | 'detail'
+      | 'empty'
+      | 'emptyHint'
+      | 'cliHint'
+      | 'source'
+      | 'skill'
+      | 'mcp'
+      | 'pluginState'
+      | 'expand'
+      | 'collapse'
+      | 'storeDir'
+      | 'dataDir'
+      | 'installedAt'
+      | 'loadError'
+      | 'toggleError'
   }
 }
 
@@ -41,10 +51,35 @@ const NS = 'agentPlugins.panel'
 /** Required client services (cordis fiber inject). */
 export const inject = ['slots', 'connection', 'locale']
 
+/** RPC result envelope (RpcResult<unknown>). */
+interface RpcResultEnvelope {
+  ok: boolean
+  value?: unknown
+  error?: { code?: string; message?: string }
+}
+
+/** Panel data mirroring the host `agentPlugins/list` projection. */
+interface PanelPlugin {
+  name: string
+  version: string
+  source: 'dir' | 'zip' | 'git' | null
+  installedAt: string | null
+  enabled: boolean
+  description: string | null
+  skills: Array<{ name: string; enabled: boolean }>
+  mcp: Array<{ serverName: string; enabled: boolean }>
+}
+
+interface PanelData {
+  plugins: PanelPlugin[]
+  stores: string[]
+  dataRoot: string
+}
+
 /** Business face injected into the panel component by the slot registration. */
 export interface AgentPluginsPanelFace {
-  /** Call the host `agentPlugins/ping` Remote endpoint. */
-  ping: () => Promise<unknown>
+  list: () => Promise<unknown>
+  setEnabled: (args: { name: string; skill?: string; mcp?: string; enabled: boolean }) => Promise<unknown>
 }
 
 /**
@@ -57,19 +92,37 @@ export function apply(ctx: Context): void {
   ctx.effect(() => ctx.locale.register(NS, {
     zh: {
       label: 'Agent 插件',
-      ping: '测试通道',
-      pingResult: '通道测试',
-      pingOk: '连接正常',
-      pingFail: '连接失败',
-      detail: '详情',
+      empty: '还没有安装任何 Agent 插件',
+      emptyHint: '使用 CLI 安装一个插件包，然后回到这里管理它',
+      cliHint: 'agent-plugins install <dir|zip|git-url>',
+      source: '来源',
+      skill: '技能',
+      mcp: 'MCP',
+      pluginState: '插件',
+      expand: '展开详情',
+      collapse: '收起',
+      storeDir: 'Store 目录',
+      dataDir: 'PLUGIN_DATA',
+      installedAt: '安装时间',
+      loadError: '加载失败',
+      toggleError: '切换失败',
     },
     en: {
       label: 'Agent Plugins',
-      ping: 'Ping channel',
-      pingResult: 'Channel test',
-      pingOk: 'connected',
-      pingFail: 'failed',
-      detail: 'Detail',
+      empty: 'No agent plugins installed yet',
+      emptyHint: 'Install a plugin package with the CLI, then manage it here',
+      cliHint: 'agent-plugins install <dir|zip|git-url>',
+      source: 'Source',
+      skill: 'Skill',
+      mcp: 'MCP',
+      pluginState: 'Plugin',
+      expand: 'Show details',
+      collapse: 'Collapse',
+      storeDir: 'Store',
+      dataDir: 'PLUGIN_DATA',
+      installedAt: 'Installed',
+      loadError: 'Failed to load',
+      toggleError: 'Failed to toggle',
     },
   }))
   ctx.slots.inject('settings.plugins.tab', () => ctx.slots.register({
@@ -79,7 +132,8 @@ export function apply(ctx: Context): void {
     label: () => t('label'),
     locale: NS,
     inject: (): AgentPluginsPanelFace => ({
-      ping: async () => rpc.call('/api', 'agentPlugins/ping', { args: {} }),
+      list: async () => rpc.call('/api', 'agentPlugins/list', { args: {} }),
+      setEnabled: async (args) => rpc.call('/api', 'agentPlugins/setEnabled', { args }),
     }),
   }, AgentPluginsPanel))
 }
@@ -87,40 +141,175 @@ export function apply(ctx: Context): void {
 /** Panel component props: the injected business face plus the locale `t` seat. */
 interface AgentPluginsPanelProps extends AgentPluginsPanelFace, PropsLocale<'agentPlugins.panel'> {}
 
+/** Small inline stylesheet injected once (kept minimal, no external CSS). */
+const css = `
+.ap-panel{display:flex;flex-direction:column;gap:14px;max-width:720px}
+.ap-empty{color:var(--dsw-alias-label-tertiary);margin:0;font-size:13px;line-height:1.6}
+.ap-cli{background:var(--dsw-alias-bg-layer-3);border:1px solid var(--dsw-alias-border-l2);border-radius:8px;padding:8px 12px;font-size:12px;line-height:1.5;margin:0}
+.ap-card{border:1px solid var(--dsw-alias-border-l2);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.ap-head{display:flex;align-items:center;gap:10px;min-width:0}
+.ap-title{flex:1;min-width:0;font-size:13px;font-weight:600;margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ap-badge{white-space:nowrap;background:var(--dsw-alias-bg-module-platform);color:var(--dsw-alias-label-secondary);border-radius:999px;padding:1px 8px;font-size:11px}
+.ap-meta{color:var(--dsw-alias-label-tertiary);font-size:12px;margin:0}
+.ap-desc{color:var(--dsw-alias-label-secondary);font-size:12px;margin:0;line-height:1.5}
+.ap-row{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--dsw-alias-label-secondary)}
+.ap-row-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ap-switch{font:inherit;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-layer-3);border:1px solid var(--dsw-alias-border-l2);border-radius:6px;padding:2px 10px;font-size:12px;cursor:pointer}
+.ap-switch:disabled{opacity:.45;cursor:default}
+.ap-divider{border:none;border-top:1px solid var(--dsw-alias-border-l2);margin:2px 0}
+.ap-sub{display:flex;flex-direction:column;gap:6px;padding-left:2px}
+.ap-sub-head{font-size:11px;font-weight:600;color:var(--dsw-alias-label-tertiary);margin:0;text-transform:uppercase;letter-spacing:.04em}
+.ap-detail{margin:0;font-size:12px;color:var(--dsw-alias-label-tertiary);white-space:pre-wrap;word-break:break-all;line-height:1.5}
+.ap-error{color:var(--dsw-alias-label-error);font-size:12px;margin:0}
+`
+
+/** Inject the stylesheet once per page (idempotent). */
+function ensureStyles(): void {
+  const tag = 'dsh-agent-plugins-panel-css'
+  if (typeof document !== 'undefined' && document.querySelector(`style[data-tag="${tag}"]`) === null) {
+    const style = document.createElement('style')
+    style.dataset.tag = tag
+    style.textContent = css
+    document.head.appendChild(style)
+  }
+}
+
+/** Extract a value from an RPC result envelope. */
+function rpcValue(result: unknown): { ok: true; value: PanelData } | { ok: false; message: string } {
+  const envelope = result as RpcResultEnvelope
+  if (envelope?.ok === true && envelope.value !== undefined) {
+    return { ok: true, value: envelope.value as PanelData }
+  }
+  return { ok: false, message: envelope?.error?.message ?? String(result) }
+}
+
 /**
- * M0 panel body: a single channel-liveness probe that calls the host half.
- * M5 replaces this with the installed-plugins list and two-level toggles.
+ * Panel body: installed plugin list with two-level toggles, MCP list inline,
+ * CLI hint, and an empty state.
  */
-function AgentPluginsPanel({ ping, t }: AgentPluginsPanelProps) {
-  const [state, setState] = React.useState<'idle' | 'pending' | 'ok' | 'fail'>('idle')
-  const [detail, setDetail] = React.useState('')
+function AgentPluginsPanel({ list, setEnabled, t }: AgentPluginsPanelProps) {
+  const [data, setData] = React.useState<PanelData | null>(null)
+  const [error, setError] = React.useState<string | null>(null)
+  const [expanded, setExpanded] = React.useState<string | null>(null)
+  const [busy, setBusy] = React.useState(false)
+  const [toggleError, setToggleError] = React.useState<string | null>(null)
+
+  React.useEffect(() => {
+    ensureStyles()
+    let cancelled = false
+    void list().then((result) => {
+      if (cancelled) return
+      const parsed = rpcValue(result)
+      if (parsed.ok) {
+        setData(parsed.value)
+        setError(null)
+      } else {
+        setError(parsed.message)
+      }
+    })
+    return () => { cancelled = true }
+  }, [list])
+
+  const toggle = async (args: { name: string; skill?: string; mcp?: string; enabled: boolean }): Promise<void> => {
+    setBusy(true)
+    setToggleError(null)
+    try {
+      const result = rpcValue(await setEnabled(args))
+      if (!result.ok) setToggleError(result.message)
+      const fresh = rpcValue(await list())
+      if (fresh.ok) {
+        setData(fresh.value)
+        setError(null)
+      }
+    } catch (err) {
+      setToggleError(String(err))
+    } finally {
+      setBusy(false)
+    }
+  }
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 640 }}>
-      <p style={{ margin: 0, fontSize: 13 }}>
-        {t('pingResult')}: {state === 'idle' ? '—' : state === 'pending' ? '…' : state === 'ok' ? t('pingOk') : t('pingFail')}
-      </p>
-      <button
-        type="button"
-        disabled={state === 'pending'}
-        onClick={async () => {
-          setState('pending')
-          try {
-            const result = await ping()
-            setDetail(JSON.stringify(result))
-            setState('ok')
-          } catch (error) {
-            setDetail(String(error))
-            setState('fail')
-          }
-        }}
-        style={{ width: 140, height: 30 }}
-      >
-        {t('ping')}
-      </button>
-      {detail !== '' && (
-        <pre style={{ margin: 0, fontSize: 12, whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
-          {t('detail')}: {detail}
-        </pre>
+    <div className="ap-panel">
+      {error !== null && <p className="ap-error">{t('loadError')}: {error}</p>}
+      {toggleError !== null && <p className="ap-error">{t('toggleError')}: {toggleError}</p>}
+      {data !== null && data.plugins.length === 0 && (
+        <>
+          <p className="ap-empty">{t('empty')}</p>
+          <p className="ap-empty">{t('emptyHint')}</p>
+          <p className="ap-cli">{t('cliHint')}</p>
+        </>
+      )}
+      {data?.plugins.map((plugin) => {
+        const open = expanded === plugin.name
+        return (
+          <div className="ap-card" key={plugin.name}>
+            <div className="ap-head">
+              <p className="ap-title">{plugin.name}@{plugin.version}</p>
+              {plugin.source !== null && <span className="ap-badge">{plugin.source}</span>}
+              <button
+                type="button"
+                className="ap-switch"
+                disabled={busy}
+                onClick={() => void toggle({ name: plugin.name, enabled: !plugin.enabled })}
+              >
+                {plugin.enabled ? `${t('pluginState')} ✓` : `${t('pluginState')} ✗`}
+              </button>
+              <button
+                type="button"
+                className="ap-switch"
+                onClick={() => setExpanded(open ? null : plugin.name)}
+              >
+                {open ? t('collapse') : t('expand')}
+              </button>
+            </div>
+            {open && (
+              <>
+                {plugin.description !== null && <p className="ap-desc">{plugin.description}</p>}
+                {plugin.installedAt !== null && <p className="ap-meta">{t('installedAt')}: {plugin.installedAt}</p>}
+                <div className="ap-sub">
+                  <p className="ap-sub-head">{t('skill')}</p>
+                  {plugin.skills.length === 0 && <p className="ap-meta">—</p>}
+                  {plugin.skills.map((skill) => (
+                    <div className="ap-row" key={skill.name}>
+                      <span className="ap-row-label">{skill.name}</span>
+                      <button
+                        type="button"
+                        className="ap-switch"
+                        disabled={busy || !plugin.enabled}
+                        onClick={() => void toggle({ name: plugin.name, skill: skill.name, enabled: !skill.enabled })}
+                      >
+                        {skill.enabled ? '✓' : '✗'}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <hr className="ap-divider" />
+                <div className="ap-sub">
+                  <p className="ap-sub-head">{t('mcp')}</p>
+                  {plugin.mcp.length === 0 && <p className="ap-meta">—</p>}
+                  {plugin.mcp.map((server) => (
+                    <div className="ap-row" key={server.serverName}>
+                      <span className="ap-row-label">{server.serverName}</span>
+                      <button
+                        type="button"
+                        className="ap-switch"
+                        disabled={busy || !plugin.enabled}
+                        onClick={() => void toggle({ name: plugin.name, mcp: server.serverName, enabled: !server.enabled })}
+                      >
+                        {server.enabled ? '✓' : '✗'}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <p className="ap-detail">{t('dataDir')}: {data.dataRoot}/{plugin.name}</p>
+              </>
+            )}
+          </div>
+        )
+      })}
+      {data !== null && data.plugins.length > 0 && <p className="ap-cli">{t('cliHint')}</p>}
+      {data !== null && (
+        <p className="ap-meta">{t('storeDir')}: {data.stores.join(', ')}</p>
       )}
     </div>
   )

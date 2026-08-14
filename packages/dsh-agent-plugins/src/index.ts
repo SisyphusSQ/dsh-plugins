@@ -25,7 +25,7 @@ import z from '@deepseek-ai/schemastery'
 import { Remote, TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol'
 import type { Context } from '@deepseek-ai/cordis'
 import type { SkillProviderControl } from '@deepseek-ai/dsh-skill'
-import { DATA_DIRNAME, STORE_DIRNAME, loadLedger, resolveDshHome, type Ledger } from './store.js'
+import { DATA_DIRNAME, STORE_DIRNAME, loadLedger, resolveDshHome, scanStore, setMcpEnabled, setPluginEnabled, setSkillEnabled, type Ledger } from './store.js'
 import { AgentPluginsSkillProvider } from './skill-provider.js'
 import { watchStoreTree } from './store-watch.js'
 import { syncMcpRows } from './mcp-sync.js'
@@ -134,7 +134,14 @@ export default class AgentPluginsService extends TypertRemoteService<never> {
     ctx.effect(() => () => {
       for (const dispose of disposers) dispose()
     })
+
+    // Keep the resolved runtime paths for the panel endpoints.
+    this.stores = stores
+    this.dataRoot = dataRoot
   }
+
+  private stores: string[] = []
+  private dataRoot = ''
 
   /** Channel liveness probe used by the panel and by E2E tests. */
   @Remote('ping')
@@ -153,4 +160,89 @@ export default class AgentPluginsService extends TypertRemoteService<never> {
       skills: summaries.map((skill) => ({ name: skill.name, description: skill.description, provider: skill.provider })),
     }
   }
+
+  /**
+   * Panel data: installed plugins with two-level enable states, component
+   * inventories, and the store locations. Read-only.
+   */
+  @Remote('list')
+  async list(): Promise<PanelData> {
+    const ledger = this.ledger
+    const plugins: PanelPlugin[] = []
+    for (const storeDir of this.stores) {
+      for (const plugin of await scanStore(storeDir)) {
+        const row = ledger.plugins[plugin.name]
+        plugins.push({
+          name: plugin.name,
+          version: plugin.version,
+          source: row?.source.kind ?? null,
+          installedAt: row?.installedAt ?? null,
+          enabled: row?.enabled ?? true,
+          description: plugin.manifest.description ?? null,
+          skills: plugin.skills.map((name) => ({
+            name,
+            enabled: componentEnabledOf(row, 'skills', name),
+          })),
+          mcp: plugin.mcpServers.map((name) => ({
+            serverName: qualifyPanelServerName(plugin.name, name),
+            enabled: componentEnabledOf(row, 'mcp', name),
+          })),
+        })
+      }
+    }
+    return { plugins, stores: this.stores, dataRoot: this.dataRoot }
+  }
+
+  /**
+   * Panel write path: plugin-level or component-level enable toggle.
+   * Wire args mirror the method parameter names (SRC reflection): pass
+   * `{ name, enabled }` for the plugin level, plus `skill` or `mcp` for the
+   * component level. Missing optional fields are allowed by the gateway.
+   * Writes the ledger (the store watcher then reconciles skills + MCP rows).
+   */
+  @Remote('setEnabled')
+  async setEnabled(name: string, skill: string | undefined, mcp: string | undefined, enabled: boolean): Promise<{ ok: boolean; message?: string }> {
+    const primary = this.stores[0]
+    if (primary === undefined) return { ok: false, message: 'no store configured' }
+    const { ledger } = await loadLedger(primary)
+    this.ledger = ledger
+    const wrap = (result: { ok: boolean; issue?: { message: string } }): { ok: boolean; message?: string } =>
+      result.ok ? { ok: true } : { ok: false, ...(result.issue !== undefined ? { message: result.issue.message } : {}) }
+    if (skill !== undefined) {
+      return wrap(await setSkillEnabled(primary, ledger, name, skill, enabled))
+    }
+    if (mcp !== undefined) {
+      return wrap(await setMcpEnabled(primary, ledger, name, mcp, enabled))
+    }
+    return wrap(await setPluginEnabled(primary, ledger, name, enabled))
+  }
+}
+
+/** Component effective state (absent row/state = enabled). */
+function componentEnabledOf(row: import('./store.js').LedgerPlugin | undefined, kind: 'skills' | 'mcp', key: string): boolean {
+  if (row === undefined || !row.enabled) return false
+  const state = row[kind][key]
+  return state?.enabled ?? true
+}
+
+/** Panel MCP label: the qualified server name. */
+function qualifyPanelServerName(pluginName: string, serverName: string): string {
+  return `${pluginName.replace(/\./g, '_')}__${serverName}`
+}
+
+export interface PanelPlugin {
+  name: string
+  version: string
+  source: 'dir' | 'zip' | 'git' | null
+  installedAt: string | null
+  enabled: boolean
+  description: string | null
+  skills: Array<{ name: string; enabled: boolean }>
+  mcp: Array<{ serverName: string; enabled: boolean }>
+}
+
+export interface PanelData {
+  plugins: PanelPlugin[]
+  stores: string[]
+  dataRoot: string
 }

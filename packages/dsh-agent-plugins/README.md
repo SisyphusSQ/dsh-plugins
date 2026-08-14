@@ -3,7 +3,7 @@
 Agent Plugins 1.0.0 适配插件：让 [DeepSeek Harness (DSH)](https://github.com/deepseek-ai/deepseek-harness) 直接消费
 [Agent Plugins](https://github.com/agentplugins/agent-plugins-spec) 标准插件包（`plugin.json` + `skills/` + `mcp.json`）。
 
-**状态：实验性（M0 骨架）。** 一个 npm 包三合一：host 半（bundle patch）+ client 半（设置面板 tab）+ CLI（`agent-plugins`）。
+**状态：实验性（M0–M5 全部完成，待真实 profile 装机验收）。** 一个 npm 包三合一：host 半（bundle patch）+ client 半（设置面板 tab）+ CLI（`agent-plugins`）。
 
 ## 已验证环境
 
@@ -21,7 +21,7 @@ Agent Plugins 1.0.0 适配插件：让 [DeepSeek Harness (DSH)](https://github.c
 | M2 skills provider（含组件级启停） | 计划中 |
 | M3 MCP 映射 + patch 同步 + 热重载 E2E | ✅（真实 stdio server 注册/启停/卸载全通） |
 | M4 护栏 / doctor / 文档 | 计划中 |
-| M5 client 面板（列表 + 两级 toggle + MCP 同列） | 计划中 |
+| M5 client 面板（列表 + 两级 toggle + MCP 同列） | ✅（浏览器实测：渲染/toggle/级联全通） |
 
 设计文档见 [docs/design/dsh-agent-plugins.md](../../docs/design/dsh-agent-plugins.md)。
 

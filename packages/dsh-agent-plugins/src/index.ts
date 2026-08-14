@@ -6,9 +6,12 @@
  * exposed to the browser through the typert Gateway SRC reflection — the
  * panel client half calls `connection.rpc.call('/api', 'agentPlugins/<m>', { args })`.
  *
- * Milestone state (M0 skeleton):
- * - host service + remote endpoints exist (`ping` proves the channel);
- * - store watch / skills provider / MCP patch sync land in M1–M3.
+ * Milestone state (M2):
+ * - M0: host service + remote endpoints (`ping` proves the channel);
+ * - M2: skills provider registered into `ctx.skills` (provider `agent-plugins`,
+ *   rank 90), store watch drives `control.invalidate()` and ledger refresh;
+ * - M1: CLI / store / ledger live in the same lib (lib/store.js etc.);
+ * - M3: MCP mapping + home-patch sync; M5: panel data endpoints.
  *
  * Not doing (guard rails, keep in mind while editing):
  * - no process sandbox for plugin stdio servers (spec has none; shell trust);
@@ -16,8 +19,13 @@
  *   no MCP approval integration;
  * - component-level toggles stop at skill / MCP server granularity.
  */
+import { join } from 'node:path'
 import { Remote, TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol'
 import type { Context } from '@deepseek-ai/cordis'
+import type { SkillProviderControl } from '@deepseek-ai/dsh-skill'
+import { STORE_DIRNAME, loadLedger, resolveDshHome, type Ledger } from './store.js'
+import { AgentPluginsSkillProvider } from './skill-provider.js'
+import { watchStoreTree } from './store-watch.js'
 
 /** Cordis plugin name used by loader diagnostics. */
 export const name = 'agent-plugins'
@@ -28,6 +36,14 @@ export const AGENT_PLUGINS_SERVICE = 'agentPlugins'
 /** Version reported by the `ping` endpoint; keep in sync with package.json. */
 const SERVICE_VERSION = '0.1.0'
 
+/** Adapter configuration (Schema arrives in M4; keys stay forward-compatible). */
+export interface AgentPluginsConfig {
+  /** Machine-level store directories; default `$DSH_HOME/agent-plugins`. */
+  stores?: string[]
+  /** Whether the skills half is enabled. */
+  skillsEnabled?: boolean
+}
+
 /**
  * The agent-plugins adapter service.
  *
@@ -36,16 +52,64 @@ const SERVICE_VERSION = '0.1.0'
  * `agentPlugins` Remote namespace (default namespace = service key).
  */
 export default class AgentPluginsService extends TypertRemoteService<never> {
-  static inject: string[] = []
+  static inject = ['skills']
 
-  constructor(ctx: Context) {
+  private readonly provider: AgentPluginsSkillProvider
+  private control: SkillProviderControl | undefined
+  private ledger: Ledger
+
+  constructor(ctx: Context, config: AgentPluginsConfig = {}) {
     super(ctx, AGENT_PLUGINS_SERVICE)
-    // M1+: watch stores, register the skills provider, sync MCP patch rows.
+    const home = resolveDshHome()
+    const stores = config.stores ?? [join(home, STORE_DIRNAME)]
+    const primaryStore = stores[0]
+    this.ledger = { version: 1, plugins: {} }
+
+    this.provider = new AgentPluginsSkillProvider(ctx, {
+      stores,
+      readLedger: () => this.ledger,
+      warn: (message) => ctx.logger.warn(message),
+    })
+
+    const skillsEnabled = config.skillsEnabled ?? true
+    if (skillsEnabled) {
+      ctx.effect(() => ctx.skills.registerProvider((control) => {
+        this.control = control
+        return this.provider
+      }))
+    }
+
+    // Store watch: refresh the ledger and invalidate skill catalogs so
+    // installs/uninstalls/toggles take effect without a restart. The watcher
+    // debounces and coalesces events itself.
+    const onStoreChange = (): void => {
+      if (primaryStore === undefined) return
+      void loadLedger(primaryStore).then(({ ledger }) => {
+        this.ledger = ledger
+        this.control?.invalidate()
+      })
+    }
+    const disposers = stores.map((store) => watchStoreTree(store, onStoreChange))
+    ctx.effect(() => () => {
+      for (const dispose of disposers) dispose()
+    })
   }
 
   /** Channel liveness probe used by the panel and by E2E tests. */
   @Remote('ping')
   async ping(): Promise<{ ok: true; service: string; version: string }> {
     return { ok: true, service: AGENT_PLUGINS_SERVICE, version: SERVICE_VERSION }
+  }
+
+  /**
+   * Skill catalog view (read-only) — used by the panel and M2 E2E checks.
+   * Returns the registry's merged skill summaries for the global layer.
+   */
+  @Remote('skills')
+  async skills(): Promise<{ skills: Array<{ name: string; description: string; provider: string }> }> {
+    const summaries = await this.ctx.skills.list()
+    return {
+      skills: summaries.map((skill) => ({ name: skill.name, description: skill.description, provider: skill.provider })),
+    }
   }
 }

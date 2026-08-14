@@ -18,12 +18,18 @@
 import { createHash } from 'node:crypto'
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
+import { homedir } from 'node:os'
 import { cp, lstat, mkdir, readFile, readdir, realpath, rename, rm, writeFile } from 'node:fs/promises'
 import { dirname, join, relative, resolve, sep } from 'node:path'
 import { parseMcpManifest, parsePluginManifest, type ManifestIssue, type PluginManifest } from './manifest.js'
 import { validateCommand } from './mcp-map.js'
 
 const execFileAsync = promisify(execFile)
+
+/** DSH home resolution (env override, default ~/.dsh) — mirrors dsh-home-paths. */
+export function resolveDshHome(): string {
+  return process.env.DSH_HOME ?? join(homedir(), '.dsh')
+}
 
 /** Default machine-level store directory name under $DSH_HOME. */
 export const STORE_DIRNAME = 'agent-plugins'

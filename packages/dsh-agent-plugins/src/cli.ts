@@ -5,7 +5,6 @@
  * installed.json and (in M3) the managed home-patch section. Effect is
  * applied by the adapter's store watch or reconciled at next profile boot.
  */
-import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { access, readdir, stat } from 'node:fs/promises'
 import {
@@ -14,6 +13,7 @@ import {
   componentEnabled,
   installFromSource,
   loadLedger,
+  resolveDshHome,
   scanStore,
   setMcpEnabled,
   setPluginEnabled,
@@ -23,11 +23,6 @@ import {
   type PluginSource,
   type StorePlugin,
 } from './store.js'
-
-/** DSH home resolution (env override, default ~/.dsh) — mirrors dsh-home-paths. */
-export function resolveDshHome(): string {
-  return process.env.DSH_HOME ?? join(homedir(), '.dsh')
-}
 
 export interface CliOptions {
   storeDir: string

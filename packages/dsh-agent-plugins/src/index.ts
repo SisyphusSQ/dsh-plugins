@@ -19,7 +19,9 @@
  *   no MCP approval integration;
  * - component-level toggles stop at skill / MCP server granularity.
  */
+import { homedir } from 'node:os'
 import { join } from 'node:path'
+import z from '@deepseek-ai/schemastery'
 import { Remote, TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol'
 import type { Context } from '@deepseek-ai/cordis'
 import type { SkillProviderControl } from '@deepseek-ai/dsh-skill'
@@ -37,9 +39,9 @@ export const AGENT_PLUGINS_SERVICE = 'agentPlugins'
 /** Version reported by the `ping` endpoint; keep in sync with package.json. */
 const SERVICE_VERSION = '0.1.0'
 
-/** Adapter configuration (Schema arrives in M4; keys stay forward-compatible). */
+/** Adapter configuration (see the config table in docs/design/dsh-agent-plugins.md). */
 export interface AgentPluginsConfig {
-  /** Machine-level store directories; default `$DSH_HOME/agent-plugins`. */
+  /** Machine-level store directories; default `$DSH_HOME/agent-plugins`. `~` expands to $HOME. */
   stores?: string[]
   /** Whether the skills half is enabled. */
   skillsEnabled?: boolean
@@ -47,6 +49,11 @@ export interface AgentPluginsConfig {
   mcpEnabled?: boolean
   /** Home patch file receiving the generated MCP rows; default `$DSH_HOME/cordis.patch.yml`. */
   managedPatch?: string
+}
+
+/** Expand a leading `~` in configured paths. */
+export function expandHome(value: string): string {
+  return value === '~' ? homedir() : value.startsWith('~/') ? join(homedir(), value.slice(2)) : value
 }
 
 /**
@@ -59,6 +66,13 @@ export interface AgentPluginsConfig {
 export default class AgentPluginsService extends TypertRemoteService<never> {
   static inject = ['skills']
 
+  static Config = z.object({
+    stores: z.array(z.string()).default([]),
+    skillsEnabled: z.boolean().default(true),
+    mcpEnabled: z.boolean().default(true),
+    managedPatch: z.string().default(''),
+  })
+
   private readonly provider: AgentPluginsSkillProvider
   private control: SkillProviderControl | undefined
   private ledger: Ledger
@@ -66,10 +80,14 @@ export default class AgentPluginsService extends TypertRemoteService<never> {
   constructor(ctx: Context, config: AgentPluginsConfig = {}) {
     super(ctx, AGENT_PLUGINS_SERVICE)
     const home = resolveDshHome()
-    const stores = config.stores ?? [join(home, STORE_DIRNAME)]
+    const stores = (config.stores ?? []).length > 0
+      ? config.stores!.map(expandHome)
+      : [join(home, STORE_DIRNAME)]
     const primaryStore = stores[0]
     const dataRoot = join(home, DATA_DIRNAME)
-    const managedPatch = config.managedPatch ?? join(home, 'cordis.patch.yml')
+    const managedPatch = config.managedPatch !== undefined && config.managedPatch !== ''
+      ? expandHome(config.managedPatch)
+      : join(home, 'cordis.patch.yml')
     this.ledger = { version: 1, plugins: {} }
 
     this.provider = new AgentPluginsSkillProvider(ctx, {

@@ -6,7 +6,7 @@
  * applied by the adapter's store watch or reconciled at next profile boot.
  */
 import { join } from 'node:path'
-import { access, readdir, stat } from 'node:fs/promises'
+import { access, readFile, readdir, stat } from 'node:fs/promises'
 import {
   DATA_DIRNAME,
   STORE_DIRNAME,
@@ -23,6 +23,8 @@ import {
   type PluginSource,
   type StorePlugin,
 } from './store.js'
+import { computeMcpEntries } from './mcp-sync.js'
+import { MANAGED_SECTION_END, MANAGED_SECTION_START, managedEntryIds } from './patch-sync.js'
 
 export interface CliOptions {
   storeDir: string
@@ -250,6 +252,34 @@ async function cmdDoctor(opts: CliOptions): Promise<number> {
       if (issue.fatal === true) {
         console.error(`✗ ${plugin.name}: ${issue.message}`)
         problems++
+      }
+    }
+  }
+
+  // MCP managed patch health: marker integrity + ledger/patch consistency.
+  const patchFile = join(resolveDshHome(), 'cordis.patch.yml')
+  const patchText = await readFile(patchFile, 'utf8').catch(() => undefined)
+  if (patchText !== undefined) {
+    const hasStart = patchText.includes(MANAGED_SECTION_START)
+    const hasEnd = patchText.includes(MANAGED_SECTION_END)
+    if (hasStart && !hasEnd) {
+      console.error(`✗ 保留段损坏：${patchFile} 有开始标记但缺结束标记（可能影响启动）`)
+      problems++
+    } else if (hasStart && hasEnd) {
+      const warns: string[] = []
+      const expected = await computeMcpEntries({
+        storeDirs: [opts.storeDir],
+        dataRoot: opts.dataRoot,
+        managedPatch: patchFile,
+        readLedger: () => ledger,
+        warn: (m) => warns.push(m),
+      })
+      const actualIds = await managedEntryIds(patchFile)
+      const expectedIds = expected.map((entry) => entry.id)
+      const missing = expectedIds.filter((id) => !actualIds.includes(id))
+      const extra = actualIds.filter((id) => !expectedIds.includes(id))
+      if (missing.length > 0 || extra.length > 0) {
+        console.warn(`! 保留段与台账不一致（缺失 ${missing.length} 行、多余 ${extra.length} 行）；运行中的 adapter 会自动同步，未运行时下次启动对账`)
       }
     }
   }

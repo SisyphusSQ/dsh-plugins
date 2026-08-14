@@ -16,6 +16,12 @@ import { mapMcpServers, type McpMappingContext } from './mcp-map.js'
 import { entriesForServers, syncPatchFile, type McpPatchEntry } from './patch-sync.js'
 import { scanStore, type Ledger } from './store.js'
 
+/** Guard rail: more servers than this in one plugin triggers a warning. */
+export const MAX_SERVERS_PER_PLUGIN = 10
+
+/** Guard rail: header keys/values that look like credentials trigger a warning. */
+const CREDENTIAL_HEADER_RE = /authorization|bearer|api[_-]?key|token/i
+
 export interface McpSyncOptions {
   /** Machine-level store directories (project stores contribute no MCP). */
   storeDirs: string[]
@@ -34,10 +40,10 @@ export interface McpSyncResult {
 }
 
 /**
- * Recompute and apply the managed MCP rows.
- * @returns the applied entries and whether the file changed.
+ * Recompute the desired MCP rows without writing (doctor / panel use this).
+ * Guard rails: per-plugin server count, credential-shaped headers.
  */
-export async function syncMcpRows(opts: McpSyncOptions): Promise<McpSyncResult> {
+export async function computeMcpEntries(opts: McpSyncOptions): Promise<McpPatchEntry[]> {
   const ledger = opts.readLedger()
   const desired: McpPatchEntry[] = []
 
@@ -56,6 +62,9 @@ export async function syncMcpRows(opts: McpSyncOptions): Promise<McpSyncResult> 
         for (const issue of parsed.issues) opts.warn(`${plugin.name}: ${issue.message}`)
         continue
       }
+      if (parsed.value.length > MAX_SERVERS_PER_PLUGIN) {
+        opts.warn(`${plugin.name}: ${parsed.value.length} MCP servers exceed the ${MAX_SERVERS_PER_PLUGIN} guard rail; check the plugin`)
+      }
       const mapping: McpMappingContext = {
         pluginName: plugin.name,
         pluginRoot: plugin.dir,
@@ -70,6 +79,14 @@ export async function syncMcpRows(opts: McpSyncOptions): Promise<McpSyncResult> 
           continue
         }
         const config = configs[0]!
+        if (config.transport === 'streamable-http' && config.headers !== undefined) {
+          for (const [key, value] of Object.entries(config.headers)) {
+            if (CREDENTIAL_HEADER_RE.test(key) || CREDENTIAL_HEADER_RE.test(value)) {
+              opts.warn(`${plugin.name}: header "${key}" looks like a credential; make sure it is not committed to the store`)
+              break
+            }
+          }
+        }
         // Component-level filter: server explicitly disabled → skip.
         const state = row.mcp[config.serverName]
         if (state !== undefined && !state.enabled) continue
@@ -77,7 +94,15 @@ export async function syncMcpRows(opts: McpSyncOptions): Promise<McpSyncResult> 
       }
     }
   }
+  return desired
+}
 
+/**
+ * Recompute and apply the managed MCP rows.
+ * @returns the applied entries and whether the file changed.
+ */
+export async function syncMcpRows(opts: McpSyncOptions): Promise<McpSyncResult> {
+  const desired = await computeMcpEntries(opts)
   const result = await syncPatchFile(opts.managedPatch, desired)
   return {
     changed: result.changed,

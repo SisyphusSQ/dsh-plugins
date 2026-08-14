@@ -162,3 +162,36 @@ packages/dsh-agent-plugins/
 - 已验证 DSH 版本：`@deepseek-ai/dsh@0.1.0-rc.6`。
 - M1 fixture 单测 ≠ 真实 E2E；M2/M3 的"技能可发现 / 工具注册"验收在本机 profile 实测，两者分开描述。
 - 隔离测试环境：`DSH_HOME=/tmp/dsh-ap-test` + 复制 profiles（24M）+ `dsh --profile web --port 3090`，不影响线上 web profile 与本会话。
+
+## 符合性清单（M4，以规范 Appendix A 为底稿）
+
+| 规范项 | 状态 | 实现位置 |
+| --- | --- | --- |
+| plugin.json `$schema` 必须为 1.0.0 plugin schema | ✅ 不识别/不支持版本拒绝整包 | manifest.ts |
+| name 必填 + 格式（§5.5，1–64、小写、无 `--`/`..`） | ✅ 违反拒绝整包 | manifest.ts `isValidPluginName` |
+| 封闭 schema：未知顶层字段报告并忽略 | ✅ | manifest.ts |
+| extensions 非对象忽略并记录 | ✅ | manifest.ts |
+| 路径不得逃逸插件根（含 symlink 解析） | ✅ 组件级失败边界 | store.ts `verifyPluginDir` |
+| 加载时不得联网取 schema | ✅ 本地内置两套 schema 常量 | manifest.ts |
+| mcp.json 顶层 closed + 版本一致 | ✅ 多余字段废整个 MCP 半 | manifest.ts |
+| 每 server closed variant（stdio/streamable-http/sse） | ✅ 单 server 失败不影响其他 | manifest.ts |
+| url：绝对 HTTP(S)、无 userinfo/fragment、非 loopback 强制 HTTPS | ✅ | manifest.ts `isValidServerUrl` |
+| headers 同名不同大小写 invalid | ✅ | manifest.ts |
+| sse 可选（OPTIONAL） | ✅ 跳过 + warning | manifest.ts |
+| stdio command 单 token（裸名/`./`），不展开占位符 | ✅ | mcp-map.ts `validateCommand` |
+| cwd 省略 → 插件根；显式仅 `./`/`${PLUGIN_ROOT}`/`${PLUGIN_DATA}` | ✅ | mcp-map.ts `resolveCwd` |
+| `${PLUGIN_ROOT}`/`${PLUGIN_DATA}` 展开：args/env 值/cwd，单次非递归，展开后 containment | ✅ | mcp-map.ts `expandPlaceholders` |
+| 子进程 env：显式注入 PLUGIN_ROOT/PLUGIN_DATA；server env 键不得为保留字 | ✅ | mcp-map.ts（注入）+ manifest 校验 |
+| serverName 限定 `[A-Za-z0-9_-]{1,32}` | ✅ | mcp-map.ts `qualifyServerName` |
+| 技能：SKILL.md 直接子目录候选、frontmatter 必填 name+description、未知字段忽略 | ✅ | vendor/parse-skill-file.ts |
+| 技能校验失败跳过 + 日志 | ✅ | skill-provider.ts |
+| 护栏：单插件 server >10 告警 | ✅ | mcp-sync.ts |
+| 护栏：headers 凭据字样告警 | ✅ | mcp-sync.ts |
+| 信任模型：不沙箱、显式 CLI 安装、台账校验和 | ✅ | store.ts / cli.ts |
+
+## M3/M4 实测补充结论
+
+- MCP 行热生效链路：`syncPatchFile` 原子写 → `watchUserPatches` HMR → include entry 热替换 → mcp-client dispose/新建（同名 serverName 工具名不变）。**E2E 已验证**（真实 stdio server：注册/启停/卸载全通）。
+- mcp-client 默认 reconnect 策略会在 server 更新后自动重连成功；连接失败不阻塞插件激活（failOnStartupError 默认 false）。
+- 踩坑记录：① 生成的 config 块缩进错误 → 坏 YAML → boot fail loud（有 YAML 可解析回归测试）；② MCP stdio 响应必须带 `jsonrpc: "2.0"`（SDK schema 校验）；③ 台账 MCP key 用限定名 `<plugin>__<server>`；④ pnpm `file:` 安装是拷贝非链接，改 lib 后需删旧拷贝重装。
+- doctor 检测：台账↔store 一致性、保留段标记完整性、台账↔保留段一致性（运行中 adapter 会自动同步修复）。

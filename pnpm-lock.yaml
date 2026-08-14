@@ -10,6 +10,9 @@ importers:
 
   packages/dsh-agent-plugins:
     dependencies:
+      '@deepseek-ai/schemastery':
+        specifier: ^3.18.1
+        version: 3.18.1
       yaml:
         specifier: ^2.4.2
         version: 2.9.0

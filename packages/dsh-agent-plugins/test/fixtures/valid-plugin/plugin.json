@@ -1,0 +1,10 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "hello-world",
+  "version": "1.2.3",
+  "description": "A valid test plugin",
+  "author": "test",
+  "homepage": "https://example.com",
+  "license": "MIT",
+  "keywords": ["test"]
+}

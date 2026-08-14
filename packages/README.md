@@ -1,6 +1,10 @@
 # Packages
 
-This directory will contain independently installable DeepSeek Harness plugin packages. It intentionally contains no package scaffold yet.
+This directory contains independently installable DeepSeek Harness plugin packages.
+
+## 当前包
+
+- [`dsh-composer-skill-mention`](dsh-composer-skill-mention/README.md)：实验中；为 DSH Web composer 增加 `$` / `￥` Skill 提及，仅验证 `@deepseek-ai/dsh@0.1.0-rc.6`，尚未发布。
 
 ## 新增包的条件
 

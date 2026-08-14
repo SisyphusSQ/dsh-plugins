@@ -1,0 +1,7 @@
+# dsh-agent-plugins bundle patch: one insert row over the empty profile root.
+# The row is addressed by later layers (profile cordis.patch.yml, home patch)
+# through its id; the last write wins per row.
+
+- insert:
+    - id: agent-plugins
+      name: 'dsh-agent-plugins'

@@ -1,0 +1,17 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
+  "mcpServers": {
+    "tools": {
+      "type": "stdio",
+      "command": "./bin/tools",
+      "args": ["--root", "${PLUGIN_ROOT}", "--data", "${PLUGIN_DATA}"],
+      "env": { "MODE": "prod" },
+      "cwd": "${PLUGIN_ROOT}"
+    },
+    "remote": {
+      "type": "streamable-http",
+      "url": "https://mcp.example.com/sse",
+      "headers": { "Authorization": "Bearer xyz" }
+    }
+  }
+}

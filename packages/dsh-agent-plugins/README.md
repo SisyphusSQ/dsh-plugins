@@ -17,13 +17,27 @@ Agent Plugins 1.0.0 适配插件：让 [DeepSeek Harness (DSH)](https://github.c
 | 阶段 | 状态 |
 | --- | --- |
 | M0 挂载点 + 数据通道 + 热重载机制核实 | ✅ |
-| M1 CLI + store + 台账 + manifest/mcp.json 校验 | 计划中 |
+| M1 CLI + store + 台账 + manifest/mcp.json 校验 | ✅（规范 fixture 39/39 通过） |
 | M2 skills provider（含组件级启停） | 计划中 |
 | M3 MCP 映射 + patch 同步 + 热重载 E2E | 计划中 |
 | M4 护栏 / doctor / 文档 | 计划中 |
 | M5 client 面板（列表 + 两级 toggle + MCP 同列） | 计划中 |
 
 设计文档见 [docs/design/dsh-agent-plugins.md](../../docs/design/dsh-agent-plugins.md)。
+
+## CLI（M1 已实现）
+
+```sh
+agent-plugins install <dir|zip|git-url>   # 校验通过才入 store；同 name 替换（PLUGIN_DATA 保留）
+agent-plugins uninstall <name>            # 删文件与台账，PLUGIN_DATA 保留
+agent-plugins update [name...|--all]      # 按台账来源重取（git/dir/zip）
+agent-plugins enable|disable <name>       # 插件级启停
+agent-plugins enable|disable <name> --skill <n> | --mcp <server>   # 组件级启停
+agent-plugins list [--json]
+agent-plugins doctor
+```
+
+store 位于 `$DSH_HOME/agent-plugins/`，台账 `installed.json`（插件级 `enabled` + 组件级 `skills.*.enabled` / `mcp.*.enabled`，两级均默认 true）。CLI 与 host adapter / 面板共享同一 lib 函数。
 
 ## 开发
 

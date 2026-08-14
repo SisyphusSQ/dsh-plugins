@@ -186,6 +186,11 @@ export function mapMcpServers(
           env[key] = expandPlaceholders(value, ctx)
         }
       }
+      // Spec §9.1: the client merges env on top of a SCRUBBED ambient env, so
+      // the adapter must inject both variables explicitly; the server's own
+      // env keys can never collide (reserved check above).
+      env[PLUGIN_ROOT_ENV] = ctx.pluginRoot
+      env[PLUGIN_DATA_ENV] = ctx.pluginDataDir
       const args = server.args?.map((arg) => expandPlaceholders(arg, ctx)) ?? []
       configs.push({
         serverName: qualified,

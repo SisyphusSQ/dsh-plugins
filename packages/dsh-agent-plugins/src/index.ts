@@ -23,9 +23,10 @@ import { join } from 'node:path'
 import { Remote, TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol'
 import type { Context } from '@deepseek-ai/cordis'
 import type { SkillProviderControl } from '@deepseek-ai/dsh-skill'
-import { STORE_DIRNAME, loadLedger, resolveDshHome, type Ledger } from './store.js'
+import { DATA_DIRNAME, STORE_DIRNAME, loadLedger, resolveDshHome, type Ledger } from './store.js'
 import { AgentPluginsSkillProvider } from './skill-provider.js'
 import { watchStoreTree } from './store-watch.js'
+import { syncMcpRows } from './mcp-sync.js'
 
 /** Cordis plugin name used by loader diagnostics. */
 export const name = 'agent-plugins'
@@ -42,6 +43,10 @@ export interface AgentPluginsConfig {
   stores?: string[]
   /** Whether the skills half is enabled. */
   skillsEnabled?: boolean
+  /** Whether the MCP half is enabled. */
+  mcpEnabled?: boolean
+  /** Home patch file receiving the generated MCP rows; default `$DSH_HOME/cordis.patch.yml`. */
+  managedPatch?: string
 }
 
 /**
@@ -63,6 +68,8 @@ export default class AgentPluginsService extends TypertRemoteService<never> {
     const home = resolveDshHome()
     const stores = config.stores ?? [join(home, STORE_DIRNAME)]
     const primaryStore = stores[0]
+    const dataRoot = join(home, DATA_DIRNAME)
+    const managedPatch = config.managedPatch ?? join(home, 'cordis.patch.yml')
     this.ledger = { version: 1, plugins: {} }
 
     this.provider = new AgentPluginsSkillProvider(ctx, {
@@ -79,17 +86,33 @@ export default class AgentPluginsService extends TypertRemoteService<never> {
       }))
     }
 
-    // Store watch: refresh the ledger and invalidate skill catalogs so
-    // installs/uninstalls/toggles take effect without a restart. The watcher
-    // debounces and coalesces events itself.
-    const onStoreChange = (): void => {
-      if (primaryStore === undefined) return
-      void loadLedger(primaryStore).then(({ ledger }) => {
+    const mcpEnabled = config.mcpEnabled ?? true
+
+    // Reconciliation: refresh the ledger, invalidate skill catalogs, and
+    // rewrite the managed MCP rows. Runs once at apply() (full reconcile)
+    // and on every store change (incremental; the watcher debounces).
+    const reconcile = async (): Promise<void> => {
+      if (primaryStore !== undefined) {
+        const { ledger } = await loadLedger(primaryStore)
         this.ledger = ledger
-        this.control?.invalidate()
-      })
+      }
+      this.control?.invalidate()
+      if (mcpEnabled) {
+        const result = await syncMcpRows({
+          storeDirs: stores,
+          dataRoot,
+          managedPatch,
+          readLedger: () => this.ledger,
+          warn: (message) => ctx.logger.warn(message),
+        })
+        if (result.error !== undefined) ctx.logger.warn(`agent-plugins: MCP sync failed: ${result.error}`)
+      }
     }
-    const disposers = stores.map((store) => watchStoreTree(store, onStoreChange))
+    void reconcile()
+
+    const disposers = stores.map((store) => watchStoreTree(store, () => {
+      void reconcile()
+    }))
     ctx.effect(() => () => {
       for (const dispose of disposers) dispose()
     })

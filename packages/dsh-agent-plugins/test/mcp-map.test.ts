@@ -76,7 +76,11 @@ test('mapMcpServers maps valid stdio and http servers', async () => {
   assert.equal(stdio?.command, join(ctx.pluginRoot, 'bin/tools'))
   assert.deepEqual(stdio?.args, ['--root', ctx.pluginRoot, '--data', ctx.pluginDataDir])
   assert.equal(stdio?.cwd, ctx.pluginRoot)
-  assert.deepEqual(stdio?.env, { MODE: 'prod' })
+  assert.deepEqual(stdio?.env, {
+    MODE: 'prod',
+    PLUGIN_ROOT: ctx.pluginRoot,
+    PLUGIN_DATA: ctx.pluginDataDir,
+  })
   const http = configs.find((c) => c.transport === 'streamable-http')
   assert.equal(http?.url, 'https://mcp.example.com/sse')
   assert.deepEqual(http?.headers, { Authorization: 'Bearer xyz' })

@@ -10,7 +10,18 @@
 
 包形态：**一个 npm 包三合一**——`dsh.bundle.patch`（host 半）+ `exports["./client"]`（面板 client 半）+ `bin.agent-plugins`（CLI）。
 
-## M0 结论（2026-08-14 源码级核实 + 部分 E2E）
+## M0 结论（2026-08-14 源码级核实 + E2E 实测）
+
+### 0. M0 E2E 实测结果（隔离实例 DSH_HOME=/tmp/dsh-ap-test，端口 3090）
+
+| 验证项 | 结果 |
+| --- | --- |
+| host 半激活 + RPC 通道 | ✅ `POST /api/agentPlugins/ping` 返回 `{ok:true, service:"agentPlugins", version:"0.1.0"}` |
+| client 半打包进 boot graph | ✅ `/plugins/dsh-agent-plugins/client.js` 200，`__ModuleLoader__.load` 格式 |
+| `dsh plugin --profile web add file:` | ✅ 自动 reconcile 进 `dsh.profile.bundles` |
+| 组合树 | ✅ `--dump-config` 含 `agent-plugins` 行 |
+| patch 热重载（增/删/坏行） | ✅ 见 §3 表 |
+| 挂载点 | 源码 + 实时 slot 树确认；面板可见性待浏览器人工验收 |
 
 ### 1. 挂载点：`settings.plugins.tab`（已确认）
 
@@ -62,18 +73,27 @@ rpc.call('/api', 'agentPlugins/list', { args: {} }, signal) // payload 必须恰
 - 参数名不要撞 typert lookup 定义（`agent`/`sessionId` 等有 lookup provider 的名会被注入改写）；面板 API 用普通 JSON 参数名。
 - 端点：`<namespace>/<method>`，namespace 默认 = serviceKey（`agentPlugins`）。
 
-### 3. patch 热重载（机制已确认，E2E 待实测）
+### 3. patch 热重载（机制已确认，E2E 已实测 ✅）
 
 launcher（`dsh/lib/profile-boot-*.js`）boot 后：
 1. 无条件创建 `@deepseek-ai/cordis-plugin-hmr`（`config: {root: []}`——只做 config 级监听，**不做插件级 HMR**，与需求文档风险 3 一致）；
 2. 对两个文件调 `watchUserPatches`：profile 的 `cordis.patch.yml` + `$DSH_HOME/cordis.patch.yml`；
 3. `hmr.registerConfig`（chokidar 精确监听 add/change/unlink）→ `entry.update()` 热替换根 Include 的 patches。
 
-即：**写 `$DSH_HOME/cordis.patch.yml` 保留段 → 热生效**的链路在内核层面成立。`dsh-mcp-client` 自身支持 HMR hot-swap（dispose 旧实例建新实例，同名 serverName 工具名不变）。
+**E2E 实测（2026-08-14，隔离实例 3090）**：
+
+| 场景 | 结果 |
+| --- | --- |
+| 运行中向 home patch 写入 insert 行（真实包） | ✅ entry 热创建并激活（`pluginInventory/list` 可见 `fiberPhase: active`） |
+| 删除 home patch 文件 | ✅ 对应 entry 热移除，实例继续服务 |
+| 运行中写入坏行（包不存在） | ✅ 实例不崩（entry 静默 failed，无日志） |
+| **boot 时** home patch 含坏行 | ❌ **fail loud，整个 profile 起不来**（`Cannot find package`）——坐实"文件坏 = 启动失败"语义 |
+| client-modules boot graph rev | 按**包名**去重（两个 entry 同名包只留一份），rev 不变是正常行为，不是热重载失效 |
 
 **硬性要求（文档补充）**：`loadOptionalPatches` 对 home patch 是"文件坏 → boot fail loud"，且整个文件按单个 YAML 数组解析。因此 patch-sync 必须：
 - 保留段内只增删自己的行，文件始终是合法 YAML 顶层数组；
-- **原子写（tmp + rename）**，避免热重载窗口期的半截文件让 profile 起不来。
+- **原子写（tmp + rename）**，避免热重载窗口期的半截文件让 profile 起不来；
+- 写入的 MCP 行引用的 `dsh-mcp-client` 包必须存在于 profile（官方包，必然成立）。
 
 ### 4. 顺带发现的上游缺陷（待提 PR）
 

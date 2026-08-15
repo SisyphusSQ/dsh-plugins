@@ -1,11 +1,13 @@
 /** Model-facing cross-session capabilities for DeepSeek Harness. */
 import type { Context } from '@deepseek-ai/cordis'
-import type { Agent } from '@deepseek-ai/dsh-agent'
+import type { Agent, PreStepDecision } from '@deepseek-ai/dsh-agent'
 import type {} from '@deepseek-ai/dsh-host-apiproxy'
 import { HarnessError } from '@deepseek-ai/dsh-llm'
 import type { SessionId } from '@deepseek-ai/dsh-session'
+import type {} from '@deepseek-ai/dsh-session-reference'
 import { TypertLookupFailure } from '@deepseek-ai/dsh-typert-protocol'
 import z from '@deepseek-ai/schemastery'
+import { injectMentionedSessionReferences } from './inject.js'
 import {
   createSessionToolDefinitions,
   defaultSessionToolsConfig,
@@ -78,8 +80,44 @@ export function apply(ctx: Context, config: Partial<SessionToolsConfig> = {}): v
   }, resolvedConfig)
 
   for (const definition of definitions) ctx.tools.register(definition)
+
+  ctx.on(
+    'agent/pre-step',
+    async ({ agent, messages, signal }, next) => {
+      const decision: PreStepDecision = await next()
+      if (decision.kind === 'reject') return decision
+      signal.throwIfAborted()
+      return injectMentionedSessionReferences({
+        agent,
+        claimedMessages: messages,
+        decision,
+        prepare: (target, content, references, prepareSignal) => (
+          ctx.sessionReferenceResolver.prepare(
+            target,
+            content,
+            references,
+            prepareSignal,
+          )
+        ),
+        signal,
+      })
+    },
+    { prepend: true },
+  )
 }
 
+export { listSessionMentionCandidates } from './client/candidates.js'
+export { createSessionMentionSource } from './client/source.js'
+export { injectMentionedSessionReferences } from './inject.js'
+export {
+  injectedSessionIds,
+  sessionReferencesFromMessages,
+} from './mentions.js'
 export { createSessionToolDefinitions, defaultSessionToolsConfig } from './tools.js'
+export {
+  encodeSessionReferenceUri,
+  formatSessionReferenceMention,
+  SESSION_REFERENCE_SCHEME,
+} from './uri.js'
 export type { SessionToolServices, SessionToolsConfig } from './tools.js'
 export type { SessionRelayMessageSource } from './message-source.js'

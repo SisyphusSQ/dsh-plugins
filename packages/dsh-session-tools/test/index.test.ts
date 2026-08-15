@@ -12,6 +12,7 @@ import { defaultSessionToolsConfig } from '../lib/tools.js'
 
 test('apply registers the complete six-tool surface', () => {
   const registered: ToolDefinition[] = []
+  const events: string[] = []
   const context = {
     tools: {
       register: (definition: ToolDefinition) => {
@@ -25,9 +26,14 @@ test('apply registers the complete six-tool surface', () => {
     sessionQuery: {},
     sessionReferenceResolver: {},
     typert: { lookups: { get: () => undefined } },
+    on: (event: string) => {
+      events.push(event)
+      return () => undefined
+    },
   } as unknown as Context
 
   apply(context, defaultSessionToolsConfig)
+  assert.deepEqual(events, ['agent/pre-step'])
 
   assert.equal(name, 'session-tools')
   assert.deepEqual(inject, [
@@ -86,6 +92,7 @@ test('Typert agent lookup policy failures become stable Harness tool errors', as
         }),
       },
     },
+    on: () => undefined,
   } as unknown as Context
   apply(context, defaultSessionToolsConfig)
   const send = registered.find((definition) => definition.name === 'send_message_to_session')

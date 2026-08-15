@@ -157,6 +157,15 @@ importers:
       '@deepseek-ai/dsh-agent':
         specifier: 0.1.0-rc.6
         version: 0.1.0-rc.6(b0514d7a320728b6d8f5a31eb3960e10)
+      '@deepseek-ai/dsh-api-remotes':
+        specifier: 0.1.0-rc.6
+        version: 0.1.0-rc.6(963f21f11cddd09def26a2473cddd8c5)
+      '@deepseek-ai/dsh-client-runtime':
+        specifier: 0.1.0-rc.6
+        version: 0.1.0-rc.6(5ee287bd07c00b3171c7ee342e9431a4)
+      '@deepseek-ai/dsh-client-ui-input-trigger':
+        specifier: 0.1.0-rc.6
+        version: 0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-client-locale@0.1.0-rc.6(9e8db6c5abfb5dfda585a92ec8fe7fec))(@deepseek-ai/dsh-client-runtime@0.1.0-rc.6(5ee287bd07c00b3171c7ee342e9431a4))(@deepseek-ai/dsh-client-ui-primitives@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-client-ui-slots@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))(react@18.3.1)
       '@deepseek-ai/dsh-host-apiproxy':
         specifier: 0.1.0-rc.6
         version: 0.1.0-rc.6(e9efce95e5e57cd2168691beebd30eb1)
@@ -184,6 +193,9 @@ importers:
       '@types/node':
         specifier: ^22.0.0
         version: 22.20.1
+      tsdown:
+        specifier: ^0.15.0
+        version: 0.15.12(@emnapi/core@1.11.3)(@emnapi/runtime@1.11.3)(typescript@5.9.3)
       typescript:
         specifier: ^5.6.0
         version: 5.9.3

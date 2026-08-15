@@ -1,6 +1,6 @@
 # dsh-session-tools
 
-DeepSeek Harness 的模型侧会话能力插件。它提供六个真实工具，并对读取、生命周期变更和跨会话投递执行 Root Agent 权威校验与可配置 Approval。
+DeepSeek Harness 的会话能力插件。同一包提供六个模型侧工具，以及 Web composer 的 `@会话` 候选与 `pre-step` 快照注入。
 
 状态：实验中，尚未发布到 npm。
 
@@ -16,6 +16,14 @@ DeepSeek Harness 的模型侧会话能力插件。它提供六个真实工具，
 | `send_message_to_session` | 给另一普通会话排队一个带来源的独立 follow-up turn | 是 |
 
 工具仅允许当前精确、正在运行且由 Agent Loop 驱动的 Root Agent 调用。Subagent 始终拒绝。跨会话消息使用 `source.kind = "session-relay"`，不会伪装成直接用户输入。
+
+## `@会话`
+
+Web 输入框的 `@` 会多一组普通会话候选（排除当前会话和 subagent）。选中后写入 `@[标题](dsh-session:…)`。Host 在 `agent/pre-step` 解析这些 mention，调用 `sessionReferenceResolver.prepare()`，把不可信快照插到本步消息前面。
+
+人主动 `@` 不走 `read_session` 的 Approval。手打 `@标题` 不会注入；必须选出带 URI 的 markdown，或粘贴规范 `dsh-session:` URI。同一轮若 `read_session` 已经注入同一 sessionId，不再重复准备。
+
+rc.6 没有公开 prompt 预处理钩子，因此持久化的用户消息仍会留下 markdown URI，不会改写成 TUI 那样的纯 `@标题`。无效引用和 `prepare()` 失败会抛出，不吞掉。
 
 ## 本地构建与安装
 
@@ -57,8 +65,8 @@ DSH rc.6 的 `approval.policy=never`（Web 的 Full access preset）会自动拒
 
 | DSH 版本 | 状态 | 已验证 |
 | --- | --- | --- |
-| `0.1.0-rc.6` | 本地兼容 | typecheck/build、17 个 Node 测试、npm tarball 内容、隔离 `web` profile 安装、插件树合成、真实 Web 启动与模型六工具调用、热/冷 relay、`session-relay` 来源、`session-reference` 注入、Fork lineage、Workspace Write Approval UI 与 asked/decided 审计 |
+| `0.1.0-rc.6` | 本地兼容 | typecheck/build、29 个 Node 测试、npm tarball 内容、隔离 `web` profile 安装、插件树合成、真实 Web 启动与模型六工具调用、热/冷 relay、`session-relay` 来源、`session-reference` 注入、Fork lineage、Workspace Write Approval UI 与 asked/decided 审计。隔离 Web 上 `@列出` 弹出 `session` 组、选中写入 `dsh-session:` mention、发送后出现跨会话召回。持久化用户消息仍保留 markdown URI |
 
-以上是 `dsh-session-tools` 的真实 DSH Web E2E。分屏和 `@会话` Client 包仍未实现或验证，npm registry 发布验证也未完成，因此该结论不构成整个路线图完成或发布证明。
+六个工具与 `@会话` 的 rc.6 Live E2E 已经完成。分屏仍等待 DSH Core 多会话 API，就绪后也落在本包，不再单开包。npm registry 发布验证未完成。
 
 完整的权威、生命周期、relay、分屏 Core 契约和剩余验收项见[设计文档](../../docs/design/dsh-session-capabilities.md)。

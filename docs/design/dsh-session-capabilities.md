@@ -1,9 +1,9 @@
 # DSH 会话能力套件设计
 
-- 状态：`dsh-session-tools` 已完成 rc.6 Live E2E，分屏与 `@会话` Client 增强等待 DSH Core API
+- 状态：`dsh-session-tools` 已完成 rc.6 工具与 `@会话` Live E2E；分屏仍等待 DSH Core API
 - 首个验证目标：`@deepseek-ai/dsh@0.1.0-rc.6`
 - 设计日期：2026-08-14
-- 对应插件包：`dsh-session-tools`、`dsh-session-split-view`（依赖后续 DSH Core API）
+- 对应插件包：`dsh-session-tools`（工具、`@会话` 菜单与 pre-step 注入；分屏就绪后也落本包）
 
 ## 1. 目标
 
@@ -22,10 +22,10 @@ DSH 的 Session Log 是会话的持久事实，但 rc.6 的模型侧缺少通用
 
 | 交付物 | 所在仓库 | 责任 | rc.6 状态 |
 | --- | --- | --- | --- |
-| `dsh-session-tools` | 本仓库 `packages/` | 六个模型工具、授权、快照读取、跨会话 relay | 已完成 Live E2E，未发布 |
+| `dsh-session-tools` 模型工具 | 本仓库 `packages/dsh-session-tools` | 六个模型工具、授权、快照读取、跨会话 relay | 已完成 Live E2E，未发布 |
+| `dsh-session-tools` `@会话` | 同一包的 Web client + host `pre-step` | 输入框候选、`dsh-session:` mention、快照注入 | 已完成 Live E2E；日志保留 markdown URI；未发布 |
 | 多会话 UI Core 扩展 | DSH 上游 | 多会话保活、任意会话渲染、根布局扩展槽 | 需要新增 |
-| `dsh-session-split-view` | 本仓库 `packages/` | 主辅双会话 UI、响应式抽屉、会话选择 | 等待 Core API |
-| `dsh-session-reference-web` | 后续独立包 | 输入框 `@会话` 选择和提交预处理 | 等待公开提交钩子 |
+| 分屏 UI | 同一包，待 Core API | 主辅双会话 UI、响应式抽屉、会话选择 | 等待 Core API，不单开包 |
 
 需要修改 DSH Core 才成立的功能，在兼容版本发布前不得以正式纯插件包放入 `packages/`。
 
@@ -40,10 +40,10 @@ flowchart LR
     Tools --> Lookup["ctx.typert.lookups: agent\n活跃复用或冷会话恢复"]
     Lookup --> Followup["Agent.followup\nsession-relay"]
 
-    Web["DSH Web"] --> Split["dsh-session-split-view"]
-    Split --> Core["DSH Core\nretain + SessionPane + secondary-pane"]
-    Core --> Main["主 Session Scope"]
-    Core --> Side["辅助 Session Scope"]
+    Web["DSH Web"] --> Mention["dsh-session-tools @会话"]
+    Mention --> Triggers["inputTriggers @ source"]
+    Mention --> PreStep["agent/pre-step + prepare()"]
+    PreStep --> Reference
 ```
 
 ## 4. `dsh-session-tools`
@@ -151,15 +151,16 @@ current session 持有隐式 lease。辅助 lease 保活 history、mux、Agent s
 
 ## 6. `@会话` 引用增强
 
-`@deepseek-ai/dsh-session-reference` 是快照准备服务，不会自动接管 Web composer。`dsh-session-reference-web` 需要：
+`@deepseek-ai/dsh-session-reference` 是快照准备服务，不会自动接管 Web composer。rc.6 没有公开 prompt 预处理钩子，本能力落在 `dsh-session-tools` 同一包，而不是新建 Client 包：
 
-- Client 会话候选搜索和 mention 编码；
-- Host Remote adapter 调用 `listCandidates()` / `prepare()`；
-- prompt 提交前把 `dsh-session:` URI 转成结构化 references；
-- 每次最多三个来源、每来源 65 KiB；
-- 无公开 prompt preprocess hook 时，先向 Core 补通用钩子。
+- Client 注册 `@` source（`name: "session"`），候选来自侧栏会话列表，排除当前会话和 `origin=subagent`；
+- 选中后写入 `formatSessionReferenceMention()` 的 `@[标题](dsh-session:…)`；
+- Host 在 `agent/pre-step` 只解析 `source.kind = user` 的直接消息，调用 `prepare()`，把快照插到本步消息前面；
+- 每次最多三个来源、每来源 65 KiB，由 resolver 强制；
+- 与 `read_session` 已注入的同一 sessionId 去重；
+- 持久化用户消息仍保留 markdown URI，不改写为 TUI 的纯 `@标题`。
 
-挂载服务本身不等于零代码启用 `@会话`。
+挂载 resolver 本身不等于启用 `@会话`；必须同时加载本包的 Web client 与 host `pre-step`。
 
 ## 7. 验证策略
 
@@ -171,7 +172,8 @@ current session 持有隐式 lease。辅助 lease 保活 history、mux、Agent s
 - 读取：快照通过 `deferContext` 注入，正文不复制到工具结果；
 - ApiProxy：参数继承、RPC 错误、Fork 锚点；
 - Relay：冷/热 lookup、source provenance、自发消息拒绝、一次投递；
-- Cordis：六个工具注册和卸载。
+- Cordis：六个工具注册、`agent/pre-step` 挂载和卸载；
+- `@会话`：规范 URI 往返、只解析直接用户消息、与 `read_session` 去重、候选过滤/排序、选中写入 markdown mention。
 
 ### 7.2 真实 DSH 验证
 
@@ -182,7 +184,8 @@ current session 持有隐式 lease。辅助 lease 保活 history、mux、Agent s
 - 至少两个普通会话间的创建、读取、重命名、Fork 和 relay；
 - 活跃目标与冷目标各一次 relay；
 - Approval UI 与 Session Log 审计回读；
-- npm pack 内容和 `cordis.patch.yml` 安装回读。
+- npm pack 内容和 `cordis.patch.yml` 安装回读；
+- Web `@` 弹出普通会话候选、选中写入规范 mention，发送后注入 `session-reference`。
 
 类型检查、构建、Node fixture 和本地链接验证不得描述为真实 DSH Web E2E。
 
@@ -204,12 +207,19 @@ current session 持有隐式 lease。辅助 lease 保活 history、mux、Agent s
 - 验证 rc.6 Full access 的 `approval.policy=never` 会自动拒绝 Approval request；受信 Full access profile 要调用默认需审批的工具，必须由部署者显式关闭对应插件审批字段，Root Agent 权威校验仍然生效；
 - Live E2E 结束后停止独立端口的临时 Web 服务。
 
-因此，`dsh-session-tools` 已满足本节 7.2 的 rc.6 Live E2E。npm registry 发布验证仍未完成；分屏与 `@会话` Client 包尚未实现，不能据此描述为整个会话能力套件完成。
+截至 2026-08-15，同一隔离 `web` profile 上还完成：
+
+- 真实 Web 输入 `@列出`，菜单出现 `session` 组与「列出当前会话信息」；
+- 选中后 composer 写入 `@[列出当前会话信息](dsh-session:…)`；
+- 发送后页面出现「跨会话召回」，模型未再调用工具即可根据快照说明被引会话；
+- 持久化用户消息仍保留 markdown URI，与 rc.6 缺少 prompt 预处理钩子的已知限制一致。
+
+因此，`dsh-session-tools` 的六个工具与 `@会话` 已满足本节 7.2 的 rc.6 Live E2E。npm registry 发布验证仍未完成；分屏仍等待 Core API，不能据此描述为整个会话能力套件完成。
 
 ## 8. 兼容与发布
 
 - `dsh-session-tools` 首个验证目标为 rc.6；只有实际验证过的版本才能写入兼容表；
-- `dsh-session-split-view` 的最低版本是首个发布多会话 Core API 的 DSH 版本，当前不得猜测；
+- 分屏的最低版本是首个发布多会话 Core API 的 DSH 版本，当前不得猜测；落地时扩展 `dsh-session-tools`，不新建包；
 - DSH 仍为 developer preview，所有 peerDependency、接口和 E2E 证据按精确版本记录；
 - 没有可安装产物、profile 安装结果和版本兼容记录时不得创建 Release。
 

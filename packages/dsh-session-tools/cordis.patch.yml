@@ -1,5 +1,6 @@
-# dsh-session-tools mounts the existing bounded snapshot resolver and then the
-# model-facing tool adapter. Row order is documentary; Cordis activation waits
+# dsh-session-tools mounts the bounded snapshot resolver, then the model-facing
+# tools and @session pre-step adapter. The Web client entry is declared on the
+# package, not this patch. Row order is documentary; Cordis activation waits
 # for injected services.
 
 - insert:

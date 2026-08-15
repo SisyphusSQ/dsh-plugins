@@ -1,6 +1,6 @@
 # Packages
 
-This directory contains independently installable DeepSeek Harness plugin packages.
+This directory contains independently installable DeepSeek Harness plugin packages. Packages remain experimental until their README records a completed DSH profile verification.
 
 ## 当前包
 
@@ -9,6 +9,7 @@ This directory contains independently installable DeepSeek Harness plugin packag
 | [`dsh-agent-plugins`](dsh-agent-plugins/README.md) | 实验中，待真实 profile 验收 | Agent Plugins 标准包适配、CLI、host/client 面板 | `0.1.0-rc.6` |
 | [`dsh-composer-skill-mention`](dsh-composer-skill-mention/README.md) | 实验中，未发布 | DSH Web composer 的 `$` / `￥` Skill 提及 | `0.1.0-rc.6` |
 | [`dsh-session-tools`](dsh-session-tools/README.md) | 实验中，未发布 | 会话列表、快照读取、创建、重命名、Fork、跨会话 relay | `0.1.0-rc.6` |
+| [`dsh-thinking-collapse`](dsh-thinking-collapse/README.md) | 实验中，已完成隔离 profile 验收 | 聊天视图的 Codex 式思考折叠 | `0.1.0-rc.6` |
 
 ## 新增包的条件
 
@@ -17,7 +18,7 @@ This directory contains independently installable DeepSeek Harness plugin packag
 ```text
 packages/dsh-example/
 ├── src/
-├── test/
+├── test/ or tests/
 ├── README.md
 ├── package.json
 └── cordis.patch.yml

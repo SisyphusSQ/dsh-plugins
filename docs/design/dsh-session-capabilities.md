@@ -22,8 +22,8 @@ DSH 的 Session Log 是会话的持久事实，但 rc.6 的模型侧缺少通用
 
 | 交付物 | 所在仓库 | 责任 | rc.6 状态 |
 | --- | --- | --- | --- |
-| `dsh-session-tools` 模型工具 | 本仓库 `packages/dsh-session-tools` | 六个模型工具、授权、快照读取、跨会话 relay | 已完成 Live E2E，未发布 |
-| `dsh-session-tools` `@会话` | 同一包的 Web client + host `pre-step` | 输入框候选、`dsh-session:` mention、快照注入 | 已完成 Live E2E；日志保留 markdown URI；未发布 |
+| `dsh-session-tools` 模型工具 | 本仓库 `packages/dsh-session-tools` | 六个模型工具、授权、快照读取、跨会话 relay | 已完成 Live E2E；`0.1.0` 已发布 |
+| `dsh-session-tools` `@会话` | 同一包的 Web client + host `pre-step` | 输入框候选、`dsh-session:` mention、快照注入 | 已完成 Live E2E；日志保留 markdown URI；`0.1.0` 已发布 |
 | 多会话 UI Core 扩展 | DSH 上游 | 多会话保活、任意会话渲染、根布局扩展槽 | 需要新增 |
 | 分屏 UI | 同一包，待 Core API | 主辅双会话 UI、响应式抽屉、会话选择 | 等待 Core API，不单开包 |
 
@@ -214,7 +214,7 @@ current session 持有隐式 lease。辅助 lease 保活 history、mux、Agent s
 - 发送后页面出现「跨会话召回」，模型未再调用工具即可根据快照说明被引会话；
 - 持久化用户消息仍保留 markdown URI，与 rc.6 缺少 prompt 预处理钩子的已知限制一致。
 
-因此，`dsh-session-tools` 的六个工具与 `@会话` 已满足本节 7.2 的 rc.6 Live E2E。npm registry 发布验证仍未完成；分屏仍等待 Core API，不能据此描述为整个会话能力套件完成。
+因此，`dsh-session-tools` 的六个工具与 `@会话` 已满足本节 7.2 的 rc.6 Live E2E。`dsh-session-tools@0.1.0` 已于 2026-08-15 完成 npm registry 发布、版本回读与隔离 profile 安装；分屏仍等待 Core API，不能据此描述为整个会话能力套件完成。
 
 ## 8. 兼容与发布
 

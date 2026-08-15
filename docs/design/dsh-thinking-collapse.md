@@ -1,5 +1,7 @@
 # DSH 思考折叠插件设计
 
+- 状态：已完成 rc.6 实现与隔离 Web profile 验证；`dsh-thinking-collapse@0.1.0` 已于 2026-08-15 发布到 npm registry，并完成 registry 版本与隔离 profile 安装回读
+
 ## 1. 背景与目标
 
 DeepSeek Harness（DSH）`0.1.0-rc.6` 的聊天视图会把 reasoning 渲染为可展开的 `Think` 行。默认折叠态仍显示思考首行，流式期间显示最新一行；正文开始后不会执行一次明确的自动折叠。工具调用不是 `assistant-step` 里的一块 Markdown，而是独立的 `tool-call` Chat Node，由 `@deepseek-ai/dsh-client-ui-tool` 画在思考行旁边。

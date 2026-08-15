@@ -1,6 +1,6 @@
 # dsh-worktree-workspaces 设计与验证记录
 
-- 状态：已完成 rc.6 实现与隔离 profile 验证，尚未发布到 npm registry
+- 状态：已完成 rc.6 实现与隔离 profile 验证；`dsh-worktree-workspaces@0.1.0` 已于 2026-08-15 发布到 npm registry，并完成 registry 版本与隔离 profile 安装回读
 - 目标包：`dsh-worktree-workspaces`
 - 验证基线：`@deepseek-ai/dsh@0.1.0-rc.6`
 - 记录日期：2026-08-15
@@ -55,4 +55,4 @@ Web 选择器的当前界面证据见 [`picker.png`](../../packages/dsh-worktree
 
 - 当前只声明兼容 `@deepseek-ai/dsh@0.1.0-rc.6`。
 - DSH developer preview 升级后，必须重新核对命令、工具、Workspace 与 client-runtime 契约，并重做真实 profile 验证。
-- npm tarball 内容、registry 安装和 registry 版本回读属于发布验证；完成之前不创建 GitHub Release。
+- 2026-08-15 已完成 npm tarball 内容、registry 安装和 registry 版本回读；GitHub Release 以同一 `v0.1.0` tag 记录首发结果。

@@ -19,7 +19,7 @@ interface ParsedWorktreeCommand {
   branch?: string;
 }
 
-const USAGE = "用法：/worktree [status | new [branch]]";
+const USAGE = "用法：/worktree [status | new [可选分支]]";
 
 function parseInput(rawInput: string): ParsedWorktreeCommand {
   const input = rawInput.trim();
@@ -87,7 +87,7 @@ export function createWorktreeCommand(config: WorktreeCommandConfig): CommandDef
   return {
     name: "worktree",
     description: "创建 Git worktree 并注册为 DSH Workspace",
-    input: { hint: "status | new [branch]" },
+    input: { hint: "status | new [可选分支]" },
     async handler(invocation) {
       const cwd = invocation.agent.session.header.cwd;
       if (cwd === undefined) {

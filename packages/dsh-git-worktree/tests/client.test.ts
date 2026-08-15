@@ -6,6 +6,7 @@ import type { WorkspaceView } from "@deepseek-ai/dsh-api-remotes/client";
 import {
   createWorktreeDecoration,
   defaultWorktreeBranch,
+  inject,
   managedWorkspaceTitle,
   worktreeOptions,
 } from "../src/client.js";
@@ -27,6 +28,7 @@ function workspace(
 }
 
 test("menu uses native rows for local, current worktree, and new worktree", () => {
+  assert.deepEqual(inject, ["workspaces", "sessions", "remote", "remote.commands", "commandUi"]);
   const local = workspace("local", "/repo/fixture-repo", "fixture-repo", []);
   const managed = workspace(
     "managed",

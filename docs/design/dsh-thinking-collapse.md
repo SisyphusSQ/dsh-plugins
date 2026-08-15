@@ -6,10 +6,11 @@ DeepSeek Harness（DSH）`0.1.0-rc.6` 的聊天视图会把 reasoning 渲染为�
 
 `dsh-thinking-collapse` 将聊天视图调整为 Codex 式交互：
 
-- reasoning 是当前流式尾块时，完整内容持续可见；
+- reasoning 是当前流式尾块时，标题以紧凑时长显示“已处理 <duration>”，完整内容持续可见；
 - 后续正文、工具调用或其他 block 出现，或者当前 step 结束时，自动折叠；
 - 折叠态只显示本地化的“耗时 <duration>”状态、右侧箭头和底部分隔线，不显示任何思考内容预览；
-- 用户可以在结束后点击展开或再次收起；
+- 用户可以在结束后点击展开；标题仍保持“耗时 <duration>”，箭头向下，分隔线固定在标题下方，完整 reasoning 以 Markdown 展示并保留原字号和颜色；
+- 用户可以再次点击收起，标题文案不随展开状态变化；
 - 只影响聊天视图，不修改轨迹视图、DSH Host 行为或模型请求。
 
 本插件的目标是一个可独立安装、可卸载、可验证的正式 DSH client 插件，不通过 DOM 查询、CSS 覆盖或修改 DSH 安装目录实现。
@@ -101,12 +102,14 @@ key 使用 `thinking-collapse-timing`，通过 TypeScript declaration merge 扩�
 
 | 状态 | 展示 | 用户点击 |
 | --- | --- | --- |
-| 流式尾块 | 强制展开完整 reasoning，标题为“思考中”/`Thinking` | 不收起 |
-| 后续 block 已出现 | 自动折叠为“耗时 Ns”/`Worked for Ns` | 可展开 |
-| step 已结束或中断 | 折叠为“耗时 Ns”/`Worked for Ns` | 可展开 |
+| 流式尾块 | 强制展开完整 reasoning，标题为“已处理 Ns”/`Worked for Ns` 并持续计时 | 不收起 |
+| 后续 block 已出现 | 自动折叠为“耗时 Ns”/`Worked for Ns` | 展开后标题仍为“耗时 Ns”/`Worked for Ns` |
+| step 已结束或中断 | 折叠为“耗时 Ns”/`Worked for Ns` | 展开后标题仍为“耗时 Ns”/`Worked for Ns` |
 | 历史计时不可用 | 折叠为“思考过程”/`Thoughts` | 可展开 |
 
-中文时长格式为 `8秒` 或 `1分钟 8秒`，英文为 `8s` 或 `1m 8s`，负值归零。折叠态不再显示左侧思考图标；使用 DSH 原生向右箭头，展开后由 `DisclosureRow` 切换为向下箭头。状态文案由插件自己的中英 locale namespace 提供，可访问性运行状态文案继续复用 conversation locale。
+思考未结束时统一使用紧凑时长 `8s` 或 `1m 8s`；结束后中文时长格式为 `8秒` 或 `1分钟 8秒`，英文为 `8s` 或 `1m 8s`，负值归零。折叠态不再显示左侧思考图标；使用 DSH 原生向右箭头，展开后由 `DisclosureRow` 切换为向下箭头。状态文案由插件自己的中英 locale namespace 提供，可访问性运行状态文案继续复用 conversation locale。
+
+`DisclosureRow` 只负责标题和箭头，展开状态不参与标题文案计算。分隔线由标题容器持有，保证折叠时位于组件底部、展开时仍位于标题与 reasoning 之间。展开内容使用 `MarkdownText`，从而共享安全 Markdown、行内代码和代码块渲染契约；其基础文字保持 DSH reasoning 原有的 `14px / 24px` 与 `label-tertiary` 颜色，不提升为 assistant 正文层级。
 
 ## 7. Renderer 兼容副本
 
@@ -131,6 +134,7 @@ rc.6 没有独立的 reasoning slot，也没有从 `/client` 公共入口导出 
 
 - shadow renderer 抛出运行时错误时，DSH slot renderer 会 abdicate 当前 entry，默认 `priority: 0` renderer 成为下一位候选；
 - 计时 Definition 缺少历史 chunk 时只降级时长，不影响 reasoning 内容本身；
+- 实时 reasoning 先于计时投影到达的短暂窗口显示“已处理 0s”，不会退回另一套可见状态文案；投影到达后立即切换为事件时间；
 - 插件不吞掉 slot 注册冲突。相同 key 和 priority 的第二个插件应在装载阶段明确失败；
 - 插件不读写 localStorage，不创建独立业务数据文件，也不改变 Session log。
 
@@ -141,6 +145,8 @@ rc.6 没有独立的 reasoning slot，也没有从 `/client` 公共入口导出 
 - 计时 fold：正常结束、缺失 block-end、多个 reasoning block、retry、中断和无历史 chunk；
 - 展开状态：流式强制展开、后续 block 自动折叠、结束后用户切换；
 - 隐私形态：折叠 header 不包含 reasoning 首行或末行，只包含耗时状态与箭头；
+- 生命周期文案：流式期间为持续更新的紧凑“已处理 Ns”，结束后折叠与展开均为本地化“耗时 Ns”；
+- 展开形态：分隔线保持在标题下方，完整 reasoning 由 `MarkdownText` 渲染，并保留原 reasoning 字号和颜色；
 - slot：`priority: -1` 赢过默认 `0`；
 - 构建：Host ESM、client loader artifact、类型声明和 npm pack 内容。
 
@@ -152,18 +158,19 @@ dsh plugin --profile web add file:<repo>/packages/dsh-thinking-collapse
 
 安装后重启 `dsh web`，刷新页面并验证：
 
-1. reasoning 流式期间完整可见；
+1. reasoning 流式期间标题显示持续更新的“已处理 Ns”，完整内容可见；
 2. 正文或工具 block 出现后立即折叠；
 3. header 只显示“耗时 Ns”和右侧箭头，整行下方有分隔线；
-4. 点击可以展开与收起；
-5. 刷新后最近会话仍能从事件窗口恢复时长；
-6. 轨迹视图保持不变。
+4. 点击后标题仍为“耗时 Ns”，分隔线下显示保留原字号和颜色的 Markdown reasoning；
+5. 再次点击后标题不变并隐藏 reasoning；
+6. 刷新后最近会话仍能从事件窗口恢复时长；
+7. 轨迹视图保持不变。
 
 真实模型调用可能产生用量，执行前单独确认。类型检查、构建、fixture 或组件测试都不能替代这条真实 Web 验证。
 
 ### 9.1 已完成的 live E2E
 
-2026-08-14 已在 DSH `0.1.0-rc.6` 上完成上述真实 Web 验证。使用隔离 profile `web-thinking-collapse-e2e`、独立端口 `127.0.0.1:3081` 和 Chrome，实际发送一次 `DeepSeek V4 Flash / Max` reasoning 请求。观测结果包括流式强制展开、正文出现后自动折叠为 `耗时 2秒`、无内容预览、手动展开/收起、刷新后时长恢复，以及轨迹视图不受影响。浏览器控制台无 warning/error；折叠态已和 Codex 参考图并排复核，完整记录见仓库根目录的 [`design-qa.md`](../../design-qa.md)。
+2026-08-14 已在 DSH `0.1.0-rc.6` 上完成一次真实 Web 验证，随后根据用户确认调整生命周期文案和正文层级；调整后的 live E2E 与视觉复核结果以仓库根目录的 [`design-qa.md`](../../design-qa.md) 为准。
 
 ## 10. 升级流程
 

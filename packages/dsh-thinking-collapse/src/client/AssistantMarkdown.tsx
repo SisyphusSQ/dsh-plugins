@@ -74,6 +74,7 @@ export const AssistantMarkdown = memo(function AssistantMarkdown({
             timing={timing}
             t={t}
             thinkingT={thinkingT}
+            codeLabels={codeLabels}
           />,
         )
         break

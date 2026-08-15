@@ -3,6 +3,9 @@
   flex-direction: column;
   width: 100%;
   min-width: 0;
+}
+
+.header {
   padding: 0 0 10px;
   border-bottom: 1px solid var(--dsw-alias-border-l2);
 }
@@ -58,12 +61,18 @@
 }
 
 .thinkBody {
-  padding: 8px 0 2px;
+  --dsw-font-markdown-base: 14px/24px var(--dsw-font-family);
+  --dsw-font-markdown-base-font-size: 14px;
+  --dsw-font-markdown-base-line-height: 24px;
+
+  padding: 16px 0 0;
   color: var(--dsw-alias-label-tertiary);
   font-size: 14px;
   line-height: 24px;
-  white-space: pre-wrap;
-  word-break: break-word;
+}
+
+.thinkBody > div {
+  color: inherit;
 }
 
 @media (prefers-reduced-motion: reduce) {

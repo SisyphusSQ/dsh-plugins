@@ -1,6 +1,6 @@
 # dsh-thinking-collapse
 
-`dsh-thinking-collapse` 为 DeepSeek Harness Web 聊天视图提供 Codex 式思考折叠：思考流式期间完整可见，后续正文或工具 block 出现后自动折叠成本地化的“耗时 2秒”状态行，点击可以重新展开。
+`dsh-thinking-collapse` 为 DeepSeek Harness Web 聊天视图提供 Codex 式思考折叠：思考流式期间以“已处理 2s”计时并保持完整可见，后续正文或工具 block 出现后自动折叠成本地化的“耗时 2秒”状态行；结束后点击可以在标题分隔线下用 Markdown 展示完整 reasoning。
 
 > 状态：实验中。已完成 `@deepseek-ai/dsh@0.1.0-rc.6` live Web E2E，尚未发布到 npm。
 
@@ -11,6 +11,8 @@
 - reasoning 结束后自动折叠，不显示首行或末行预览；
 - 折叠行显示基于 Session event 时间戳计算的本地化“耗时”文案；
 - 折叠态去掉思考图标，使用右侧箭头和底部分隔线贴近 Codex；
+- reasoning 未结束时标题显示“已处理 2s”式紧凑时长并持续更新；结束后无论折叠或展开，标题均保持本地化的“耗时”文案；
+- 展开内容复用 DSH `MarkdownText`，支持段落、行内代码、列表、代码块和其他既有 Markdown 能力，同时保留原 reasoning 正文的字号和颜色；
 - 历史窗口不含原始 chunk、无法准确恢复时长时只显示“思考过程”/`Thoughts`；
 - 保留 Markdown、图片、未知 block、file mention 和 interrupted marker；
 - 不修改轨迹视图、模型请求、Session log 或 DSH 核心。
@@ -50,9 +52,10 @@ dsh plugin --profile web remove dsh-thinking-collapse
 2. reasoning 流式期间完整内容可见；
 3. 正文或工具调用出现后 reasoning 自动折叠；
 4. 折叠行只显示“耗时 Ns”以及右侧箭头；
-5. 点击折叠行可以展开和再次收起；
-6. 刷新页面后最近会话仍能从加载窗口恢复时长；
-7. 轨迹视图没有变化。
+5. 点击后标题保持“耗时 Ns”，箭头向下，分隔线下显示保留原字号和颜色的 Markdown reasoning；
+6. 再次点击可以收起；
+7. 刷新页面后最近会话仍能从加载窗口恢复时长；
+8. 轨迹视图没有变化。
 
 真实模型调用可能产生费用。自动测试、类型检查和构建不能替代上述 DSH Web 验证。
 
@@ -61,13 +64,14 @@ dsh plugin --profile web remove dsh-thinking-collapse
 2026-08-14 使用默认 `web` profile 的隔离副本 `web-thinking-collapse-e2e`，在 `127.0.0.1:3081` 启动 DSH `0.1.0-rc.6`，并通过 Chrome 使用 `DeepSeek V4 Flash / Max` 完成一次真实 reasoning 请求：
 
 - 服务启动清单包含 `dsh-thinking-collapse` 及全部声明的 client inject；
-- reasoning 流式期间思考行保持展开，完整思考内容可见；
+- reasoning 流式期间标题显示 `已处理 2s` 并持续计时，思考行保持展开，完整思考内容可见；
 - 正文出现后自动折叠为 `耗时 2秒`，header 不包含思考内容预览；
-- 点击可以展开完整 reasoning，再次点击可以收起；
+- 点击后标题保持 `耗时 2秒`，原生箭头向下，标题分隔线保持在 reasoning 上方；
+- reasoning 通过 DSH Markdown renderer 展示并保留原字号和颜色；再次点击可以收起；
 - 刷新当前会话后仍恢复 `耗时 2秒`；
 - 轨迹视图保持原有 timeline 渲染；
-- 页面中只有一个插件 CSS 标签，Chrome 控制台无 warning/error；
-- 已按 Codex 参考图完成折叠态视觉对照，隔离 profile 保留用于复查。
+- 页面中只有一个插件 CSS 标签，未出现插件运行错误；
+- 已分别按 Codex 折叠态和展开态参考图完成视觉对照，隔离 profile 保留用于复查。
 
 API key 由既有 DSH 启动环境提供；验证记录不保存或输出 key 值。
 

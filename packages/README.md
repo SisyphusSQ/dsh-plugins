@@ -1,6 +1,11 @@
 # Packages
 
-This directory will contain independently installable DeepSeek Harness plugin packages. It intentionally contains no package scaffold yet.
+This directory contains independently installable DeepSeek Harness plugin packages. Each package owns its runtime, documentation, and validation boundary.
+
+## 当前包
+
+- [`dsh-git-worktree`](dsh-git-worktree/README.md)：实验中的 host Git worktree、`/worktree`、模型工具与 CLI，尚未发布。
+- [`dsh-git-worktree-web`](dsh-git-worktree-web/README.md)：实验中的 Web 命令弹层与 Workspace 切换 companion，尚未发布。
 
 ## 新增包的条件
 
@@ -12,7 +17,7 @@ packages/dsh-example/
 ├── tests/
 ├── README.md
 ├── package.json
-└── cordis.patch.yml
+└── cordis.patch.yml     # 仅声明 dsh.bundle 的 host 包需要
 ```
 
 同时满足以下约定：

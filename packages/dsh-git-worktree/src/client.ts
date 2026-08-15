@@ -5,38 +5,18 @@ import type {
 } from "@deepseek-ai/dsh-client-ui-commands/client";
 import type { WorkspaceView } from "@deepseek-ai/dsh-api-remotes/client";
 
-export const name = "git-worktree-web";
-export const inject = [
-  "@deepseek-ai/dsh-api-remotes",
-  "@deepseek-ai/dsh-client-runtime",
-  "@deepseek-ai/dsh-client-ui-commands",
-];
+import {
+  defaultWorktreeBranch,
+  managedWorkspaceTitle,
+  parseManagedWorkspaceTitle,
+} from "./protocol.js";
+
+export { defaultWorktreeBranch, managedWorkspaceTitle };
+
+export const name = "git-worktree";
+export const inject = ["workspaces", "sessions", "remote", "remote.commands", "commandUi"];
 
 const WORKSPACE_WAIT_MS = 10_000;
-const WORKSPACE_SEPARATOR = " · ";
-
-export function defaultWorktreeBranch(sessionId: string): string {
-  const slug = sessionId
-    .trim()
-    .replace(/[^A-Za-z0-9_-]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-  if (slug === "") throw new Error("sessionId cannot produce a Git branch name");
-  return `dsh/${slug}`;
-}
-
-export function managedWorkspaceTitle(repositoryName: string, branch: string): string {
-  return `${repositoryName}${WORKSPACE_SEPARATOR}${branch}`;
-}
-
-function parseManagedWorkspaceTitle(
-  title: string,
-): { repositoryName: string; branch: string } | undefined {
-  const separator = title.indexOf(WORKSPACE_SEPARATOR);
-  if (separator <= 0) return undefined;
-  const repositoryName = title.slice(0, separator);
-  const branch = title.slice(separator + WORKSPACE_SEPARATOR.length);
-  return branch === "" ? undefined : { repositoryName, branch };
-}
 
 function pathBasename(path: string): string {
   const normalized = path.replace(/[\\/]+$/, "");
@@ -211,6 +191,6 @@ export function createWorktreeDecoration(ctx: ClientContext): CommandDecoration 
 export function apply(ctx: ClientContext): void {
   ctx.effect(
     () => ctx.commandUi.decorate(createWorktreeDecoration(ctx)),
-    "dsh-git-worktree-web: /worktree decoration",
+    "dsh-git-worktree: /worktree decoration",
   );
 }

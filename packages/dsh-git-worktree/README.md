@@ -1,19 +1,20 @@
 # dsh-git-worktree
 
-为 DeepSeek Harness（DSH）创建和归档 Git linked worktree 的 host 插件。它提供 `/worktree` slash command、模型工具和 CLI；Web 弹层与切换能力由独立 companion 包 `dsh-git-worktree-web` 提供。本方案不包含 Skill，也不修改 DSH 核心。
+为 DeepSeek Harness（DSH）创建和归档 Git linked worktree。同一包提供 `/worktree` slash command、模型工具、CLI，以及 Web 上的「本地 / 当前工作树 / 新建工作树」弹层。本方案不包含 Skill，也不修改 DSH 核心。
 
 > **状态：实验中，尚未发布。** 当前实现目标版本为 `@deepseek-ai/dsh@0.1.0-rc.6`。在完成真实 DSH profile 安装和 Web/Headless E2E 前，不应把本包描述为已兼容或可发布。
 
 ## 能力边界
 
 - `/worktree status`：直接读取当前 Git 仓库与 worktree 状态，不经过模型。
-- `/worktree new [branch]`：创建新分支和 linked worktree，并注册为 DSH Workspace；省略分支时使用当前 session id 生成 `dsh/<session-id>`。
+- `/worktree new [可选分支]`：创建新分支和 linked worktree，并注册为 DSH Workspace；省略分支时使用当前 session id 生成 `dsh/<session-id>`。
+- 裸 `/worktree`：Headless 返回状态；Web 使用 DSH 原生 `popupSelect` 显示「本地 / 当前工作树 / 新建工作树」，选中新建后切换到新 Workspace 会话。
 - `worktree_create`：模型需要编排 Git 工作树时使用，返回供新会话使用的绝对 `cwd`。
 - `dsh-worktree create`：从终端预先创建 worktree。
 - `dsh-worktree archive`：按根目录 mtime 阈值预览或归档本包管理目录下的 linked worktree。
 - Git 自身的 `git worktree list --porcelain -z` 是工作树事实源；DSH 自带 Workspace registry 只负责 Web/会话入口，本包不建立第二套台账。
 
-host 包不会创建 DSH session、复制未提交改动、fetch 远端、合并代码、删除分支、自动 prune 或配置定时任务。安装 Web companion 后，由 DSH client-runtime 在用户选择成功时创建或复用目标 Workspace 的空白 session。
+本包不会创建 DSH session、复制未提交改动、fetch 远端、合并代码、删除分支、自动 prune 或配置定时任务。Web 弹层在用户选择成功时，由 DSH client-runtime 创建或复用目标 Workspace 的空白 session。精确放在「标准模式」右侧的常驻控件仍超出 rc.6 公开 slot 边界。
 
 ## 安装
 
@@ -21,12 +22,9 @@ host 包不会创建 DSH session、复制未提交改动、fetch 远端、合并
 
 ```bash
 dsh plugin --profile web add file:/absolute/path/to/dsh-plugins/packages/dsh-git-worktree
-dsh plugin --profile web add file:/absolute/path/to/dsh-plugins/packages/dsh-git-worktree-web
 ```
 
-Headless 只需安装 host 包；Web profile 同时安装 companion 后，裸 `/worktree` 会使用 DSH 原生 `popupSelect` 显示“本地 / 当前工作树 / 新建工作树”。精确放在“标准模式”右侧的常驻控件仍超出 rc.6 公开 slot 边界。
-
-安装后应使用 `dsh --dump-config` 确认 `dsh-git-worktree` bundle 行已经组合，并在 Web 中确认 `/worktree` 命令弹层可见。
+Headless 与 Web 都只装这一个包。安装后应使用 `dsh --dump-config` 确认 `dsh-git-worktree` bundle 行已经组合，并在 Web 中确认裸 `/worktree` 弹出命令弹层。
 
 ## 创建 worktree
 
@@ -70,7 +68,7 @@ host slash command 可直接输入：
 /worktree new suqing/my-task
 ```
 
-裸命令在 Headless 中返回状态；在安装 companion 的 Web 中打开原生命令弹层。带参数命令始终直接执行，不发送给模型。
+带参数命令始终直接执行，不发送给模型。`/worktree new` 省略分支时默认 `dsh/<session-id>`。
 
 ## 归档
 
@@ -116,11 +114,9 @@ pnpm install
 pnpm --filter dsh-git-worktree typecheck
 pnpm --filter dsh-git-worktree test
 pnpm --filter dsh-git-worktree build
-pnpm --filter dsh-git-worktree-web typecheck
-pnpm --filter dsh-git-worktree-web test
 ```
 
-这些命令只能证明类型、fixture、真实 Git worktree 操作和 bundle 静态契约，不能替代 DSH Web/Headless E2E。
+这些命令只能证明类型、fixture、真实 Git worktree 操作、bundle 静态契约和 client bundle 形态，不能替代 DSH Web/Headless E2E。
 
 发布前还必须确认：
 

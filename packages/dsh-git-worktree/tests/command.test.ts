@@ -72,9 +72,10 @@ test("/worktree rejects unsupported arguments before touching Git", async (t) =>
     },
   });
 
+  assert.equal(command.input?.hint, "status | new [可选分支]");
   const result = await command.handler(invocation(fixture.repository, "remove everything"));
   assert.deepEqual(result, {
     kind: "error",
-    text: "用法：/worktree [status | new [branch]]",
+    text: "用法：/worktree [status | new [可选分支]]",
   });
 });

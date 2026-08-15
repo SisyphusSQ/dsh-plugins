@@ -1,7 +1,7 @@
 {
   "name": "dsh-git-worktree",
   "version": "0.1.0",
-  "description": "Git worktree creation and archival for DeepSeek Harness",
+  "description": "Git worktree creation, archival, and Web slash-command picker for DeepSeek Harness",
   "type": "module",
   "main": "lib/src/index.js",
   "types": "lib/src/index.d.ts",
@@ -9,6 +9,10 @@
     ".": {
       "types": "./lib/src/index.d.ts",
       "default": "./lib/src/index.js"
+    },
+    "./client": {
+      "types": "./lib/src/client.d.ts",
+      "default": "./lib/client.js"
     },
     "./protocol": {
       "types": "./lib/src/protocol.d.ts",
@@ -21,12 +25,14 @@
   },
   "files": [
     "lib/src",
+    "lib/client.js",
+    "lib/client.js.map",
     "cordis.patch.yml",
     "README.md",
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && tsdown",
     "test": "pnpm run build && node --test lib/tests/*.test.js",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
@@ -39,10 +45,21 @@
   "dsh": {
     "bundle": {
       "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-api-remotes",
+        "@deepseek-ai/dsh-client-runtime",
+        "@deepseek-ai/dsh-client-ui-commands"
+      ],
+      "platform": "web"
     }
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "^4.0.1",
+    "@deepseek-ai/dsh-api-remotes": "0.1.0-rc.6",
+    "@deepseek-ai/dsh-client-runtime": "0.1.0-rc.6",
+    "@deepseek-ai/dsh-client-ui-commands": "0.1.0-rc.6",
     "@deepseek-ai/dsh-commands": "0.1.0-rc.6",
     "@deepseek-ai/dsh-tools": "0.1.0-rc.6",
     "@deepseek-ai/dsh-workspace": "0.1.0-rc.6"
@@ -52,11 +69,15 @@
   },
   "devDependencies": {
     "@deepseek-ai/cordis": "^4.0.1",
+    "@deepseek-ai/dsh-api-remotes": "0.1.0-rc.6",
+    "@deepseek-ai/dsh-client-runtime": "0.1.0-rc.6",
+    "@deepseek-ai/dsh-client-ui-commands": "0.1.0-rc.6",
     "@deepseek-ai/dsh-commands": "0.1.0-rc.6",
     "@deepseek-ai/dsh-system-prompt": "0.1.0-rc.6",
     "@deepseek-ai/dsh-tools": "0.1.0-rc.6",
     "@deepseek-ai/dsh-workspace": "0.1.0-rc.6",
     "@types/node": "^24.0.0",
+    "tsdown": "^0.15.0",
     "typescript": "^5.9.0"
   },
   "license": "MIT"

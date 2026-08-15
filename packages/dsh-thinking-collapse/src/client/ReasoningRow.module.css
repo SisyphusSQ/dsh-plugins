@@ -60,15 +60,27 @@
   white-space: nowrap;
 }
 
+.activityBody {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+  padding: 16px 0 0;
+}
+
 .thinkBody {
   --dsw-font-markdown-base: 14px/24px var(--dsw-font-family);
   --dsw-font-markdown-base-font-size: 14px;
   --dsw-font-markdown-base-line-height: 24px;
 
-  padding: 16px 0 0;
+  min-width: 0;
   color: var(--dsw-alias-label-tertiary);
   font-size: 14px;
   line-height: 24px;
+}
+
+.toolsBody {
+  min-width: 0;
 }
 
 .thinkBody > div {

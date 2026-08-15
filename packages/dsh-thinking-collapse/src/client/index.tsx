@@ -1,13 +1,15 @@
 import type { ClientContext } from '@deepseek-ai/dsh-client-runtime/client'
 import type { ChatNodeViewProps } from '@deepseek-ai/dsh-client-ui-conversation/client'
 import type {} from '@deepseek-ai/dsh-client-locale/client'
+import type {} from '@deepseek-ai/dsh-client-ui-tool/client'
 import { AssistantNodeView } from './AssistantNodeView.js'
+import { ToolCallNodeView } from './ToolCallNodeView.js'
 import { en, THINKING_COLLAPSE_NS, zh } from './locales.js'
 import { thinkingTimingDefinition } from './timing.js'
 
 export const inject = ['slots', 'conversationEvents', 'locale']
 
-/** Install the timing projection and shadow the rc.6 assistant-step renderer. */
+/** Install the timing projection and shadow the rc.6 assistant-step and tool-call renderers. */
 export function apply(ctx: ClientContext): void {
   ctx.conversationEvents.register(thinkingTimingDefinition)
   ctx.effect(
@@ -16,12 +18,23 @@ export function apply(ctx: ClientContext): void {
   )
   const thinkingT = ctx.locale.bind(THINKING_COLLAPSE_NS)
   const CodexAssistantNodeView = (props: ChatNodeViewProps<'assistant-step'>) => (
-    <AssistantNodeView {...props} thinkingT={thinkingT} />
+    <AssistantNodeView {...props} thinkingT={thinkingT} slots={ctx.slots} />
   )
-  ctx.slots.inject('conversation.chat.node', () => ctx.slots.register({
-    name: 'conversation.chat.node',
-    key: 'assistant-step',
-    priority: -1,
-    locale: 'conversation',
-  }, CodexAssistantNodeView))
+  const CodexToolCallNodeView = (props: ChatNodeViewProps<'tool-call'>) => (
+    <ToolCallNodeView {...props} thinkingT={thinkingT} slots={ctx.slots} />
+  )
+  ctx.slots.inject('conversation.chat.node', () => [
+    ctx.slots.register({
+      name: 'conversation.chat.node',
+      key: 'assistant-step',
+      priority: -1,
+      locale: 'conversation',
+    }, CodexAssistantNodeView),
+    ctx.slots.register({
+      name: 'conversation.chat.node',
+      key: 'tool-call',
+      priority: -1,
+      locale: 'conversation',
+    }, CodexToolCallNodeView),
+  ])
 }

@@ -30,7 +30,7 @@ Package requirements and future contribution boundaries are documented in [`pack
 - 实验中：[`dsh-agent-plugins`](packages/dsh-agent-plugins/README.md)——Agent Plugins 标准包适配，待真实 profile 验收，尚未发布
 - 实验中：[`dsh-composer-skill-mention`](packages/dsh-composer-skill-mention/README.md)——为 DSH Web composer 增加 `$` / `￥` Skill 提及，仅验证 rc.6，尚未发布
 - 实验中：[`dsh-session-tools`](packages/dsh-session-tools/README.md)——六个模型侧会话工具，已完成 rc.6 隔离 profile 安装与真实模型 Live E2E，尚未发布
-- 实验中：[`dsh-thinking-collapse`](packages/dsh-thinking-collapse/README.md)——聊天视图的 Codex 式思考折叠，已完成 DSH `0.1.0-rc.6` 隔离 profile live Web E2E，尚未发布
+- 实验中：[`dsh-thinking-collapse`](packages/dsh-thinking-collapse/README.md)——聊天视图的 Codex 式思考与工具调用折叠，已完成 DSH `0.1.0-rc.6` 隔离 profile live Web E2E，尚未发布
 - 实验中：[`dsh-git-worktree`](packages/dsh-git-worktree/README.md) + [`dsh-git-worktree-web`](packages/dsh-git-worktree-web/README.md)——Git worktree host 命令、模型工具、CLI 与 Web Workspace companion，尚未发布
 - 计划中：`dsh-session-split-view` 与 `dsh-session-reference-web`——依赖尚未公开的 DSH Core 多会话渲染/提交扩展 API，当前只有[设计](docs/design/dsh-session-capabilities.md)
 

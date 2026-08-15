@@ -38,6 +38,7 @@ const t = ((key: string) => key) as never
 const thinkingT = ((key: string, params?: Record<string, unknown>) => {
   const copy: Record<string, string> = {
     'status.history': '思考过程',
+    'status.tools': '工具调用',
     'status.elapsed': '耗时 {duration}',
     'status.processed': '已处理 {duration}',
     'duration.seconds': '{seconds}秒',
@@ -151,5 +152,67 @@ describe('ReasoningRow', () => {
 
     expect(screen.getByRole('button', { name: '思考过程' })).toBeTruthy()
     expect(screen.queryByText('historical reasoning')).toBeNull()
+  })
+
+  it('renders absorbed tools inside the live body without leaking them into the header', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(1_000)
+
+    const { rerender } = render(
+      <ReasoningRow
+        text="private reasoning"
+        live
+        active
+        timing={{ startedAt: 1_000, endedAt: null }}
+        t={t}
+        thinkingT={thinkingT}
+        codeLabels={{ copyLabel: '复制', copiedLabel: '已复制' }}
+      >
+        <div>bash ls -la</div>
+      </ReasoningRow>,
+    )
+
+    expect(screen.getByRole('button', { name: '已处理 0s' }).textContent).not.toContain('bash')
+    expect(screen.getByText('bash ls -la')).toBeTruthy()
+
+    rerender(
+      <ReasoningRow
+        text="private reasoning"
+        live={false}
+        active={false}
+        timing={{ startedAt: 1_000, endedAt: 5_000 }}
+        t={t}
+        thinkingT={thinkingT}
+        codeLabels={{ copyLabel: '复制', copiedLabel: '已复制' }}
+      >
+        <div>bash ls -la</div>
+      </ReasoningRow>,
+    )
+
+    const button = screen.getByRole('button', { name: '耗时 4秒' })
+    expect(button.getAttribute('aria-expanded')).toBe('false')
+    expect(screen.queryByText('bash ls -la')).toBeNull()
+    expect(screen.queryByText('private reasoning')).toBeNull()
+    fireEvent.click(button)
+    expect(screen.getByText('bash ls -la')).toBeTruthy()
+    expect(screen.getByRole('button', { name: '耗时 4秒' })).toBeTruthy()
+  })
+
+  it('uses tool-call history copy when duration is unavailable', () => {
+    render(
+      <ReasoningRow
+        live={false}
+        active={false}
+        historyKind="tools"
+        t={t}
+        thinkingT={thinkingT}
+        codeLabels={{ copyLabel: '复制', copiedLabel: '已复制' }}
+      >
+        <div>read README.md</div>
+      </ReasoningRow>,
+    )
+
+    expect(screen.getByRole('button', { name: '工具调用' })).toBeTruthy()
+    expect(screen.queryByText('read README.md')).toBeNull()
   })
 })

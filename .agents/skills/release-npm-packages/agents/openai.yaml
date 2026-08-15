@@ -1,0 +1,4 @@
+interface:
+  display_name: "npm 包发版"
+  short_description: "安全完成 npm 单包或 monorepo 发版与闭环回读"
+  default_prompt: "使用 $release-npm-packages 发布当前 npm 包，并闭环验证 registry、消费端安装、Git tag 与 Release。"

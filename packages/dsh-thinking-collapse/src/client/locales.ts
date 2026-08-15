@@ -4,6 +4,7 @@ export const THINKING_COLLAPSE_NS = 'thinking-collapse' as const
 
 export const zh = {
   'status.history': '思考过程',
+  'status.tools': '工具调用',
   'status.elapsed': '耗时 {duration}',
   'status.processed': '已处理 {duration}',
   'duration.seconds': '{seconds}秒',
@@ -16,6 +17,7 @@ export type ThinkingCollapseLocaleKey = keyof typeof zh
 
 export const en: Record<ThinkingCollapseLocaleKey, string> = {
   'status.history': 'Thoughts',
+  'status.tools': 'Tool calls',
   'status.elapsed': 'Worked for {duration}',
   'status.processed': 'Worked for {duration}',
   'duration.seconds': '{seconds}s',

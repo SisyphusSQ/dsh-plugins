@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import type { ReactNode } from 'react'
 import type { MarkdownCodeLabels } from '@deepseek-ai/dsh-client-ui-primitives'
 import {
   DisclosureRow,
@@ -33,42 +34,48 @@ export function formatCompactThinkingDuration(
 }
 
 export interface ReasoningRowProps {
-  readonly text: string
-  /** The block is still the final streaming block and must stay expanded. */
+  readonly text?: string | undefined
+  readonly children?: ReactNode
+  /** The activity is still in progress and must stay expanded. */
   readonly live: boolean
-  /** Reasoning tokens are still arriving; controls the running animation only. */
+  /** Tokens or tools are still arriving; controls the running animation and live copy. */
   readonly active: boolean
   readonly timing?: ReasoningBlockTiming | undefined
+  /** Fallback title when no recoverable duration exists. */
+  readonly historyKind?: 'reasoning' | 'tools' | undefined
   readonly t: ChatViewSlotProps['t']
   readonly thinkingT: TranslateNS<typeof THINKING_COLLAPSE_NS>
   readonly codeLabels: MarkdownCodeLabels
 }
 
-/** Live reasoning is forced open; settled reasoning becomes a content-free summary. */
+/** Live activity is forced open; settled activity becomes a content-free summary. */
 export function ReasoningRow({
   text,
+  children,
   live,
   active,
   timing,
+  historyKind = 'reasoning',
   t,
   thinkingT,
   codeLabels,
 }: ReasoningRowProps) {
   const [expanded, setExpanded] = useState(false)
   const [now, setNow] = useState(() => Date.now())
+  const ticking = timing !== undefined && timing.endedAt === null
 
   useEffect(() => {
     if (live) setExpanded(false)
   }, [live])
 
   useEffect(() => {
-    if (!active || timing === undefined || timing.endedAt !== null) return undefined
+    if (!ticking) return undefined
     setNow(Date.now())
     const timer = window.setInterval(() => setNow(Date.now()), 1000)
     return () => window.clearInterval(timer)
-  }, [active, timing])
+  }, [ticking, timing])
 
-  const end = timing?.endedAt ?? (active ? now : undefined)
+  const end = timing?.endedAt ?? (ticking || active ? now : undefined)
   const durationMs = timing !== undefined && end !== undefined
     ? end - timing.startedAt
     : undefined
@@ -84,8 +91,9 @@ export function ReasoningRow({
         duration: compactDuration ?? thinkingT('duration.compactSeconds', { seconds: 0 }),
       })
     : duration === undefined
-      ? thinkingT('status.history')
+      ? thinkingT(historyKind === 'tools' ? 'status.tools' : 'status.history')
       : thinkingT('status.elapsed', { duration })
+  const hasBody = (text !== undefined && text.length > 0) || children !== undefined
 
   return (
     <div className={css.root} data-variant="think" data-state={active ? 'running' : 'ok'}>
@@ -107,9 +115,14 @@ export function ReasoningRow({
           }}
         />
       </div>
-      {open && (
-        <div className={css.thinkBody}>
-          <MarkdownText text={text} streaming={active} codeLabels={codeLabels} />
+      {open && hasBody && (
+        <div className={css.activityBody}>
+          {text !== undefined && text.length > 0 && (
+            <div className={css.thinkBody}>
+              <MarkdownText text={text} streaming={active} codeLabels={codeLabels} />
+            </div>
+          )}
+          {children}
         </div>
       )}
     </div>

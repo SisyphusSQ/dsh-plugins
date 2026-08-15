@@ -1,0 +1,10 @@
+# dsh-session-tools mounts the existing bounded snapshot resolver and then the
+# model-facing tool adapter. Row order is documentary; Cordis activation waits
+# for injected services.
+
+- insert:
+    - id: session-reference-resolver
+      name: '@deepseek-ai/dsh-session-reference'
+
+    - id: session-tools
+      name: 'dsh-session-tools'

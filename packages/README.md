@@ -1,11 +1,17 @@
 # Packages
 
-This directory contains independently installable DeepSeek Harness plugin packages. Each package owns its runtime, documentation, and validation boundary.
+This directory contains independently installable DeepSeek Harness plugin packages. Packages remain experimental until their README records a completed DSH profile verification.
 
 ## 当前包
 
-- [`dsh-git-worktree`](dsh-git-worktree/README.md)：实验中的 host Git worktree、`/worktree`、模型工具与 CLI，尚未发布。
-- [`dsh-git-worktree-web`](dsh-git-worktree-web/README.md)：实验中的 Web 命令弹层与 Workspace 切换 companion，尚未发布。
+| 包 | 状态 | 能力 | DSH 目标版本 |
+| --- | --- | --- | --- |
+| [`dsh-agent-plugins`](dsh-agent-plugins/README.md) | 实验中，待真实 profile 验收 | Agent Plugins 标准包适配、CLI、host/client 面板 | `0.1.0-rc.6` |
+| [`dsh-composer-skill-mention`](dsh-composer-skill-mention/README.md) | 实验中，未发布 | DSH Web composer 的 `$` / `￥` Skill 提及 | `0.1.0-rc.6` |
+| [`dsh-session-tools`](dsh-session-tools/README.md) | 实验中，未发布 | 会话列表、快照读取、创建、重命名、Fork、跨会话 relay | `0.1.0-rc.6` |
+| [`dsh-thinking-collapse`](dsh-thinking-collapse/README.md) | 实验中，已完成隔离 profile 验收 | 聊天视图的 Codex 式思考折叠 | `0.1.0-rc.6` |
+| [`dsh-git-worktree`](dsh-git-worktree/README.md) | 实验中，未发布 | Git worktree host 命令、模型工具与 CLI | `0.1.0-rc.6` |
+| [`dsh-git-worktree-web`](dsh-git-worktree-web/README.md) | 实验中，未发布 | DSH Web 命令弹层与 Workspace 切换 companion | `0.1.0-rc.6` |
 
 ## 新增包的条件
 
@@ -14,7 +20,7 @@ This directory contains independently installable DeepSeek Harness plugin packag
 ```text
 packages/dsh-example/
 ├── src/
-├── tests/
+├── test/ or tests/
 ├── README.md
 ├── package.json
 └── cordis.patch.yml     # 仅声明 dsh.bundle 的 host 包需要

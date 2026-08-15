@@ -3,12 +3,12 @@
 Agent Plugins 1.0.0 适配插件：让 [DeepSeek Harness (DSH)](https://github.com/deepseek-ai/deepseek-harness) 直接消费
 [Agent Plugins](https://github.com/agentplugins/agent-plugins-spec) 标准插件包（`plugin.json` + `skills/` + `mcp.json`）。
 
-**状态：实验性（M0–M5 全部完成，待真实 profile 装机验收）。** 一个 npm 包三合一：host 半（bundle patch）+ client 半（设置面板 tab）+ CLI（`agent-plugins`）。
+**状态：实验性（M0–M5 全部完成，待真实 profile 装机验收）。** 一个 npm 包三合一：host 半（bundle patch）+ client 半（侧栏面板）+ CLI（`agent-plugins`）。
 
 ## 已验证环境
 
 - `@deepseek-ai/dsh@0.1.0-rc.6`（本机 sqmc04，web profile）
-- 挂载点：设置 → 插件分区的 `settings.plugins.tab` slot
+- 挂载点：侧栏脚 `sidebar.footer.action` 入口 + `shell.overlay` 覆盖会话列
 - 数据通道：host 半 `TypertRemoteService` + `@Remote`；client 半 `connection.rpc.call('/api', 'agentPlugins/<m>', { args })`
 - 热重载：launcher 无条件提供 HMR 服务并监听 `$DSH_HOME/cordis.patch.yml`（机制已核实，E2E 见 M3）
 
@@ -21,7 +21,7 @@ Agent Plugins 1.0.0 适配插件：让 [DeepSeek Harness (DSH)](https://github.c
 | M2 skills provider（含组件级启停） | 计划中 |
 | M3 MCP 映射 + patch 同步 + 热重载 E2E | ✅（真实 stdio server 注册/启停/卸载全通） |
 | M4 护栏 / doctor / 文档 | 计划中 |
-| M5 client 面板（列表 + 两级 toggle + MCP 同列） | ✅（设计稿对齐 + 侧栏入口：sidebar.footer.action "插件"按钮 + 浮层面板，照 cordis-panel 模式；浏览器实测全通） |
+| M5 client 面板（列表 + 两级 toggle + MCP 同列） | ✅（设计稿对齐 + 侧栏入口：sidebar.footer.action "插件"按钮 + shell.overlay 覆盖会话列） |
 
 设计文档见 [docs/design/dsh-agent-plugins.md](../../docs/design/dsh-agent-plugins.md)。
 

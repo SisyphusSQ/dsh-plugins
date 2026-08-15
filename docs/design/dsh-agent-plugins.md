@@ -122,7 +122,7 @@ packages/dsh-agent-plugins/
 │   ├── patch-sync.ts      # home patch 保留段生成/清理 + 原子写        [M3]
 │   └── store.ts           # store 扫描、watch、installed.json 台账     [M1]
 │   └── client/
-│       └── index.tsx      # 面板：settings.plugins.tab tab             [M0 骨架 / M5 完整]
+│       └── index.tsx      # 面板：sidebar.footer.action + shell.overlay [M5]
 ├── bin/agent-plugins.js   # CLI（薄壳：参数解析 + 调 lib/store.js）    [M1]
 └── test/                  # 规范 fixtures（plugin + mcp 两套 schema）  [M1]
 ```

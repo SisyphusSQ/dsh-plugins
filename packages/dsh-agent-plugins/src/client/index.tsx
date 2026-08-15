@@ -20,6 +20,7 @@ import type {} from '@deepseek-ai/dsh-client-runtime/client'
 declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface SlotMap {
     'sidebar.footer.action': { kind: 'list'; scope: 'root'; owner: { wide: boolean } }
+    'shell.overlay': { kind: 'list'; scope: 'root' }
   }
   interface LocaleNamespaceMap {
     'agentPlugins.panel':
@@ -111,16 +112,65 @@ export interface AgentPluginsPanelFace {
   setEnabled: (args: { name: string; skill?: string; mcp?: string; enabled: boolean }) => Promise<unknown>
 }
 
+type PanelOpenListener = () => void
+const panelOpenListeners = new Set<PanelOpenListener>()
+let panelOpen = false
+
+function getPanelOpen(): boolean {
+  return panelOpen
+}
+
+function setPanelOpen(next: boolean): void {
+  if (panelOpen === next) return
+  panelOpen = next
+  for (const listener of panelOpenListeners) listener()
+}
+
+function subscribePanelOpen(listener: PanelOpenListener): () => void {
+  panelOpenListeners.add(listener)
+  return () => {
+    panelOpenListeners.delete(listener)
+  }
+}
+
+function usePanelOpen(): [boolean, (next: boolean) => void] {
+  const [open, setOpen] = React.useState(getPanelOpen)
+  React.useEffect(() => subscribePanelOpen(() => {
+    setOpen(getPanelOpen())
+  }), [])
+  return [open, setPanelOpen]
+}
+
+/** Width of the layout sidebar column; pins the overlay to the conversation area. */
+function useSidebarWidth(): number {
+  const [width, setWidth] = React.useState(280)
+  React.useEffect(() => {
+    const overlay = document.querySelector('[data-shell-overlay]')
+    const sidebar = overlay?.parentElement?.firstElementChild
+    if (!(sidebar instanceof HTMLElement)) return
+    const update = (): void => {
+      setWidth(sidebar.getBoundingClientRect().width)
+    }
+    update()
+    const observer = new ResizeObserver(update)
+    observer.observe(sidebar)
+    return () => observer.disconnect()
+  }, [])
+  return width
+}
+
 /**
- * Mount the Agent Plugins panel: a sidebar-foot "插件" entry (beside
- * Settings, per the app-shell design frame) that opens the panel in a
- * floating layer (same pattern as the cordis-panel entry). The panel content
- * is the design-aligned two-column overview.
+ * Mount the Agent Plugins panel: a sidebar-foot "插件" entry that covers
+ * the conversation column through `shell.overlay` (the design's 内容区).
  * @param ctx - the browser plugin context.
  */
 export function apply(ctx: Context): void {
+  ensureStyles()
   const { rpc } = ctx.get('connection') as ConnectionHandle
-  const t = ctx.locale.bind(NS)
+  const face = (): AgentPluginsPanelFace => ({
+    list: async () => rpc.call('/api', 'agentPlugins/list', { args: {} }),
+    setEnabled: async (args) => rpc.call('/api', 'agentPlugins/setEnabled', { args }),
+  })
   ctx.effect(() => ctx.locale.register(NS, {
     zh: {
       navLabel: '插件',
@@ -200,55 +250,70 @@ export function apply(ctx: Context): void {
     id: 'agent-plugins',
     order: 10,
     locale: NS,
-    inject: (): AgentPluginsPanelFace => ({
-      list: async () => rpc.call('/api', 'agentPlugins/list', { args: {} }),
-      setEnabled: async (args) => rpc.call('/api', 'agentPlugins/setEnabled', { args }),
-    }),
   }, AgentPluginsFooterAction))
+  ctx.slots.inject('shell.overlay', () => ctx.slots.register({
+    name: 'shell.overlay',
+    id: 'agent-plugins-panel',
+    order: 10,
+    locale: NS,
+    inject: face,
+  }, AgentPluginsOverlay))
 }
 
-/** Footer-entry props: the sidebar column state plus the panel business face. */
-interface AgentPluginsFooterActionProps extends AgentPluginsPanelFace, PropsLocale<'agentPlugins.panel'> {
+/** Footer-entry props: the sidebar column state plus the locale `t` seat. */
+interface AgentPluginsFooterActionProps extends PropsLocale<'agentPlugins.panel'> {
   /** Whether the sidebar renders wide content (false = 56px rail). */
   wide: boolean
 }
 
 /**
- * Sidebar-foot "插件" entry: a button that toggles a floating panel hosting
- * the design-aligned AgentPluginsPanel (mirrors the cordis-panel pattern).
+ * Sidebar-foot "插件" entry: toggles the conversation-column overlay.
  */
-function AgentPluginsFooterAction({ wide, list, setEnabled, t }: AgentPluginsFooterActionProps) {
-  const [open, setOpen] = React.useState(false)
+function AgentPluginsFooterAction({ wide, t }: AgentPluginsFooterActionProps) {
+  const [open, setOpen] = usePanelOpen()
   return (
-    <>
-      <button
-        type="button"
-        className="ap-nav"
-        data-wide={wide}
-        aria-label={t('navLabel')}
-        aria-expanded={open}
-        onClick={() => setOpen(!open)}
-      >
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-          <rect x="2" y="2" width="12" height="12" rx="2.5" stroke="currentColor" strokeWidth="1.4" />
-          <path d="M5 6.5h6M5 9.5h4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-        </svg>
-        {wide && <span className="ap-nav-label">{t('navLabel')}</span>}
-      </button>
-      {open && (
-        <div className="ap-float" role="dialog" aria-label={t('navLabel')}>
-          <div className="ap-float-head">
-            <span className="ap-float-title">{t('navLabel')}</span>
-            <button type="button" className="ap-float-close" aria-label={t('close')} onClick={() => setOpen(false)}>
-              ×
-            </button>
-          </div>
-          <div className="ap-float-body">
-            <AgentPluginsPanel list={list} setEnabled={setEnabled} t={t} />
-          </div>
-        </div>
-      )}
-    </>
+    <button
+      type="button"
+      className="ap-nav"
+      data-wide={wide}
+      data-active={open || undefined}
+      aria-label={t('navLabel')}
+      aria-expanded={open}
+      onClick={() => setOpen(!open)}
+    >
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <rect x="2" y="2" width="12" height="12" rx="2.5" stroke="currentColor" strokeWidth="1.4" />
+        <path d="M5 6.5h6M5 9.5h4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+      </svg>
+      {wide && <span className="ap-nav-label">{t('navLabel')}</span>}
+    </button>
+  )
+}
+
+/** Overlay props: the injected business face plus the locale `t` seat. */
+interface AgentPluginsOverlayProps extends AgentPluginsPanelFace, PropsLocale<'agentPlugins.panel'> {}
+
+/**
+ * Conversation-column cover: sits in `shell.overlay` and fills everything
+ * to the right of the sidebar. Closed state renders nothing so the overlay
+ * layer stays click-through.
+ */
+function AgentPluginsOverlay({ list, setEnabled, t }: AgentPluginsOverlayProps) {
+  const [open, setOpen] = usePanelOpen()
+  const sidebarWidth = useSidebarWidth()
+  if (!open) return null
+  return (
+    <div className="ap-page" style={{ left: sidebarWidth }} role="dialog" aria-label={t('navLabel')}>
+      <div className="ap-page-head">
+        <span className="ap-page-title">{t('navLabel')}</span>
+        <button type="button" className="ap-page-close" aria-label={t('close')} onClick={() => setOpen(false)}>
+          ×
+        </button>
+      </div>
+      <div className="ap-page-body">
+        <AgentPluginsPanel list={list} setEnabled={setEnabled} t={t} />
+      </div>
+    </div>
   )
 }
 
@@ -307,13 +372,13 @@ const css = `
 .ap-nav[data-active]{background:var(--dsw-alias-interactive-bg-hover)}
 .ap-nav[data-wide=false]{width:36px;height:36px;border-radius:50%;justify-content:center;padding:0}
 .ap-nav-label{text-overflow:ellipsis;white-space:nowrap;min-width:0;overflow:hidden}
-.ap-float{z-index:30;position:fixed;bottom:128px;left:12px;width:560px;max-width:calc(100vw - 24px);max-height:60vh;display:flex;flex-direction:column;overflow:hidden;border:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-base);border-radius:12px;box-shadow:var(--dsw-shadow-lv2);--dsh-scrollbar-thumb:var(--dsw-alias-scrollbar-bg-l2);--dsh-scrollbar-thumb-hover:var(--dsw-alias-scrollbar-hover-l2)}
-.ap-float-head{flex:none;min-height:44px;display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-base)}
-.ap-float-title{color:var(--dsw-alias-label-primary);font-size:13px;font-weight:500;line-height:20px}
-.ap-float-close{color:var(--dsw-alias-label-tertiary);cursor:pointer;background:transparent;border:none;font-size:18px;line-height:1;padding:2px 6px;border-radius:6px}
-.ap-float-close:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-secondary)}
-.ap-float-body{flex:1;min-height:0;overflow-y:auto;padding:12px}
-.ap-float-body .ap-panel{container-type:inline-size;max-width:none}
+.ap-page{position:absolute;top:0;right:0;bottom:0;display:flex;flex-direction:column;overflow:hidden;background:var(--dsw-alias-bg-base);border-left:1px solid var(--dsw-alias-border-l1);--dsh-scrollbar-thumb:var(--dsw-alias-scrollbar-bg-l2);--dsh-scrollbar-thumb-hover:var(--dsw-alias-scrollbar-hover-l2)}
+.ap-page-head{flex:none;min-height:44px;display:flex;align-items:center;justify-content:space-between;padding:10px 20px;border-bottom:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-base)}
+.ap-page-title{color:var(--dsw-alias-label-primary);font-size:13px;font-weight:500;line-height:20px}
+.ap-page-close{color:var(--dsw-alias-label-tertiary);cursor:pointer;background:transparent;border:none;font-size:18px;line-height:1;padding:2px 6px;border-radius:6px}
+.ap-page-close:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-secondary)}
+.ap-page-body{flex:1;min-height:0;overflow-y:auto;padding:20px}
+.ap-page-body .ap-panel{container-type:inline-size;max-width:none}
 @container (max-width: 700px) {
   .ap-body{flex-direction:column}
   .ap-right{width:100%}

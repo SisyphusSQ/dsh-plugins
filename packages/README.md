@@ -1,6 +1,12 @@
 # Packages
 
-This directory will contain independently installable DeepSeek Harness plugin packages. It intentionally contains no package scaffold yet.
+This directory contains independently installable DeepSeek Harness plugin packages.
+
+## 当前包
+
+| 包 | 状态 | 能力 | DSH 目标版本 |
+| --- | --- | --- | --- |
+| [`dsh-session-tools`](dsh-session-tools/README.md) | 实验中，未发布 | 会话列表、快照读取、创建、重命名、Fork、跨会话 relay | `0.1.0-rc.6` |
 
 ## 新增包的条件
 
@@ -9,7 +15,7 @@ This directory will contain independently installable DeepSeek Harness plugin pa
 ```text
 packages/dsh-example/
 ├── src/
-├── tests/
+├── test/
 ├── README.md
 ├── package.json
 └── cordis.patch.yml

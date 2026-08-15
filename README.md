@@ -2,11 +2,11 @@
 
 A monorepo for composable [DeepSeek Harness (DSH)](https://github.com/deepseek-ai/deepseek-harness) plugins.
 
-> **Status:** Repository scaffold only. No installable plugins have been published yet.
+> **Status:** One installable experimental package is implemented locally. No plugin has been published yet.
 
 ## 中文说明
 
-本仓库用于维护可组合的 DeepSeek Harness（DSH）第三方插件。当前只建立 monorepo 工作区和包约定，尚未提供任何可安装插件。
+本仓库用于维护可组合的 DeepSeek Harness（DSH）第三方插件。当前已有一个可打包安装、但尚未发布的实验包；发布状态与本地实现状态严格分开记录。
 
 后续每个稳定能力将作为 `packages/` 下的独立包开发：既可以单独安装，也可以在确有需要时由聚合包组合安装。README 会始终区分已发布、实验中和计划中的内容。
 
@@ -14,7 +14,8 @@ A monorepo for composable [DeepSeek Harness (DSH)](https://github.com/deepseek-a
 
 ```text
 .
-├── packages/            # Future independently installable plugin packages
+├── docs/design/         # 已决策设计与 Core 依赖边界
+├── packages/            # Independently installable plugin packages
 ├── AGENTS.md            # Repository collaboration and package conventions
 ├── package.json         # Private workspace manifest
 ├── pnpm-workspace.yaml  # Workspace package discovery
@@ -25,11 +26,11 @@ Package requirements and future contribution boundaries are documented in [`pack
 
 ## Development status
 
-- Available plugins: none
-- Experimental plugins: none
-- Planned plugins: discussed separately before implementation
+- 已发布插件：无
+- 实验中：[`dsh-session-tools`](packages/dsh-session-tools/README.md)——六个模型侧会话工具，已完成 rc.6 隔离 profile 安装与真实模型 Live E2E，尚未发布
+- 计划中：`dsh-session-split-view` 与 `dsh-session-reference-web`——依赖尚未公开的 DSH Core 多会话渲染/提交扩展 API，当前只有[设计](docs/design/dsh-session-capabilities.md)
 
-Installation and release instructions will be added only after the first plugin is implemented and validated against an explicit DSH version.
+实验包的本地安装、配置和证据边界见各自 README。只有完成发布前验证后，才会增加 registry 安装命令和 Release。
 
 ## License
 

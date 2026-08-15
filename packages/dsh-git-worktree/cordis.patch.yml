@@ -1,0 +1,3 @@
+- insert:
+    - id: git-worktree
+      name: 'dsh-git-worktree'

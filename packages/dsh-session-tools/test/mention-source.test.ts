@@ -9,13 +9,13 @@ test('filters ordinary sessions by title and ranks same cwd first', () => {
     {
       id: 'session-current',
       displayTitle: '查询fixture仓库会话记录',
-      cwd: '/Users/suqing/.dsh/e2e/dsh-git-worktree/fixture-repo',
+      cwd: '/Users/suqing/.dsh/e2e/dsh-worktree-workspaces/fixture-repo',
     },
     {
       id: 'session-listed',
       title: '列出当前会话信息',
       displayTitle: '列出当前会话信息',
-      cwd: '/Users/suqing/.dsh/e2e/dsh-git-worktree/fixture-repo',
+      cwd: '/Users/suqing/.dsh/e2e/dsh-worktree-workspaces/fixture-repo',
     },
     {
       id: 'session-other-cwd',
@@ -29,7 +29,7 @@ test('filters ordinary sessions by title and ranks same cwd first', () => {
     },
   ], {
     currentSessionId: 'session-current',
-    currentCwd: '/Users/suqing/.dsh/e2e/dsh-git-worktree/fixture-repo',
+    currentCwd: '/Users/suqing/.dsh/e2e/dsh-worktree-workspaces/fixture-repo',
     query: '列出',
   })
 

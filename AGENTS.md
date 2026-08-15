@@ -2,7 +2,7 @@
 
 ## 仓库定位
 
-本仓库是 DeepSeek Harness（DSH）第三方插件的 pnpm monorepo。当前阶段仅维护工作区骨架，尚无可安装插件。
+本仓库是 DeepSeek Harness（DSH）第三方插件的 pnpm monorepo。`packages/` 下每个目录对应一个可独立安装的插件。
 
 ## 包边界
 
@@ -21,6 +21,8 @@
 
 ## 文档与交付
 
-- README 必须区分已发布、实验中和计划中的能力，不把路线图写成现有功能。
+- README 默认英文（`README.md`），中文为 `README.zh.md`，页顶互相链接。
+- README 只写已交付能力；路线图、未完成项和已知限制不进入 README，需要时写在 `docs/design/`。
+- 发布到 registry 之前，README 不写安装命令和 registry 包名。
 - Issue、PR 和 MR 默认使用中文；命令、路径、包名和错误原文可保留英文。
 - 发布前必须确认 npm 包内容、DSH profile 安装结果和版本兼容记录；无可安装产物时不得创建 Release。

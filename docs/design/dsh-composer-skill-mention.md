@@ -1,6 +1,6 @@
 # DSH Composer Skill 提及设计
 
-- 状态：实验实现
+- 状态：已完成 rc.6 实现与隔离 Web profile 验证，尚未发布到 npm registry
 - 目标包：`dsh-composer-skill-mention`
 - 验证基线：`@deepseek-ai/dsh@0.1.0-rc.6`
 - 设计日期：2026-08-14

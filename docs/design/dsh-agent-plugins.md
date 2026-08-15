@@ -1,8 +1,9 @@
 # dsh-agent-plugins 设计
 
-> 仓库内设计文档。需求来源：[agent-memory/ideas/agent-plugins-dsh-adapter.md](../../../Documents/agent-memory/ideas/agent-plugins-dsh-adapter.md)
+> 仓库内设计文档。
 > 适用环境：`@deepseek-ai/dsh@0.1.0-rc.6`（本机 sqmc04，web profile）
-> 更新：2026-08-14（M0 完成后）
+> 当前状态：M0–M5 已完成 rc.6 实现与隔离 profile 验证，尚未发布到 npm registry
+> 更新：2026-08-15
 
 ## 目标
 
@@ -21,7 +22,7 @@
 | `dsh plugin --profile web add file:` | ✅ 自动 reconcile 进 `dsh.profile.bundles` |
 | 组合树 | ✅ `--dump-config` 含 `agent-plugins` 行 |
 | patch 热重载（增/删/坏行） | ✅ 见 §3 表 |
-| 挂载点 | 源码 + 实时 slot 树确认；面板可见性待浏览器人工验收 |
+| 挂载点 | ✅ 源码、实时 slot 树与浏览器面板可见性均已确认；界面证据见 [`panel.png`](../../packages/dsh-agent-plugins/screenshots/panel.png) |
 
 ### 1. 挂载点：`settings.plugins.tab`（已确认）
 

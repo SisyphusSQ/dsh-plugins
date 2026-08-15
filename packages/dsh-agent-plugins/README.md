@@ -1,66 +1,65 @@
 # dsh-agent-plugins
 
-Agent Plugins 1.0.0 适配插件：让 [DeepSeek Harness (DSH)](https://github.com/deepseek-ai/deepseek-harness) 直接消费
-[Agent Plugins](https://github.com/agentplugins/agent-plugins-spec) 标准插件包（`plugin.json` + `skills/` + `mcp.json`）。
+English | [中文](README.zh.md)
 
-**状态：实验性（M0–M5 全部完成，待真实 profile 装机验收）。** 一个 npm 包三合一：host 半（bundle patch）+ client 半（侧栏面板）+ CLI（`agent-plugins`）。
+An [Agent Plugins 1.0.0](https://github.com/agentplugins/agent-plugins-spec) adapter for [DeepSeek Harness (DSH)](https://github.com/deepseek-ai/deepseek-harness). One package covers the host bundle, a Web sidebar panel, and the `agent-plugins` CLI.
 
-## 已验证环境
+Verified with `@deepseek-ai/dsh@0.1.0-rc.6`.
 
-- `@deepseek-ai/dsh@0.1.0-rc.6`（本机 sqmc04，web profile）
-- 挂载点：侧栏脚 `sidebar.footer.action` 入口 + `shell.overlay` 覆盖会话列
-- 数据通道：host 半 `TypertRemoteService` + `@Remote`；client 半 `connection.rpc.call('/api', 'agentPlugins/<m>', { args })`
-- 热重载：launcher 无条件提供 HMR 服务并监听 `$DSH_HOME/cordis.patch.yml`（机制已核实，E2E 见 M3）
+## Install
 
-## 里程碑状态
+Requires Node.js 22 or later and `pnpm` on `PATH`:
 
-| 阶段 | 状态 |
-| --- | --- |
-| M0 挂载点 + 数据通道 + 热重载机制核实 | ✅ |
-| M1 CLI + store + 台账 + manifest/mcp.json 校验 | ✅（规范 fixture 39/39 通过） |
-| M2 skills provider（含组件级启停） | 计划中 |
-| M3 MCP 映射 + patch 同步 + 热重载 E2E | ✅（真实 stdio server 注册/启停/卸载全通） |
-| M4 护栏 / doctor / 文档 | 计划中 |
-| M5 client 面板（列表 + 两级 toggle + MCP 同列） | ✅（设计稿对齐 + 侧栏入口：sidebar.footer.action "插件"按钮 + shell.overlay 覆盖会话列） |
+```bash
+dsh plugin --profile web add dsh-agent-plugins@0.1.0
+```
 
-设计文档见 [docs/design/dsh-agent-plugins.md](../../docs/design/dsh-agent-plugins.md)。
+Remove it with `dsh plugin --profile web remove dsh-agent-plugins`.
 
-## CLI（M1 已实现）
+## What it does
 
-```sh
-agent-plugins install <dir|zip|git-url>   # 校验通过才入 store；同 name 替换（PLUGIN_DATA 保留）
-agent-plugins uninstall <name>            # 删文件与台账，PLUGIN_DATA 保留
-agent-plugins update [name...|--all]      # 按台账来源重取（git/dir/zip）
-agent-plugins enable|disable <name>       # 插件级启停
-agent-plugins enable|disable <name> --skill <n> | --mcp <server>   # 组件级启停（--mcp 用限定名 <plugin>__<server>，list 可查）
+DSH can consume standard Agent Plugin packages (`plugin.json` + `skills/` + `mcp.json`):
+
+- Skills under `skills/<name>/SKILL.md` are registered into DSH's Skill registry (provider `agent-plugins`).
+- `mcp.json` servers are mapped into the managed home patch so DSH starts them as MCP rows.
+- The CLI installs, updates, enables, and removes packages in a machine-level store.
+- The Web sidebar **插件** button opens a panel over the session list: plugin cards, skill/MCP toggles, filters, and the CLI cheat sheet.
+
+![Agent Plugins panel](screenshots/panel.png)
+
+## Store
+
+Packages live in `$DSH_HOME/agent-plugins/`. The ledger is `installed.json`, with plugin-level `enabled` plus component-level `skills.*.enabled` and `mcp.*.enabled` (both default to true). The CLI, host adapter, and panel share the same library.
+
+A disabled plugin hides all of its skills and MCP servers. Disabling one skill or one MCP server leaves the rest of the package running.
+
+## CLI
+
+```text
+agent-plugins install <dir|zip|git-url>
+agent-plugins uninstall <name>
+agent-plugins update [name...|--all]
+agent-plugins enable|disable <name>
+agent-plugins enable|disable <name> --skill <n>
+agent-plugins enable|disable <name> --mcp <server>
 agent-plugins list [--json]
 agent-plugins doctor
 ```
 
-store 位于 `$DSH_HOME/agent-plugins/`，台账 `installed.json`（插件级 `enabled` + 组件级 `skills.*.enabled` / `mcp.*.enabled`，两级均默认 true）。CLI 与 host adapter / 面板共享同一 lib 函数。
+`install` validates the package before writing the store. Reinstalling the same `name` replaces the files and keeps `PLUGIN_DATA`. `uninstall` removes files and ledger rows and keeps `PLUGIN_DATA`. `--mcp` uses the qualified server name `<plugin>__<server>` shown by `list`.
 
-## 开发
+`doctor` checks the store, ledger, and managed patch section.
 
-```sh
-pnpm install                 # workspace 依赖
-pnpm --filter dsh-agent-plugins build     # tsc host 半 + esbuild client 半
-```
+## Panel
 
-安装进本机 profile（开发期 file: 链接）：
+The footer action opens `shell.overlay` over the session column. The panel lists machine-level and project-level (`.agent-plugins`) stores, filters by name or source (`dir` / `zip` / `git`), and toggles a whole plugin or a single skill / MCP server. Expanding a card shows source, author, install time, checksum, data directory, and component switches.
 
-```sh
-dsh plugin --profile web add file:../packages/dsh-agent-plugins
-```
+Project skills are discovered from `cwd/.agent-plugins` and the project-root `.agent-plugins` directory.
 
-隔离 E2E（不碰线上 profile）：
+## Verification
 
-```sh
-rm -rf /tmp/dsh-ap-test && mkdir -p /tmp/dsh-ap-test
-cp -R ~/.dsh/profiles /tmp/dsh-ap-test/profiles
-DSH_HOME=/tmp/dsh-ap-test dsh plugin --profile web add file:/abs/path/packages/dsh-agent-plugins
-DSH_HOME=/tmp/dsh-ap-test dsh --profile web --port 3090
-```
+The compatibility boundary and verification evidence are recorded in the [design document](https://github.com/SisyphusSQ/dsh-plugins/blob/main/docs/design/dsh-agent-plugins.md). The current compatibility baseline is `@deepseek-ai/dsh@0.1.0-rc.6`.
 
-## 不做的事
+## License
 
-不重写 MCP 客户端、不做插件进程沙箱、不实现 sse、不做 extensions 目录、不做 per-tool allow/deny（不接核心审批）、面板不做安装/卸载/更新（CLI 专属）、一期无市场无发现 tab。
+MIT.

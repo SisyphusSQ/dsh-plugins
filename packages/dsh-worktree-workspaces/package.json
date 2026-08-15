@@ -1,7 +1,23 @@
 {
-  "name": "dsh-git-worktree",
+  "name": "dsh-worktree-workspaces",
   "version": "0.1.0",
   "description": "Git worktree creation, archival, and Web slash-command picker for DeepSeek Harness",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SisyphusSQ/dsh-plugins.git",
+    "directory": "packages/dsh-worktree-workspaces"
+  },
+  "homepage": "https://github.com/SisyphusSQ/dsh-plugins/tree/main/packages/dsh-worktree-workspaces#readme",
+  "bugs": {
+    "url": "https://github.com/SisyphusSQ/dsh-plugins/issues"
+  },
+  "keywords": [
+    "deepseek-harness",
+    "dsh",
+    "dsh-plugin",
+    "git",
+    "worktree"
+  ],
   "type": "module",
   "main": "lib/src/index.js",
   "types": "lib/src/index.d.ts",
@@ -21,7 +37,7 @@
     "./package.json": "./package.json"
   },
   "bin": {
-    "dsh-worktree": "./lib/src/cli.js"
+    "dsh-worktree": "lib/src/cli.js"
   },
   "files": [
     "lib/src",
@@ -29,10 +45,15 @@
     "lib/client.js.map",
     "cordis.patch.yml",
     "README.md",
+    "README.zh.md",
+    "screenshots",
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.json && tsdown",
+    "clean": "node -e \"require('node:fs').rmSync('lib', { recursive: true, force: true })\"",
+    "build": "pnpm run clean && tsc -p tsconfig.json && tsdown && pnpm run chmod-bin",
+    "chmod-bin": "node -e \"require('node:fs').chmodSync('lib/src/cli.js', 0o755)\"",
+    "prepack": "pnpm run build",
     "test": "pnpm run build && node --test lib/tests/*.test.js",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
@@ -40,7 +61,8 @@
     "node": ">=22"
   },
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
   },
   "dsh": {
     "bundle": {
@@ -56,7 +78,7 @@
     }
   },
   "peerDependencies": {
-    "@deepseek-ai/cordis": "^4.0.1",
+    "@deepseek-ai/cordis": "4.0.1",
     "@deepseek-ai/dsh-api-remotes": "0.1.0-rc.6",
     "@deepseek-ai/dsh-client-runtime": "0.1.0-rc.6",
     "@deepseek-ai/dsh-client-ui-commands": "0.1.0-rc.6",
@@ -68,7 +90,7 @@
     "@deepseek-ai/schemastery": "^3.18.1"
   },
   "devDependencies": {
-    "@deepseek-ai/cordis": "^4.0.1",
+    "@deepseek-ai/cordis": "4.0.1",
     "@deepseek-ai/dsh-api-remotes": "0.1.0-rc.6",
     "@deepseek-ai/dsh-client-runtime": "0.1.0-rc.6",
     "@deepseek-ai/dsh-client-ui-commands": "0.1.0-rc.6",

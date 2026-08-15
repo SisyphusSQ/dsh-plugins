@@ -18,7 +18,7 @@ export {
   parseManagedWorkspaceTitle,
 } from "./protocol.js";
 
-export const name = "git-worktree";
+export const name = "worktree-workspaces";
 export const inject = ["tools", "commands", "workspaceRegistry"];
 
 export interface Config {

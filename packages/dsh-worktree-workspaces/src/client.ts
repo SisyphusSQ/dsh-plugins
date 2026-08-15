@@ -13,7 +13,7 @@ import {
 
 export { defaultWorktreeBranch, managedWorkspaceTitle };
 
-export const name = "git-worktree";
+export const name = "worktree-workspaces";
 export const inject = ["workspaces", "sessions", "remote", "remote.commands", "commandUi"];
 
 const WORKSPACE_WAIT_MS = 10_000;
@@ -191,6 +191,6 @@ export function createWorktreeDecoration(ctx: ClientContext): CommandDecoration 
 export function apply(ctx: ClientContext): void {
   ctx.effect(
     () => ctx.commandUi.decorate(createWorktreeDecoration(ctx)),
-    "dsh-git-worktree: /worktree decoration",
+    "dsh-worktree-workspaces: /worktree decoration",
   );
 }

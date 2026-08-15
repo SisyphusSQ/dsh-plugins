@@ -1,72 +1,63 @@
 # dsh-session-tools
 
-DeepSeek Harness 的会话能力插件。同一包提供六个模型侧工具，以及 Web composer 的 `@会话` 候选与 `pre-step` 快照注入。
+English | [中文](README.zh.md)
 
-状态：实验中，尚未发布到 npm。
+Session tools for DeepSeek Harness. One package gives the model six session tools, and gives the Web composer `@` session candidates that inject another session as sourced context.
 
-## 工具
+Verified with `@deepseek-ai/dsh@0.1.0-rc.6`.
 
-| 工具 | 行为 | 默认审批 |
-| --- | --- | --- |
-| `list_sessions` | 列出普通会话元数据；不搜索正文 | 否 |
-| `read_session` | 将另一会话的受限、不可信快照延迟注入当前轮次 | 是 |
-| `create_session` | 通过 Host ApiProxy 创建真实持久会话和 idle Agent | 是 |
-| `rename_session` | 使用与 Web 相同的业务 API 重命名会话 | 当前会话否，其他会话是 |
-| `fork_session` | 在已完成轮次边界 Fork 会话 | 是 |
-| `send_message_to_session` | 给另一普通会话排队一个带来源的独立 follow-up turn | 是 |
+## Install
 
-工具仅允许当前精确、正在运行且由 Agent Loop 驱动的 Root Agent 调用。Subagent 始终拒绝。跨会话消息使用 `source.kind = "session-relay"`，不会伪装成直接用户输入。
-
-## `@会话`
-
-Web 输入框的 `@` 会多一组普通会话候选（排除当前会话和 subagent）。选中后写入 `@[标题](dsh-session:…)`。Host 在 `agent/pre-step` 解析这些 mention，调用 `sessionReferenceResolver.prepare()`，把不可信快照插到本步消息前面。
-
-人主动 `@` 不走 `read_session` 的 Approval。手打 `@标题` 不会注入；必须选出带 URI 的 markdown，或粘贴规范 `dsh-session:` URI。同一轮若 `read_session` 已经注入同一 sessionId，不再重复准备。
-
-rc.6 没有公开 prompt 预处理钩子，因此持久化的用户消息仍会留下 markdown URI，不会改写成 TUI 那样的纯 `@标题`。无效引用和 `prepare()` 失败会抛出，不吞掉。
-
-## 本地构建与安装
-
-要求 Node.js 22、pnpm 10，并已安装 `@deepseek-ai/dsh@0.1.0-rc.6`。
+Requires Node.js 22 or later and `pnpm` on `PATH`:
 
 ```bash
-pnpm install
-pnpm --filter dsh-session-tools test
-pnpm --filter dsh-session-tools pack --pack-destination /absolute/output/directory
-dsh plugin --profile web add /absolute/output/directory/dsh-session-tools-0.1.0.tgz
+dsh plugin --profile web add dsh-session-tools@0.1.0
 ```
 
-安装会把本包及 `@deepseek-ai/dsh-session-reference` 追加到所选 profile。`pnpm` 目前会对 DSH 提供的 peer dependencies 给出缺失提示；rc.6 的 DSH profile loader 会从 DSH 自带包树解析这些依赖，真实启动已验证。不要为了消除提示把 DSH 服务包复制为普通 dependencies。
+Remove it with `dsh plugin --profile web remove dsh-session-tools`.
 
-卸载：
+## Tools
 
-```bash
-dsh plugin --profile web remove dsh-session-tools
-```
+The tools run only on the current, running Root Agent driven by the Agent Loop. Subagents are rejected. Cross-session messages use `source.kind = "session-relay"` and are not disguised as direct user input.
 
-## 配置
+| Tool | What it does |
+| --- | --- |
+| `list_sessions` | Lists ordinary session metadata (id, title, cwd). It does not search message bodies. Subagent-owned sessions are excluded. |
+| `read_session` | Attaches a bounded, untrusted snapshot of another ordinary session to the current step. Tool calls, reasoning, internal context, and unfinished chunks are omitted. |
+| `create_session` | Creates a real persisted session and an idle Agent through the Host API. It inherits cwd and agent preset unless you override them. The new session is not prompted automatically. |
+| `rename_session` | Renames the current session or another ordinary session through the same business API as the Web UI. |
+| `fork_session` | Forks an ordinary session at a completed turn boundary, inheriting cwd, model target, workspace, lineage, and title seed. |
+| `send_message_to_session` | Queues one follow-up turn on another ordinary session, waits for that session's current turn to finish, and returns delivery confirmation only. |
 
-以下字段属于 `session-tools` Cordis 行的 `config`：
+## `@` session mentions
 
-| 字段 | 默认值 | 含义 |
+The Web composer `@` menu gains a `session` group of ordinary sessions. The current session and subagent sessions are excluded. Sessions that share the current cwd are ranked first.
+
+Picking a candidate inserts `@[title](dsh-session:…)`. On `agent/pre-step`, the host parses those mentions, calls `sessionReferenceResolver.prepare()`, and places the untrusted snapshot ahead of this step's messages.
+
+A human `@` mention does not go through `read_session` approval. Typing `@title` as plain text does not inject; the draft must contain the markdown mention (or a pasted canonical `dsh-session:` URI). If `read_session` already attached the same `sessionId` in this step, the mention is not prepared again.
+
+![Session mention candidates](screenshots/mention.png)
+
+## Configuration
+
+These fields live on the `session-tools` Cordis row `config`:
+
+| Field | Default | Meaning |
 | --- | --- | --- |
-| `approveRead` | `true` | 读取其他会话快照前审批 |
-| `approveCreate` | `true` | 创建会话前审批 |
-| `approveRenameCurrent` | `false` | 重命名当前会话前审批 |
-| `approveRenameOther` | `true` | 重命名其他会话前审批 |
-| `approveFork` | `true` | Fork 前审批 |
-| `approveSend` | `true` | 跨会话 relay 前审批 |
+| `approveRead` | `true` | Ask before attaching another session's snapshot |
+| `approveCreate` | `true` | Ask before creating a session |
+| `approveRenameCurrent` | `false` | Ask before renaming the current session |
+| `approveRenameOther` | `true` | Ask before renaming another session |
+| `approveFork` | `true` | Ask before forking |
+| `approveSend` | `true` | Ask before relaying a message |
 
-Approval 只有 `allowed-once` 会继续，其他回答全部失败关闭。关闭审批字段只适合由部署者明确接受对应风险的受信环境，不会放宽 Root Agent 限制。
+Only `allowed-once` continues an approval request; any other answer fails closed.
 
-DSH rc.6 的 `approval.policy=never`（Web 的 Full access preset）会自动拒绝所有 Approval request，而不是自动批准。因此，受信 Full access 部署若保留本插件默认的 `approve*=true`，对应写工具会按失败关闭语义被拒绝；要启用这些动作，部署者必须在插件配置中显式关闭对应审批字段。`workspace-write` / `ask` 可以保留默认值，并通过 UI 选择 `允许一次`。
+## Verification
 
-## 兼容与证据边界
+The compatibility boundary and verification evidence are recorded in the [design document](https://github.com/SisyphusSQ/dsh-plugins/blob/main/docs/design/dsh-session-capabilities.md). The current compatibility baseline is `@deepseek-ai/dsh@0.1.0-rc.6`.
 
-| DSH 版本 | 状态 | 已验证 |
-| --- | --- | --- |
-| `0.1.0-rc.6` | 本地兼容 | typecheck/build、29 个 Node 测试、npm tarball 内容、隔离 `web` profile 安装、插件树合成、真实 Web 启动与模型六工具调用、热/冷 relay、`session-relay` 来源、`session-reference` 注入、Fork lineage、Workspace Write Approval UI 与 asked/decided 审计。隔离 Web 上 `@列出` 弹出 `session` 组、选中写入 `dsh-session:` mention、发送后出现跨会话召回。持久化用户消息仍保留 markdown URI |
+## License
 
-六个工具与 `@会话` 的 rc.6 Live E2E 已经完成。分屏仍等待 DSH Core 多会话 API，就绪后也落在本包，不再单开包。npm registry 发布验证未完成。
-
-完整的权威、生命周期、relay、分屏 Core 契约和剩余验收项见[设计文档](../../docs/design/dsh-session-capabilities.md)。
+[MIT](LICENSE)

@@ -12,7 +12,7 @@ export async function git(cwd: string, args: string[]): Promise<string> {
 }
 
 export async function createTestRepository(): Promise<{ root: string; repository: string }> {
-  const root = await realpath(await mkdtemp(join(tmpdir(), "dsh-git-worktree-test-")));
+  const root = await realpath(await mkdtemp(join(tmpdir(), "dsh-worktree-workspaces-test-")));
   const repository = join(root, "repository");
   await git(root, ["init", "--initial-branch=main", repository]);
   await git(repository, ["config", "user.name", "DSH Test"]);

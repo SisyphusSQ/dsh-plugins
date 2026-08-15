@@ -54,7 +54,19 @@ test('verifyPluginDir rejects bad $schema', async () => {
 })
 
 test('verifyPluginDir skips a symlink-escaped skill but keeps the plugin', async () => {
-  const verified = await verifyPluginDir(join(fixtures, 'escape-skill'))
+  const base = await mkdtemp(join(tmpdir(), 'ap-escape-skill-'))
+  const pluginDir = join(base, 'plugin')
+  const skillDir = join(pluginDir, 'skills', 'esc')
+  const escapeTarget = join(base, 'escape-target.md')
+  await mkdir(skillDir, { recursive: true })
+  await writeFile(join(pluginDir, 'plugin.json'), JSON.stringify({
+    $schema: 'https://agent-plugins.org/schemas/1.0.0/plugin.schema.json',
+    name: 'escape-demo',
+  }))
+  await writeFile(escapeTarget, '# outside plugin root')
+  await symlink(escapeTarget, join(skillDir, 'SKILL.md'))
+
+  const verified = await verifyPluginDir(pluginDir)
   assert.equal(verified.manifest?.name, 'escape-demo')
   const escape = verified.issues.find((i) => i.message.includes('resolves outside the plugin root'))
   assert.ok(escape !== undefined, 'expected a containment issue for the escaped skill')

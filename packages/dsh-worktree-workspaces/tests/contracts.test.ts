@@ -60,6 +60,7 @@ test("host plugin registers both tool and slash-command surfaces", () => {
   } as unknown as Context;
 
   worktreePlugin.apply(ctx, { baseDir: "/tmp/dsh-worktrees" });
+  assert.equal(worktreePlugin.name, "worktree-workspaces");
   assert.deepEqual(tools, ["worktree_create"]);
   assert.deepEqual(commands, ["worktree"]);
   assert.deepEqual(worktreePlugin.inject, ["tools", "commands", "workspaceRegistry"]);
@@ -74,9 +75,10 @@ test("package declares a real DSH bundle patch and web client", async () => {
   assert.equal(manifest.dsh.bundle.patch, "./cordis.patch.yml");
   assert.equal(manifest.dsh.client.platform, "web");
   assert.equal(manifest.exports["./client"].default, "./lib/client.js");
-  assert.match(patch, /name: 'dsh-git-worktree'/);
+  assert.match(patch, /id: worktree-workspaces/);
+  assert.match(patch, /name: 'dsh-worktree-workspaces'/);
   assert.match(client, /window\.__ModuleLoader__\.load/);
-  assert.match(client, /id: "dsh-git-worktree"/);
+  assert.match(client, /id: "dsh-worktree-workspaces"/);
 });
 
 test("compiled CLI exposes help without running on import", async () => {

@@ -3,6 +3,23 @@
   "version": "0.1.0",
   "description": "Codex-style live reasoning and tool-call collapse for the DSH Web chat view.",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SisyphusSQ/dsh-plugins.git",
+    "directory": "packages/dsh-thinking-collapse"
+  },
+  "homepage": "https://github.com/SisyphusSQ/dsh-plugins/tree/main/packages/dsh-thinking-collapse#readme",
+  "bugs": {
+    "url": "https://github.com/SisyphusSQ/dsh-plugins/issues"
+  },
+  "keywords": [
+    "deepseek-harness",
+    "dsh",
+    "dsh-plugin",
+    "reasoning",
+    "tool-calls",
+    "web"
+  ],
   "type": "module",
   "engines": {
     "node": ">=22"
@@ -26,17 +43,25 @@
     "scripts",
     "cordis.patch.yml",
     "README.md",
+    "README.zh.md",
+    "screenshots",
     "UPSTREAM.md",
     "THIRD_PARTY_NOTICES.md",
     "LICENSE"
   ],
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
   "sideEffects": [
     "./lib/client.js"
   ],
   "scripts": {
-    "build": "pnpm run build:types && pnpm run build:client",
+    "clean": "node -e \"const fs = require('node:fs'); for (const path of ['lib', '.client-build']) fs.rmSync(path, { recursive: true, force: true })\"",
+    "build": "pnpm run clean && pnpm run build:types && pnpm run build:client",
     "build:types": "tsc -p tsconfig.json",
     "build:client": "tsdown src/client/index.tsx --format cjs --platform browser --target es2022 --tsconfig tsconfig.json --deps.never-bundle react --deps.never-bundle react/jsx-runtime --out-dir .client-build --clean --sourcemap --logLevel warn && node scripts/build-client.mjs",
+    "prepack": "pnpm run build",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
     "test": "vitest run"
   },

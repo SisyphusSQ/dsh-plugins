@@ -1,0 +1,3 @@
+- insert:
+    - id: worktree-workspaces
+      name: 'dsh-worktree-workspaces'

@@ -1,0 +1,13 @@
+# Overlay the Codex display name onto llm-pi-ai. apiKeyEnv stays with
+# dsh-openai-codex-oauth. This package does not register an LLM adapter.
+
+- id: llm-pi-ai
+  name: '@deepseek-ai/dsh-llm-pi-ai'
+  config:
+    providers:
+      openai-codex:
+        displayName: Codex 订阅
+
+- insert:
+    - id: codex-login-dock
+      name: dsh-codex-login-dock

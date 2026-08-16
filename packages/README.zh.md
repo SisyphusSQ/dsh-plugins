@@ -13,5 +13,6 @@
 | [dsh-session-tools](dsh-session-tools/README.zh.md) | 会话列表/读取/创建/重命名/Fork/relay 工具，以及 Web `@` 会话提及 |
 | [dsh-agent-plugins](dsh-agent-plugins/README.zh.md) | Agent Plugins 适配，含 CLI 与 Web 侧栏面板 |
 | [dsh-worktree-workspaces](dsh-worktree-workspaces/README.zh.md) | Git worktree 斜杠命令、模型工具、CLI 与 Web 弹层 |
+| [dsh-codex-login-dock](dsh-codex-login-dock/README.zh.md) | Codex 订阅的会话登录卡、设置页与 Host 认证状态 |
 
 协作与包边界约定见 [`AGENTS.md`](../AGENTS.md)。

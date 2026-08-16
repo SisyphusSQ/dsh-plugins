@@ -60,6 +60,7 @@ export const AssistantNodeView = memo(function AssistantNodeView(props: Assistan
       thinkingTiming={thinkingTiming}
       turn={data.turn}
       step={data.step}
+      location={node.location}
       slots={slots}
       kit={atomicKitFromChatNode(props)}
       useSession={useSession}

@@ -96,7 +96,12 @@ export function ReasoningRow({
   const hasBody = (text !== undefined && text.length > 0) || children !== undefined
 
   return (
-    <div className={css.root} data-variant="think" data-state={active ? 'running' : 'ok'}>
+    <div
+      className={css.root}
+      data-variant="think"
+      data-activity="outer"
+      data-state={active ? 'running' : 'ok'}
+    >
       {active && <span className={a11yCss.visuallyHidden}>{t('row.running')}</span>}
       <div className={css.header}>
         <DisclosureRow

@@ -8,6 +8,7 @@ import { THINKING_TIMING_KEY } from '../src/client/timing.js'
 
 vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => ({
   IconChevronRightOutline14: () => <span data-testid="chevron-right" />,
+  IconThinkOutline14: () => <span data-testid="think-icon" />,
   MarkdownText: ({ text }: { text: string }) => <div>{text}</div>,
   JsonBlock: ({ label }: { label: string }) => <div>{label}</div>,
   DisclosureRow: ({

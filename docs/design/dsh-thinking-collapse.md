@@ -1,21 +1,23 @@
 # DSH 思考折叠插件设计
 
-- 状态：已完成 rc.6 实现与隔离 Web profile 验证；`dsh-thinking-collapse@0.1.0` 已于 2026-08-15 发布到 npm registry，并完成 registry 版本与隔离 profile 安装回读
+- 状态：已完成 rc.6 实现与隔离 Web profile 验证；`dsh-thinking-collapse@0.1.0` 已于 2026-08-15 首发，`dsh-thinking-collapse@0.2.0` 已于 2026-08-17 发布。2026-08-16 将聊天契约改为整轮一条外层耗时；同日先做成内层嵌套耗时行，随后改为内层恢复 DSH 默认 Think 行
 
 ## 1. 背景与目标
 
 DeepSeek Harness（DSH）`0.1.0-rc.6` 的聊天视图会把 reasoning 渲染为可展开的 `Think` 行。默认折叠态仍显示思考首行，流式期间显示最新一行；正文开始后不会执行一次明确的自动折叠。工具调用不是 `assistant-step` 里的一块 Markdown，而是独立的 `tool-call` Chat Node，由 `@deepseek-ai/dsh-client-ui-tool` 画在思考行旁边。
 
-`dsh-thinking-collapse` 将聊天视图调整为 Codex 式、按 step 吸收的活动行：
+`dsh-thinking-collapse` 将聊天视图调整为 Codex 式、按 **整轮** 吸收的活动行：
 
-- 每个模型 step 一条活动行；一轮里可以有多条「耗时」；
-- 流式期间或本步普通工具仍在执行、且还没有可见正文时，活动行强制展开，按 block 顺序展示思考 Markdown 和官方工具树；
-- 正文出现，或 step 已结算且本步工具都结束时，自动收成「耗时 Ns」；header 不露出思考或命令预览；
-- 活动时长从思考开始或本步第一个工具开始，到最后一次 `tool/result` 或正文出现；工具还在跑则继续计时；
-- 吸收全部普通工具（bash / read / search / web / todo 等）。流式一开始就把工具画在活动体里；
+- 每一轮只有一条外层活动行；标题是这一轮的总耗时；
+- 该轮所有思考和普通工具都进这条外层；展开后按时间顺序排列；
+- 每一段思考恢复为 DSH 默认 Think 行：Think 图标、标题 `Think`、折叠时显示首行、流式时显示最新一行，可独立展开；不显示内层「耗时 Ns」；
+- 流式期间或本轮普通工具仍在执行、且还没有可见正文时，外层强制展开；内层 Think 即使正在流式也不强制展开；
+- 正文出现，或本轮已结算且工具都结束时，外层自动收成「耗时 Ns」；header 不露出思考或命令预览；
+- 活动时长从本轮第一次思考或第一个工具开始，到最后一次 `tool/result` 或正文出现；工具还在跑则继续计时；
+- 吸收全部普通工具（bash / read / search / web / todo 等）。流式一开始就把工具画在外层活动体里；
 - `ask_user_question` 与审批提问已经离开消息流、进了编辑器，不折进活动行；
 - 没有思考、只有工具时仍出活动行；历史算不出时长时，有思考显示「思考过程」/`Thoughts`，纯工具显示「工具调用」/`Tool calls`；
-- 正文留在该 step 的活动行外面；
+- 正文留在外层活动行外面；
 - 只影响聊天视图，不修改轨迹视图、DSH Host 行为或模型请求。
 
 本插件的目标是一个可独立安装、可卸载、可验证的正式 DSH client 插件，不通过 DOM 查询、CSS 覆盖或修改 DSH 安装目录实现。
@@ -42,19 +44,19 @@ assistant/chunk / tool/call / tool/result / step/end / assistant/message / llm/r
           ▼                             ▼
  AssistantNodeView shadow        ToolCallNodeView shadow
           │                             │
- visible reasoning/text          tools-only hidden step
- → AssistantMarkdown             → first absorbed root hosts
-          │                      absorbed (visible step) → null
+ visible reasoning/text          tools-only hidden turn
+ → first visible assistant hosts → first absorbed root hosts
+          │                      absorbed (visible turn) → null
           ▼                      unmatched → ToolCallTree
-     ReasoningRow
-      reasoning Markdown
+     ReasoningRow (turn outer)
+      ThinkRow per thought (DSH native Think)
       official tool.call.toolview tree
 ```
 
 插件包含两组相互配合的 client contribution：
 
 1. `ThinkingTimingDefinition` 从持久 Session 事件构建每个 reasoning block 以及整步活动的计时数据，并记录本步 `callIds`；
-2. shadow renderer 读取计时数据：`assistant-step` 把连续的 reasoning / 可吸收 tool-call 收成一条活动行；`tool-call` 在 assistant-step 可见时对已吸收的 call 返回 `null`。若本步 assistant-step 因只有 tool-call 被 DSH 标成 hidden，则由该步第一个被吸收的工具根节点托管活动行，避免纯工具步从聊天流消失。
+2. shadow renderer 读取计时数据：第一个有可见内容的 `assistant-step` 把 **整轮** 的 reasoning / 可吸收 tool-call 收成一条外层活动行，每段思考用 DSH 默认 Think 行；`tool-call` 在本轮已有可见 assistant-step 时对已吸收的 call 返回 `null`。若整轮 assistant-step 都因只有 tool-call 被 DSH 标成 hidden，则由该轮第一个被吸收的工具根节点托管外层活动行，避免纯工具轮从聊天流消失。后续 step 若只有已被吸收的思考/工具，渲染器返回 `null`，交给 DSH 的 `flowItem:empty { display: none }` 去掉空行；正文仍留在各自 step 节点上、画在外层行外面。
 
 官方 `ToolCallTree` 不从 `@deepseek-ai/dsh-client-ui-tool/client` 导出。`SlotCore` 规定 child slot 全局只能声明一次，官方 `tool-call` 条目已经声明了 `tool.call.toolview`。本插件的两个 shadow **不得**再声明该 children，否则装载失败。运行时通过 `ctx.slots.entriesOfSlot('tool.call.toolview')` 按 `key === toolName` 查找官方原子视图；无匹配 key 时用 `JsonBlock` fallback。
 
@@ -117,22 +119,24 @@ key 使用 `thinking-collapse-timing`，通过 TypeScript declaration merge 扩�
 
 ## 6. 渲染与交互状态机
 
-每个 step 把连续的 reasoning 与可吸收 tool-call 收成一条活动行。`ask_user_question` 不是可吸收工具。live 条件是：本步没有可见正文，并且（step 仍在流式且该组包含最后一块活动，或该组仍有 running 工具）。
+每一轮把全部 reasoning 与可吸收 tool-call 收成 **一条** 外层活动行。外层时长合并各 step 的 `activity` 墙钟。`ask_user_question` 不是可吸收工具。外层 live 条件是：本轮没有可见正文，并且（任一 step 仍在流式，或仍有 running 工具）。
+
+内层每一段思考使用上游 `ReasoningRow` 的 Think 形态，而不是再套一条耗时行。内层 running 条件是：该思考所属 step 仍在流式，且它是该 step 里最后一段尚未 `endedAt` 的 reasoning；running 只驱动扫光和最新一行预览，不强制展开。工具卡片是外层活动体里的兄弟节点，不塞进某一段思考里。
 
 | 状态 | 展示 | 用户点击 |
 | --- | --- | --- |
-| 流式 / 本步工具仍在跑、且本步还没有可见正文 | 强制展开思考 + 官方工具树，标题为“已处理 Ns”/`Worked for Ns` 并持续计时 | 不收起 |
-| 正文出现，或 step 已结算且本步工具都结束 | 自动折叠为“耗时 Ns”/`Worked for Ns` | 展开后标题仍为“耗时 Ns”/`Worked for Ns` |
-| 历史计时不可用，且含思考 | 折叠为“思考过程”/`Thoughts` | 可展开 |
-| 历史计时不可用，且只有工具 | 折叠为“工具调用”/`Tool calls` | 可展开 |
+| 流式 / 本轮工具仍在跑、且本轮还没有可见正文 | 外层强制展开，标题为“已处理 Ns”/`Worked for Ns`；内层 Think 默认折叠，当前思考在折叠态显示最新一行，更早的思考显示首行；官方工具树按时间顺序可见 | 外层不能收起；内层 Think 可独立展开 |
+| 正文出现，或本轮已结算且工具都结束 | 外层自动折叠为“耗时 Ns”/`Worked for Ns` | 展开外层后标题仍为“耗时 Ns”；内层 Think 默认仍折叠，需再点开 |
+| 历史计时不可用，且含思考 | 外层折叠为“思考过程”/`Thoughts` | 可展开外层；内层仍为 `Think` |
+| 历史计时不可用，且只有工具 | 外层折叠为“工具调用”/`Tool calls` | 可展开 |
 
-活动未结束时统一使用紧凑时长 `8s` 或 `1m 8s`；结束后中文时长格式为 `8秒` 或 `1分钟 8秒`，英文为 `8s` 或 `1m 8s`，负值归零。折叠态不再显示左侧思考图标；使用 DSH 原生向右箭头，展开后由 `DisclosureRow` 切换为向下箭头。状态文案由插件自己的中英 locale namespace 提供，可访问性运行状态文案继续复用 conversation locale。
+活动未结束时统一使用紧凑时长 `8s` 或 `1m 8s`；结束后中文时长格式为 `8秒` 或 `1分钟 8秒`，英文为 `8s` 或 `1m 8s`，负值归零。外层折叠态不再显示左侧思考图标；使用 DSH 原生向右箭头，展开后由 `DisclosureRow` 切换为向下箭头。内层 Think 保留上游 Think 图标与标题 `Think`。状态文案由插件自己的中英 locale namespace 提供，可访问性运行状态文案继续复用 conversation locale。
 
-`DisclosureRow` 只负责标题和箭头，展开状态不参与标题文案计算。分隔线由标题容器持有，保证折叠时位于组件底部、展开时仍位于标题与活动体之间。思考使用 `MarkdownText`，工具使用官方 `tool.call.toolview`；思考基础文字保持 DSH reasoning 原有的 `14px / 24px` 与 `label-tertiary` 颜色，不提升为 assistant 正文层级，也不把工具卡片染成思考色。
+`DisclosureRow` 只负责标题和箭头，展开状态不参与标题文案计算。外层分隔线由标题容器持有，保证折叠时位于组件底部、展开时仍位于标题与活动体之间。内层 Think 正文与上游一致，使用 `pre-wrap` 纯文本；正文回答使用 `MarkdownText`；工具使用官方 `tool.call.toolview`。思考基础文字保持 DSH reasoning 原有的 `14px / 24px` 与 `label-tertiary` 颜色，不提升为 assistant 正文层级，也不把工具卡片染成思考色。
 
-吸收判断：tool-call 节点 `location.kind` 为 `turn` 或 `step` 时，扫描对应 step 的 `thinking-collapse-timing.callIds` 或 `assistant-step` blocks。对不上就不要吸收，流里照常画工具。
+吸收判断：tool-call 节点 `location.kind` 为 `turn` 或 `step` 时，扫描对应 **整轮** step 的 `thinking-collapse-timing.callIds` 或 `assistant-step` blocks。对不上就不要吸收，流里照常画工具。
 
-DSH 的 `hasVisibleContent` 把纯 `tool-call` 的 `assistant-step` 标成 `visibility: hidden`。插件与这条规则对齐：没有 reasoning / 正文的 assistant 节点不再画活动行，改由该步第一个被吸收的工具根节点托管，避免 hidden 节点占位、聊天流又没有活动行。
+DSH 的 `hasVisibleContent` 把纯 `tool-call` 的 `assistant-step` 标成 `visibility: hidden`。插件与这条规则对齐：本轮没有任何 reasoning / 正文的 assistant 节点时，不画外层活动行，改由该轮第一个被吸收的工具根节点托管，避免 hidden 节点占位、聊天流又没有活动行。后续可见 assistant-step 出现后，工具托管立即让出，改由第一个可见 assistant-step 托管整轮活动。
 
 ## 7. Renderer 兼容副本
 
@@ -140,7 +144,8 @@ rc.6 没有独立的 reasoning slot，也没有从 `/client` 公共入口导出 
 
 - `AssistantNodeView`；
 - `AssistantMarkdown`；
-- `ReasoningRow`；
+- `ReasoningRow`（外层耗时行）；
+- `ThinkRow`（内层，贴近上游 Think）；
 - `ToolCallTree` / `ToolCallNodeView`；
 - message image labels 的必要桥接；
 - 对应 CSS module。
@@ -169,10 +174,10 @@ rc.6 没有独立的 reasoning slot，也没有从 `/client` 公共入口导出 
 
 - 计时 fold：正常结束、缺失 block-end、工具不关活动、tool/result 延长墙钟、正文出现但工具未完成、多个 reasoning block、retry、中断和无历史 chunk；
 - 吸收：普通工具按 step 吸收，`ask_user_question` 不吸收；
-- 展开状态：流式强制展开、工具一开始就在活动体、正文出现后自动折叠、结束后用户切换；
-- 隐私形态：折叠 header 不包含 reasoning 或命令预览，只包含耗时状态与箭头；
-- 生命周期文案：流式期间为持续更新的紧凑“已处理 Ns”，结束后折叠与展开均为本地化“耗时 Ns”；无时长纯工具为“工具调用”；
-- 展开形态：分隔线保持在标题下方，完整 reasoning 由 `MarkdownText` 渲染，工具走官方 `tool.call.toolview`；
+- 展开状态：流式强制展开外层、内层 Think 默认折叠、流式段显示最新一行预览、工具一开始就在活动体、正文出现后外层自动折叠；
+- 隐私形态：外层折叠 header 不包含 reasoning 或命令预览，只包含耗时状态与箭头；内层 Think 折叠态显示首行或最新一行；
+- 生命周期文案：流式期间为持续更新的紧凑“已处理 Ns”，结束后折叠与展开均为本地化“耗时 Ns”；无时长纯工具为“工具调用”；内层标题固定为上游 `Think`；
+- 展开形态：外层分隔线保持在标题下方；内层 Think 正文为上游纯文本；工具走官方 `tool.call.toolview`；
 - slot：`assistant-step` 与 `tool-call` 的 `priority: -1` 赢过默认 `0`，且不声明 `tool.call.toolview` children；原子视图通过已声明 keyed slot 运行时分发；
 - 构建：Host ESM、client loader artifact、类型声明和 npm pack 内容。
 
@@ -184,21 +189,22 @@ dsh plugin --profile web add file:<repo>/packages/dsh-thinking-collapse
 
 安装后重启 `dsh web`，刷新页面并验证：
 
-1. reasoning 流式期间标题显示持续更新的“已处理 Ns”，完整内容可见；
-2. 普通工具一开始就出现在活动体里，而不是先作为独立聊天行；
-3. 本步工具仍在跑且还没有正文时，活动行保持展开，耗时包含工具墙钟；
-4. 正文出现或本步工具都结束后自动折叠；header 只显示“耗时 Ns”和右侧箭头；
-5. 点击后标题仍为“耗时 Ns”，分隔线下按原顺序显示 Markdown reasoning 和官方工具树；
-6. 再次点击后标题不变并隐藏活动体；
-7. 刷新后最近会话仍能从事件窗口恢复时长；
-8. 审批 / 提问仍在编辑器；轨迹视图保持不变；
-9. 没有思考、只有工具时，聊天流仍出现活动行（由该步第一个被吸收的工具节点托管），而不是整步消失。
+1. reasoning 流式期间外层标题显示持续更新的“已处理 Ns”，内层 Think 默认折叠并显示最新一行；
+2. 普通工具一开始就出现在外层活动体里，而不是先作为独立聊天行；
+3. 本轮工具仍在跑且还没有正文时，外层保持展开，耗时包含整轮工具墙钟；
+4. 正文出现或本轮工具都结束后外层自动折叠；header 只显示一条“耗时 Ns”和右侧箭头；
+5. 点击外层后标题仍为“耗时 Ns”；分隔线下按原顺序显示 DSH Think 行和官方工具树；
+6. 内层 Think 默认折叠，再点一次才显示该段思考正文；内层标题不是“耗时 Ns”；
+7. 再次点击外层后标题不变并隐藏活动体；
+8. 刷新后最近会话仍能从事件窗口恢复时长；
+9. 审批 / 提问仍在编辑器；轨迹视图保持不变；
+10. 没有思考、只有工具时，聊天流仍出现一条活动行（由该轮第一个被吸收的工具节点托管），而不是整轮消失。
 
 真实模型调用可能产生用量，执行前单独确认。类型检查、构建、fixture 或组件测试都不能替代这条真实 Web 验证。
 
 ### 9.1 已完成的 live E2E
 
-2026-08-14 已在 DSH `0.1.0-rc.6` 上完成思考折叠 live Web 验证；调整后的视觉复核以仓库根目录的 [`design-qa.md`](../../design-qa.md) 为准。2026-08-15 在同一隔离 profile 上完成普通工具吸收验证：有思考的 bash 步、以及轨迹标成 `(tool call only)` 的纯工具步，都会在聊天流画出「耗时 Ns」活动行，官方工具卡片在活动体内，正文在活动行外，轨迹页不变。
+2026-08-14 已在 DSH `0.1.0-rc.6` 上完成思考折叠 live Web 验证；当时的视觉复核以仓库根目录的 [`design-qa.md`](../../design-qa.md) 为准。2026-08-15 在同一隔离 profile 上完成普通工具吸收验证。2026-08-16 将契约从「一步一条耗时」改为「整轮一条外层耗时」；同日先验证内层嵌套耗时行，随后改为内层恢复 DSH 默认 Think 行，并在隔离 profile `web-thinking-collapse-e2e`、`127.0.0.1:3082` 上用既有会话「查看仓库并总结README」复核：外层仍是一条「耗时 4秒」；展开后顺序为 Think（首行预览）→ Bash → Read → Think（首行预览），没有内层「耗时 Ns」；正文在行外。轨迹页仍是逐步 timeline（Request #1 / #2），未改。
 
 ## 10. 升级流程
 

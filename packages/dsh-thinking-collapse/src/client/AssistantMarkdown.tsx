@@ -2,7 +2,9 @@ import { memo, useMemo } from 'react'
 import type { ReactNode } from 'react'
 import type {
   AssistantBlock,
+  ConversationLocation,
   ConversationSnapshot,
+  StepLocation,
   ToolCallBlock,
 } from '@deepseek-ai/dsh-client-runtime/client'
 import type { ImageLoader } from '@deepseek-ai/dsh-client-ui-attachment'
@@ -17,22 +19,26 @@ import type { AtomicToolViewKit, ToolViewSlots } from './toolview.js'
 import { messageImageLabels } from './image-labels.js'
 import type { THINKING_COLLAPSE_NS } from './locales.js'
 import {
-  absorbableToolRoots,
-  hasVisibleAssistantContent,
-  insertMissingActivityTools,
+  collectTurnActivityItems,
   isActivityBlock,
   isActivityLive,
-  isAnswerBlock,
+  isAssistantTurnActivityHost,
   isRunningToolBlock,
-  lastActivityIndex,
-  missingAbsorbableToolBlocks,
-  toolCallName,
+  mergeActivityTiming,
+  stepLocationsOf,
+  toStepActivityTools,
+  turnHasAnswer,
+  type StepActivitySource,
 } from './activity.js'
-import { ReasoningRow } from './ReasoningRow.js'
-import { ToolCallTree } from './ToolCallTree.js'
+import { THINKING_TIMING_KEY } from './timing.js'
 import type { ThinkingTimingData } from './timing.js'
+import { ReasoningRow } from './ReasoningRow.js'
+import {
+  TurnActivityBody,
+  absorbableToolRootsByStep,
+  toolRootMap,
+} from './TurnActivityBody.js'
 import css from './AssistantMarkdown.module.css'
-import rowCss from './ReasoningRow.module.css'
 
 export interface AssistantMarkdownProps {
   readonly blocks: readonly AssistantBlock[]
@@ -43,6 +49,7 @@ export interface AssistantMarkdownProps {
   readonly thinkingTiming?: ThinkingTimingData | undefined
   readonly turn: number
   readonly step: number
+  readonly location?: ConversationLocation | undefined
   readonly slots: ToolViewSlots
   readonly kit: AtomicToolViewKit
   readonly useSession: SnapshotSelectorHook<ConversationSnapshot>
@@ -64,6 +71,7 @@ export const AssistantMarkdown = memo(function AssistantMarkdown({
   thinkingTiming,
   turn,
   step,
+  location,
   slots,
   kit,
   useSession,
@@ -79,121 +87,157 @@ export const AssistantMarkdown = memo(function AssistantMarkdown({
     copyLabel: t('copy'),
     copiedLabel: t('copied'),
   }), [t])
-  const toolRootList = useSession(snapshot => absorbableToolRoots(snapshot, turn, step))
+  const stepLocs = location === undefined ? [] : stepLocationsOf(location)
+  const stepNumbers = stepLocs.length > 0 ? stepLocs.map(item => item.step) : [step]
+  const toolRootsByStep = useSession(snapshot => absorbableToolRootsByStep(snapshot, turn, stepNumbers))
+  const sources = useMemo<StepActivitySource[]>(() => {
+    if (stepLocs.length === 0) {
+      return [{
+        step,
+        blocks,
+        tools: toStepActivityTools(toolRootsByStep[step] ?? []),
+        timing: thinkingTiming,
+      }]
+    }
+    return stepLocs.map(item => {
+      const assistant = item.data.get('assistant-step')
+      return {
+        step: item.step,
+        blocks: item.step === step ? blocks : assistant?.blocks ?? [],
+        tools: toStepActivityTools(toolRootsByStep[item.step] ?? []),
+        timing: item.step === step ? thinkingTiming : item.data.get(THINKING_TIMING_KEY),
+      }
+    })
+  }, [blocks, step, stepLocs, thinkingTiming, toolRootsByStep])
+  const items = useMemo(() => collectTurnActivityItems(sources), [sources])
   const toolRoots = useMemo(() => {
-    const next: Record<string, ToolCallBlock> = {}
-    for (const root of toolRootList) next[root.callId] = root
-    return next
-  }, [toolRootList])
-  const displayBlocks = useMemo(() => insertMissingActivityTools(
-    blocks,
-    missingAbsorbableToolBlocks(
-      blocks,
-      toolRootList.map(root => ({
-        callId: root.callId,
-        name: toolCallName(root),
-        argsRaw: 'kind' in root ? root.call?.argsRaw ?? '' : root.argsRaw,
-      })),
-    ),
-  ), [blocks, toolRootList])
-  const last = displayBlocks.length - 1
-  if (!hasVisibleAssistantContent(displayBlocks)) return null
-
-  const hasAnswer = displayBlocks.some(isAnswerBlock)
-  const tailActivity = lastActivityIndex(displayBlocks)
-  const rendered: ReactNode[] = []
-  let group: AssistantBlock[] = []
-  let groupStart = 0
-
-  const flushGroup = (): void => {
-    if (group.length === 0) return
-    const start = groupStart
-    const items = group
-    group = []
-    const groupEnd = start + items.length - 1
-    const callIds = items.flatMap(block => block.kind === 'tool-call' ? [block.callId] : [])
-    const toolsRunning = callIds.some(callId => {
-      const root = toolRoots[callId]
-      return root !== undefined && isRunningToolBlock(root)
-    })
-    const live = isActivityLive({
-      hasAnswer,
-      streaming,
-      groupIncludesLastActivity: tailActivity !== -1 && start <= tailActivity && tailActivity <= groupEnd,
-      toolsRunning,
-    })
-    const hasReasoning = items.some(block => block.kind === 'reasoning')
-    rendered.push(
-      <ReasoningRow
-        key={`activity-${start}`}
-        live={live}
-        active={live}
-        timing={thinkingTiming?.activity}
-        historyKind={hasReasoning ? 'reasoning' : 'tools'}
-        t={t}
-        thinkingT={thinkingT}
-        codeLabels={codeLabels}
-      >
-        {items.map((block, offset) => {
-          const index = start + offset
-          if (block.kind === 'reasoning') {
-            return (
-              <div key={index} className={rowCss.thinkBody}>
-                <MarkdownText
-                  text={block.text}
-                  streaming={live && streaming && index === last}
-                  codeLabels={codeLabels}
-                />
-              </div>
-            )
-          }
-          if (block.kind !== 'tool-call') return null
-          const root = toolRoots[block.callId]
-          if (root === undefined) return null
-          return (
-            <div key={block.callId} className={rowCss.toolsBody}>
-              <ToolCallTree
-                slots={slots}
-                kit={kit}
-                block={root}
-                selectedCallId={selectedCallId}
-                cwd={cwd}
-                openFile={openFile}
-                inspectCall={inspectCall}
-              />
-            </div>
-          )
-        })}
-      </ReasoningRow>,
+    const roots: ToolCallBlock[] = []
+    for (const number of stepNumbers) roots.push(...(toolRootsByStep[number] ?? []))
+    return toolRootMap(roots)
+  }, [stepNumbers, toolRootsByStep])
+  const host = isAssistantTurnActivityHost(sources, step)
+  const answers = renderAnswerBlocks(blocks, {
+    streaming,
+    imageLoader,
+    mentions,
+    t,
+  })
+  if (!host) {
+    if (answers.length === 0 && interrupted !== true) return null
+    return (
+      <div className={css.root} data-streaming={streaming || undefined}>
+        <div className={css.body}>
+          {answers}
+          {interrupted && <span className={css.stopped}>{t('message.stopped')}</span>}
+        </div>
+      </div>
     )
   }
 
-  for (let i = 0; i < displayBlocks.length; i += 1) {
-    const block = displayBlocks[i]
-    if (block === undefined) continue
-    if (isActivityBlock(block)) {
-      if (group.length === 0) groupStart = i
-      group.push(block)
+  const hasAnswer = turnHasAnswer(sources)
+  const toolsRunning = items.some(item => {
+    if (item.kind !== 'tool-call') return false
+    const root = toolRoots[item.callId]
+    return root !== undefined && isRunningToolBlock(root)
+  })
+  const streamingSteps = streamingStepsOf(stepLocs, step, streaming)
+  const live = isActivityLive({
+    hasAnswer,
+    streaming: streamingSteps.size > 0,
+    groupIncludesLastActivity: true,
+    toolsRunning,
+  })
+  const hasReasoning = items.some(item => item.kind === 'reasoning')
+  const timing = mergeActivityTiming(sources.map(source => source.timing?.activity))
+
+  return (
+    <div className={css.root} data-streaming={streaming || undefined}>
+      <div className={css.body}>
+        {items.length > 0 && (
+          <ReasoningRow
+            live={live}
+            active={live}
+            timing={timing}
+            historyKind={hasReasoning ? 'reasoning' : 'tools'}
+            t={t}
+            thinkingT={thinkingT}
+            codeLabels={codeLabels}
+          >
+            <TurnActivityBody
+              items={items}
+              toolRoots={toolRoots}
+              streamingSteps={streamingSteps}
+              slots={slots}
+              kit={kit}
+              selectedCallId={selectedCallId}
+              cwd={cwd}
+              openFile={openFile}
+              inspectCall={inspectCall}
+              t={t}
+            />
+          </ReasoningRow>
+        )}
+        {answers}
+        {interrupted && <span className={css.stopped}>{t('message.stopped')}</span>}
+      </div>
+    </div>
+  )
+})
+
+function streamingStepsOf(
+  stepLocs: readonly StepLocation[],
+  currentStep: number,
+  currentStreaming: boolean,
+): Set<number> {
+  const next = new Set<number>()
+  if (stepLocs.length === 0) {
+    if (currentStreaming) next.add(currentStep)
+    return next
+  }
+  for (const loc of stepLocs) {
+    if (loc.step === currentStep) {
+      if (currentStreaming) next.add(loc.step)
       continue
     }
-    flushGroup()
+    if (loc.data.get('assistant-step')?.status === 'running') next.add(loc.step)
+  }
+  return next
+}
+
+function renderAnswerBlocks(
+  blocks: readonly AssistantBlock[],
+  input: {
+    readonly streaming: boolean
+    readonly imageLoader: ImageLoader
+    readonly mentions: MarkdownFileMentions | undefined
+    readonly t: ChatViewSlotProps['t']
+  },
+): ReactNode[] {
+  const rendered: ReactNode[] = []
+  const codeLabels = {
+    copyLabel: input.t('copy'),
+    copiedLabel: input.t('copied'),
+  }
+  for (let i = 0; i < blocks.length; i += 1) {
+    const block = blocks[i]
+    if (block === undefined || isActivityBlock(block)) continue
     switch (block.kind) {
       case 'text':
         rendered.push(
           <MarkdownText
             key={i}
             text={block.text}
-            streaming={streaming}
+            streaming={input.streaming}
             codeLabels={codeLabels}
-            fileMentions={mentions}
+            fileMentions={input.mentions}
           />,
         )
         break
       case 'image': {
         const start = i
         const images = [block]
-        while (i + 1 < displayBlocks.length) {
-          const next = displayBlocks[i + 1]
+        while (i + 1 < blocks.length) {
+          const next = blocks[i + 1]
           if (next === undefined || next.kind !== 'image') break
           images.push(next)
           i += 1
@@ -202,36 +246,26 @@ export const AssistantMarkdown = memo(function AssistantMarkdown({
           <ImageGallery
             key={start}
             images={images}
-            load={imageLoader}
+            load={input.imageLoader}
             align="start"
-            labels={messageImageLabels(t)}
+            labels={messageImageLabels(input.t)}
           />,
         )
         break
       }
-      case 'tool-call':
-      case 'reasoning':
-        break
       case 'other':
         rendered.push(
           <JsonBlock
             key={i}
-            label={t('message.unknownBlock')}
+            label={input.t('message.unknownBlock')}
             payload={block.block}
-            truncatedLabel={total => t('json.truncated', { total })}
+            truncatedLabel={total => input.t('json.truncated', { total })}
           />,
         )
         break
+      default:
+        break
     }
   }
-  flushGroup()
-
-  return (
-    <div className={css.root} data-streaming={streaming || undefined}>
-      <div className={css.body}>
-        {rendered}
-        {interrupted && <span className={css.stopped}>{t('message.stopped')}</span>}
-      </div>
-    </div>
-  )
-})
+  return rendered
+}

@@ -1,14 +1,19 @@
 import type { ConversationLocation, StepLocation } from '@deepseek-ai/dsh-client-runtime/client'
 import { describe, expect, it } from 'vitest'
 import {
+  collectTurnActivityItems,
+  firstVisibleAssistantStepNumber,
   hasVisibleAssistantContent,
   insertMissingActivityTools,
   isAbsorbedToolCall,
   isActivityBlock,
   isActivityLive,
+  isAssistantTurnActivityHost,
   isEditorOwnedTool,
   isToolHostedActivity,
   lastActivityIndex,
+  liveReasoningItem,
+  mergeActivityTiming,
 } from '../src/client/activity.js'
 import type { ThinkingTimingData } from '../src/client/timing.js'
 import { THINKING_TIMING_KEY } from '../src/client/timing.js'
@@ -133,5 +138,78 @@ describe('activity absorption', () => {
       { kind: 'tool-call', callId: 'c1', name: 'bash', argsRaw: '{}' },
       { kind: 'text', text: 'DONE' },
     ])
+  })
+
+  it('merges step timings into one turn clock', () => {
+    expect(mergeActivityTiming([
+      { startedAt: 1_000, endedAt: 2_000 },
+      undefined,
+      { startedAt: 1_500, endedAt: null },
+    ])).toEqual({ startedAt: 1_000, endedAt: null })
+    expect(mergeActivityTiming([
+      { startedAt: 2_000, endedAt: 4_000 },
+      { startedAt: 1_000, endedAt: 6_000 },
+    ])).toEqual({ startedAt: 1_000, endedAt: 6_000 })
+  })
+
+  it('collects reasoning and tools across steps and hosts the first visible assistant', () => {
+    const reasoning = { kind: 'reasoning' as const, text: 'think later' }
+    const items = collectTurnActivityItems([
+      {
+        step: 1,
+        blocks: [{ kind: 'tool-call', callId: 'c1', name: 'bash', argsRaw: '{}' }],
+        tools: [{ callId: 'c1', name: 'bash', argsRaw: '{}' }],
+        timing: undefined,
+      },
+      {
+        step: 2,
+        blocks: [reasoning, { kind: 'text', text: 'DONE' }],
+        tools: [],
+        timing: {
+          blocks: { 0: { startedAt: 3_000, endedAt: 4_000 } },
+          activity: { startedAt: 3_000, endedAt: 4_000 },
+          callIds: [],
+          pendingCallIds: [],
+        },
+      },
+    ])
+    expect(items).toEqual([
+      { kind: 'tool-call', step: 1, callId: 'c1', name: 'bash' },
+      {
+        kind: 'reasoning',
+        step: 2,
+        index: 0,
+        text: 'think later',
+        timing: { startedAt: 3_000, endedAt: 4_000 },
+      },
+    ])
+    expect(firstVisibleAssistantStepNumber([
+      { step: 1, blocks: [{ kind: 'tool-call', callId: 'c1', name: 'bash', argsRaw: '{}' }] },
+      { step: 2, blocks: [reasoning, { kind: 'text', text: 'DONE' }] },
+    ])).toBe(2)
+    expect(isAssistantTurnActivityHost([
+      { step: 1, blocks: [{ kind: 'tool-call', callId: 'c1', name: 'bash', argsRaw: '{}' }] },
+      { step: 2, blocks: [reasoning] },
+    ], 2)).toBe(true)
+  })
+
+  it('marks only the latest unfinished thought in a streaming step as live', () => {
+    expect(liveReasoningItem([
+      {
+        kind: 'reasoning',
+        step: 1,
+        index: 0,
+        text: 'first',
+        timing: { startedAt: 1_000, endedAt: 2_000 },
+      },
+      { kind: 'tool-call', step: 1, callId: 'c1', name: 'bash' },
+      {
+        kind: 'reasoning',
+        step: 1,
+        index: 2,
+        text: 'second',
+        timing: { startedAt: 3_000, endedAt: null },
+      },
+    ], new Set([1]))).toMatchObject({ index: 2, text: 'second' })
   })
 })

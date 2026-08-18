@@ -10,7 +10,7 @@ Host 与 Web client API 对齐 `@deepseek-ai/dsh@0.1.0-rc.6`。fixture 测试覆
 
 ## 依赖
 
-同一 profile 需要安装本仓库的 [`dsh-openai-codex-oauth`](../dsh-openai-codex-oauth/README.zh.md)。本包运行时查找 `ctx.openaiCodexOAuth`。该 silent 面不存在时状态为 `missingPlugin`，不会自行启动浏览器登录。退出登录调用同一面上的 `logout()`。
+同一 profile 需要安装本仓库的 [`dsh-openai-codex-oauth`](https://github.com/SisyphusSQ/dsh-plugins/blob/main/packages/dsh-openai-codex-oauth/README.zh.md)。本包运行时查找 `ctx.openaiCodexOAuth`。该 silent 面不存在时状态为 `missingPlugin`，不会自行启动浏览器登录。退出登录调用同一面上的 `logout()`。
 
 完整 OAuth JSON 使用 `OPENAI_CODEX_OAUTH_CREDENTIAL`，当前 access token 使用 `OPENAI_CODEX_ACCESS_TOKEN`。默认文件是 `$DSH_HOME/.credentials.yaml`。本包不写 `~/.codex`。
 

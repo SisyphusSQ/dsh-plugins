@@ -6,16 +6,6 @@ DeepSeek Harness 的会话能力插件。同一包提供六个模型侧工具，
 
 已按 `@deepseek-ai/dsh@0.1.0-rc.6` 验证。
 
-## 安装
-
-需要 Node.js 22 或更高版本，并确保 `pnpm` 在 `PATH` 中：
-
-```bash
-dsh plugin --profile web add dsh-session-tools@0.1.0
-```
-
-卸载命令：`dsh plugin --profile web remove dsh-session-tools`。
-
 ## 工具
 
 这些工具只允许当前精确、正在运行且由 Agent Loop 驱动的 Root Agent 调用。Subagent 一律拒绝。跨会话消息使用 `source.kind = "session-relay"`，不会伪装成直接用户输入。

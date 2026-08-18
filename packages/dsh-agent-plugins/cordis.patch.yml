@@ -4,4 +4,4 @@
 
 - insert:
     - id: agent-plugins
-      name: 'dsh-agent-plugins'
+      name: '@suqingsq/dsh-agent-plugins'

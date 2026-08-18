@@ -76,9 +76,9 @@ test("package declares a real DSH bundle patch and web client", async () => {
   assert.equal(manifest.dsh.client.platform, "web");
   assert.equal(manifest.exports["./client"].default, "./lib/client.js");
   assert.match(patch, /id: worktree-workspaces/);
-  assert.match(patch, /name: 'dsh-worktree-workspaces'/);
+  assert.match(patch, /name: '@suqingsq\/dsh-worktree-workspaces'/);
   assert.match(client, /window\.__ModuleLoader__\.load/);
-  assert.match(client, /id: "dsh-worktree-workspaces"/);
+  assert.match(client, /id: "@suqingsq\/dsh-worktree-workspaces"/);
 });
 
 test("compiled CLI exposes help without running on import", async () => {

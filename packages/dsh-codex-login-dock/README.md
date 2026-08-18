@@ -10,7 +10,7 @@ Host and Web client APIs target `@deepseek-ai/dsh@0.1.0-rc.6`. Fixture tests cov
 
 ## Requires
 
-Install [`dsh-openai-codex-oauth`](../dsh-openai-codex-oauth/README.md) from this repository in the same profile. This package looks up `ctx.openaiCodexOAuth` at runtime. If that silent face is missing, status is `missingPlugin` and browser login is not started. Sign-out calls `logout()` on the same face.
+Install [`dsh-openai-codex-oauth`](https://github.com/SisyphusSQ/dsh-plugins/blob/main/packages/dsh-openai-codex-oauth/README.md) from this repository in the same profile. This package looks up `ctx.openaiCodexOAuth` at runtime. If that silent face is missing, status is `missingPlugin` and browser login is not started. Sign-out calls `logout()` on the same face.
 
 OAuth JSON lives in `OPENAI_CODEX_OAUTH_CREDENTIAL`. The current access token lives in `OPENAI_CODEX_ACCESS_TOKEN`. Default file is `$DSH_HOME/.credentials.yaml`. This package never writes `~/.codex`.
 

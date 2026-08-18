@@ -6,16 +6,6 @@
 
 已按 `@deepseek-ai/dsh@0.1.0-rc.6` 验证。
 
-## 安装
-
-需要 Node.js 22 或更高版本，并确保 `pnpm` 在 `PATH` 中：
-
-```bash
-dsh plugin --profile web add dsh-agent-plugins@0.1.0
-```
-
-卸载命令：`dsh plugin --profile web remove dsh-agent-plugins`。
-
 ## 做什么
 
 让 DSH 直接消费标准 Agent Plugin 包（`plugin.json` + `skills/` + `mcp.json`）：

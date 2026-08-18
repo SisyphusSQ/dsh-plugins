@@ -1,6 +1,6 @@
 {
-  "name": "dsh-composer-skill-mention",
-  "version": "0.1.0",
+  "name": "@suqingsq/dsh-composer-skill-mention",
+  "version": "0.2.0",
   "description": "Codex-style $ and fullwidth ￥ Skill mentions for the DSH composer",
   "repository": {
     "type": "git",

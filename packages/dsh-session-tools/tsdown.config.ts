@@ -1,6 +1,6 @@
 import { defineConfig } from 'tsdown'
 
-const packageId = 'dsh-session-tools'
+const packageId = '@suqingsq/dsh-session-tools'
 
 export default defineConfig({
   name: `${packageId}/client`,

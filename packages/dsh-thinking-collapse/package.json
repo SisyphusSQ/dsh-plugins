@@ -1,5 +1,5 @@
 {
-  "name": "dsh-thinking-collapse",
+  "name": "@suqingsq/dsh-thinking-collapse",
   "version": "0.2.0",
   "description": "Codex-style live reasoning and tool-call collapse for the DSH Web chat view.",
   "license": "MIT",

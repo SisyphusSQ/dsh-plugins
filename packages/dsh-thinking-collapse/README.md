@@ -6,16 +6,6 @@ Codex-style live activity collapse for the DeepSeek Harness Web chat view.
 
 Verified with `@deepseek-ai/dsh@0.1.0-rc.6`.
 
-## Install
-
-Requires Node.js 22 or later and `pnpm` on `PATH`:
-
-```bash
-dsh plugin --profile web add dsh-thinking-collapse@0.2.0
-```
-
-Remove it with `dsh plugin --profile web remove dsh-thinking-collapse`.
-
 ## What it does
 
 The plugin replaces the chat view's `assistant-step` and `tool-call` renderers so each assistant turn has one outer activity row.

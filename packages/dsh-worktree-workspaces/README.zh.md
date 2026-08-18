@@ -6,16 +6,6 @@
 
 已按 `@deepseek-ai/dsh@0.1.0-rc.6` 验证。
 
-## 安装
-
-需要 Node.js 22 或更高版本，并确保 `pnpm` 在 `PATH` 中：
-
-```bash
-dsh plugin --profile web add dsh-worktree-workspaces@0.1.0
-```
-
-卸载命令：`dsh plugin --profile web remove dsh-worktree-workspaces`。
-
 ## 做什么
 
 Git 自身的 `git worktree list --porcelain -z` 是工作树事实源；DSH Workspace 只负责 Web/会话入口。本包不建立第二套台账。

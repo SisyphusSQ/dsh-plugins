@@ -6,16 +6,6 @@ Create and archive Git linked worktrees for DeepSeek Harness. One package provid
 
 Verified with `@deepseek-ai/dsh@0.1.0-rc.6`.
 
-## Install
-
-Requires Node.js 22 or later and `pnpm` on `PATH`:
-
-```bash
-dsh plugin --profile web add dsh-worktree-workspaces@0.1.0
-```
-
-Remove it with `dsh plugin --profile web remove dsh-worktree-workspaces`.
-
 ## What it does
 
 Git's own `git worktree list --porcelain -z` is the source of truth for worktrees. DSH Workspace is only the Web/session entry. The plugin does not keep a second inventory.

@@ -1,6 +1,6 @@
 import { defineConfig } from "tsdown";
 
-const packageId = "dsh-worktree-workspaces";
+const packageId = "@suqingsq/dsh-worktree-workspaces";
 
 export default defineConfig({
   name: `${packageId}/client`,

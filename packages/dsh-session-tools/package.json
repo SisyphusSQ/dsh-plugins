@@ -1,6 +1,6 @@
 {
-  "name": "dsh-session-tools",
-  "version": "0.1.0",
+  "name": "@suqingsq/dsh-session-tools",
+  "version": "0.2.0",
   "description": "Cross-session tools and Web @session mentions for DeepSeek Harness.",
   "license": "MIT",
   "repository": {

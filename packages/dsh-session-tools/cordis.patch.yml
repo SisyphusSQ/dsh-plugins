@@ -8,4 +8,4 @@
       name: '@deepseek-ai/dsh-session-reference'
 
     - id: session-tools
-      name: 'dsh-session-tools'
+      name: '@suqingsq/dsh-session-tools'

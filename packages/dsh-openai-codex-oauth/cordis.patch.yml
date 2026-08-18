@@ -11,4 +11,4 @@
 
 - insert:
     - id: openai-codex-oauth
-      name: dsh-openai-codex-oauth
+      name: '@suqingsq/dsh-openai-codex-oauth'

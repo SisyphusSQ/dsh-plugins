@@ -1,4 +1,4 @@
 # Mount the package so dsh-client-modules discovers and materializes ./client.
 - insert:
     - id: dsh-thinking-collapse
-      name: 'dsh-thinking-collapse'
+      name: '@suqingsq/dsh-thinking-collapse'

@@ -1,3 +1,3 @@
 - insert:
     - id: composer-skill-mention
-      name: dsh-composer-skill-mention
+      name: '@suqingsq/dsh-composer-skill-mention'

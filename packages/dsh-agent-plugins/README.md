@@ -6,16 +6,6 @@ An [Agent Plugins 1.0.0](https://github.com/agentplugins/agent-plugins-spec) ada
 
 Verified with `@deepseek-ai/dsh@0.1.0-rc.6`.
 
-## Install
-
-Requires Node.js 22 or later and `pnpm` on `PATH`:
-
-```bash
-dsh plugin --profile web add dsh-agent-plugins@0.1.0
-```
-
-Remove it with `dsh plugin --profile web remove dsh-agent-plugins`.
-
 ## What it does
 
 DSH can consume standard Agent Plugin packages (`plugin.json` + `skills/` + `mcp.json`):

@@ -1,6 +1,6 @@
 import { defineConfig } from 'tsdown'
 
-const packageId = 'dsh-composer-skill-mention'
+const packageId = '@suqingsq/dsh-composer-skill-mention'
 
 export default defineConfig([
   {

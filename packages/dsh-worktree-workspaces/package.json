@@ -1,6 +1,6 @@
 {
-  "name": "dsh-worktree-workspaces",
-  "version": "0.1.0",
+  "name": "@suqingsq/dsh-worktree-workspaces",
+  "version": "0.2.0",
   "description": "Git worktree creation, archival, and Web slash-command picker for DeepSeek Harness",
   "repository": {
     "type": "git",

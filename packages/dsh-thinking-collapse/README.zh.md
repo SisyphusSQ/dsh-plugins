@@ -6,16 +6,6 @@
 
 已按 `@deepseek-ai/dsh@0.1.0-rc.6` 验证。
 
-## 安装
-
-需要 Node.js 22 或更高版本，并确保 `pnpm` 在 `PATH` 中：
-
-```bash
-dsh plugin --profile web add dsh-thinking-collapse@0.2.0
-```
-
-卸载命令：`dsh plugin --profile web remove dsh-thinking-collapse`。
-
 ## 做什么
 
 插件替换聊天视图的 `assistant-step` 与 `tool-call` 渲染器，让每一轮只有一条外层活动行。

@@ -3,4 +3,4 @@
 
 - insert:
     - id: codex-login-dock
-      name: dsh-codex-login-dock
+      name: '@suqingsq/dsh-codex-login-dock'

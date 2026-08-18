@@ -6,16 +6,6 @@ Session tools for DeepSeek Harness. One package gives the model six session tool
 
 Verified with `@deepseek-ai/dsh@0.1.0-rc.6`.
 
-## Install
-
-Requires Node.js 22 or later and `pnpm` on `PATH`:
-
-```bash
-dsh plugin --profile web add dsh-session-tools@0.1.0
-```
-
-Remove it with `dsh plugin --profile web remove dsh-session-tools`.
-
 ## Tools
 
 The tools run only on the current, running Root Agent driven by the Agent Loop. Subagents are rejected. Cross-session messages use `source.kind = "session-relay"` and are not disguised as direct user input.

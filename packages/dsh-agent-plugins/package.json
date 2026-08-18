@@ -1,6 +1,6 @@
 {
-  "name": "dsh-agent-plugins",
-  "version": "0.1.0",
+  "name": "@suqingsq/dsh-agent-plugins",
+  "version": "0.2.0",
   "description": "Agent Plugins 1.0.0 adapter for DeepSeek Harness: discovers skills/ and mcp.json from agent-plugin stores, registers skills and MCP servers, and manages them through a CLI and the settings panel.",
   "license": "MIT",
   "repository": {

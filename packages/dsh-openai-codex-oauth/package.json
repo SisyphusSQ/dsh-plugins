@@ -1,5 +1,5 @@
 {
-  "name": "dsh-openai-codex-oauth",
+  "name": "@suqingsq/dsh-openai-codex-oauth",
   "version": "0.2.0",
   "description": "ChatGPT subscription OAuth for DeepSeek Harness openai-codex, including silent browser login for dock and Settings.",
   "license": "MIT",

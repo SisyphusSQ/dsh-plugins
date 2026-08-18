@@ -6,16 +6,6 @@ Codex-style Skill mentions for the DeepSeek Harness Web composer.
 
 Verified with `@deepseek-ai/dsh@0.1.0-rc.6`.
 
-## Install
-
-Requires Node.js 22 or later and `pnpm` on `PATH`:
-
-```bash
-dsh plugin --profile web add dsh-composer-skill-mention@0.1.0
-```
-
-Remove it with `dsh plugin --profile web remove dsh-composer-skill-mention`.
-
 ## What it does
 
 Type `$` or the fullwidth yuan sign `￥` (U+FFE5) in the composer to filter Skills that are available to the current session. Picking a candidate inserts canonical `$skill-name ` text. Before the Agent step starts, the host loads that Skill's body through DSH's Skill registry and injects it as `skill-invocation` context.

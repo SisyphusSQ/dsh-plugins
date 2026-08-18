@@ -6,16 +6,6 @@
 
 已按 `@deepseek-ai/dsh@0.1.0-rc.6` 验证。
 
-## 安装
-
-需要 Node.js 22 或更高版本，并确保 `pnpm` 在 `PATH` 中：
-
-```bash
-dsh plugin --profile web add dsh-composer-skill-mention@0.1.0
-```
-
-卸载命令：`dsh plugin --profile web remove dsh-composer-skill-mention`。
-
 ## 做什么
 
 在输入框里键入 `$` 或全角人民币符号 `￥`（U+FFE5），即可筛选当前会话可用的 Skills。选中候选后写入规范文本 `$skill-name `。进入 Agent step 之前，宿主通过 DSH 的 Skill registry 加载该 Skill 正文，并作为 `skill-invocation` 上下文注入。

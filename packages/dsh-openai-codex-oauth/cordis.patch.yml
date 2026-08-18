@@ -1,0 +1,14 @@
+# Configure the official Pi adapter for Codex subscription tokens and load
+# this plugin. displayName lives here so a later overlay cannot drop apiKeyEnv.
+
+- id: llm-pi-ai
+  name: '@deepseek-ai/dsh-llm-pi-ai'
+  config:
+    providers:
+      openai-codex:
+        displayName: Codex 订阅
+        apiKeyEnv: OPENAI_CODEX_ACCESS_TOKEN
+
+- insert:
+    - id: openai-codex-oauth
+      name: dsh-openai-codex-oauth

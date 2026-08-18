@@ -2,10 +2,38 @@ import type {
   AssistantBlock,
   ConversationLocation,
   ConversationSnapshot,
+  StepLocation,
   ToolCallBlock,
 } from '@deepseek-ai/dsh-client-runtime/client'
 import type { ChatNode } from '@deepseek-ai/dsh-client-ui-conversation/client'
-import { THINKING_TIMING_KEY } from './timing.js'
+import {
+  THINKING_TIMING_KEY,
+  type ActivityTiming,
+  type ReasoningBlockTiming,
+  type ThinkingTimingData,
+} from './timing.js'
+
+export type TurnActivityItem =
+  | {
+      readonly kind: 'reasoning'
+      readonly step: number
+      readonly index: number
+      readonly text: string
+      readonly timing: ReasoningBlockTiming | undefined
+    }
+  | {
+      readonly kind: 'tool-call'
+      readonly step: number
+      readonly callId: string
+      readonly name: string
+    }
+
+export interface StepActivitySource {
+  readonly step: number
+  readonly blocks: readonly AssistantBlock[]
+  readonly tools: readonly Pick<Extract<AssistantBlock, { kind: 'tool-call' }>, 'callId' | 'name' | 'argsRaw'>[]
+  readonly timing: ThinkingTimingData | undefined
+}
 
 /** Question / approval tools already occupy the composer, not the activity row. */
 export const EDITOR_OWNED_TOOL_NAMES: ReadonlySet<string> = new Set(['ask_user_question'])
@@ -127,8 +155,7 @@ export function isAbsorbedToolCall(
 ): boolean {
   if (!isAbsorbableToolName(name)) return false
   if (location.kind !== 'step' && location.kind !== 'turn') return false
-  const steps = location.kind === 'step' ? [location.step] : location.turn.steps
-  return steps.some(step => {
+  return stepLocationsOf(location).some(step => {
     const timing = step.data.get(THINKING_TIMING_KEY)
     if (timing?.callIds.includes(callId) === true) return true
     const assistant = step.data.get('assistant-step')
@@ -138,4 +165,113 @@ export function isAbsorbedToolCall(
       && isAbsorbableToolName(block.name)
     )) === true
   })
+}
+
+export function stepLocationsOf(location: ConversationLocation): readonly StepLocation[] {
+  if (location.kind === 'turn') return location.turn.steps
+  if (location.kind !== 'step') return []
+  return location.turn.steps.length > 0 ? location.turn.steps : [location.step]
+}
+
+export function mergeActivityTiming(
+  timings: readonly (ActivityTiming | undefined)[],
+): ActivityTiming | undefined {
+  let startedAt: number | undefined
+  let endedAt = 0
+  let seen = false
+  let open = false
+  for (const timing of timings) {
+    if (timing === undefined) continue
+    seen = true
+    startedAt = startedAt === undefined ? timing.startedAt : Math.min(startedAt, timing.startedAt)
+    if (timing.endedAt === null) open = true
+    else endedAt = Math.max(endedAt, timing.endedAt)
+  }
+  if (!seen || startedAt === undefined) return undefined
+  return { startedAt, endedAt: open ? null : endedAt }
+}
+
+export function collectTurnActivityItems(
+  sources: readonly StepActivitySource[],
+): TurnActivityItem[] {
+  const items: TurnActivityItem[] = []
+  for (const source of sources) {
+    const display = insertMissingActivityTools(
+      source.blocks,
+      missingAbsorbableToolBlocks(source.blocks, source.tools),
+    )
+    for (const block of display) {
+      if (block.kind === 'reasoning') {
+        const index = source.blocks.findIndex(candidate => candidate === block)
+        const resolved = index === -1 ? 0 : index
+        items.push({
+          kind: 'reasoning',
+          step: source.step,
+          index: resolved,
+          text: block.text,
+          timing: source.timing?.blocks[resolved],
+        })
+        continue
+      }
+      if (block.kind === 'tool-call' && isAbsorbableToolName(block.name)) {
+        items.push({
+          kind: 'tool-call',
+          step: source.step,
+          callId: block.callId,
+          name: block.name,
+        })
+      }
+    }
+  }
+  return items
+}
+
+export function firstVisibleAssistantStepNumber(
+  sources: readonly Pick<StepActivitySource, 'step' | 'blocks'>[],
+): number | undefined {
+  for (const source of sources) {
+    if (hasVisibleAssistantContent(source.blocks)) return source.step
+  }
+  return undefined
+}
+
+export function isAssistantTurnActivityHost(
+  sources: readonly Pick<StepActivitySource, 'step' | 'blocks'>[],
+  currentStep: number,
+): boolean {
+  return firstVisibleAssistantStepNumber(sources) === currentStep
+}
+
+export function turnHasAnswer(
+  sources: readonly Pick<StepActivitySource, 'blocks'>[],
+): boolean {
+  return sources.some(source => source.blocks.some(isAnswerBlock))
+}
+
+export function liveReasoningItem(
+  items: readonly TurnActivityItem[],
+  streamingSteps: ReadonlySet<number>,
+): Extract<TurnActivityItem, { kind: 'reasoning' }> | undefined {
+  let live: Extract<TurnActivityItem, { kind: 'reasoning' }> | undefined
+  for (const item of items) {
+    if (item.kind !== 'reasoning') continue
+    if (!streamingSteps.has(item.step)) continue
+    if (item.timing?.endedAt != null) continue
+    live = item
+  }
+  return live
+}
+
+export function toolArgsRaw(block: ToolCallBlock): string {
+  return 'kind' in block ? block.call?.argsRaw ?? '' : block.argsRaw
+}
+
+export function toStepActivityTools(
+  roots: readonly ToolCallBlock[],
+): StepActivitySource['tools'] {
+  return roots.map(root => ({
+    callId: root.callId,
+    name: toolCallName(root),
+    argsRaw: toolArgsRaw(root),
+  }))
 }

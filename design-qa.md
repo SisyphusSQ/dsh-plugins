@@ -1,5 +1,9 @@
 # DSH 思考折叠视觉 QA
 
+2026-08-16 起，活动行契约改为「整轮一条外层耗时，内层恢复 DSH 默认 Think 行」。下文是 2026-08-14 对「一步一条耗时、展开后直接露出思考正文」的视觉复核，**不再代表当前实现**。
+
+2026-08-16 live Web：隔离 profile `web-thinking-collapse-e2e`，`127.0.0.1:3082`，`fixture-repo`，`DeepSeek V4 Flash / Max`。一轮两步只渲染一条外层「耗时 4秒」；展开后工具在体内，内层为 DSH Think 行（图标 + `Think` + 首行预览），不再出现内层「耗时」。轨迹页保持逐步 timeline。
+
 ## 最终判定
 
 本轮没有遗留可执行的 P0、P1 或 P2 问题。组件结构继续贴近 Codex，状态文案改为由 reasoning 生命周期决定，正文恢复 DSH 原 reasoning 的字号与颜色。

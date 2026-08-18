@@ -1,0 +1,6 @@
+# Login-dock UI only. Provider displayName and apiKeyEnv come from
+# dsh-openai-codex-oauth so this overlay cannot drop the token env.
+
+- insert:
+    - id: codex-login-dock
+      name: dsh-codex-login-dock

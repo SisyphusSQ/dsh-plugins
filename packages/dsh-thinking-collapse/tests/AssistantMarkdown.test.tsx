@@ -1,21 +1,31 @@
-import { cleanup, render, screen } from '@testing-library/react'
+import type { ReactNode } from 'react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { ToolCallBlock } from '@deepseek-ai/dsh-client-runtime/client'
 import { AssistantMarkdown } from '../src/client/AssistantMarkdown.js'
 
 vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => ({
   IconChevronRightOutline14: () => <span data-testid="chevron-right" />,
+  IconThinkOutline14: () => <span data-testid="think-icon" />,
   MarkdownText: ({ text }: { text: string }) => <div data-testid="markdown">{text}</div>,
   JsonBlock: ({ label }: { label: string }) => <div>{label}</div>,
   DisclosureRow: ({
     title,
     open,
+    onToggle,
+    collapsedContent,
+    children,
   }: {
     title: string
     open: boolean
+    onToggle?: () => void
+    collapsedContent?: ReactNode
+    children?: ReactNode
   }) => (
     <section>
-      <button type="button" aria-expanded={open}>{title}</button>
+      <button type="button" aria-expanded={open} onClick={onToggle}>{title}</button>
+      {!open && collapsedContent}
+      {open && children}
     </section>
   ),
 }))
@@ -133,9 +143,16 @@ afterEach(() => {
 describe('AssistantMarkdown activity row', () => {
   it('draws streaming tools inside the activity body instead of after it', () => {
     renderMarkdown()
+    expect(document.querySelector('[data-activity="outer"]')?.getAttribute('data-state')).toBe('running')
+    expect(document.querySelector('[data-activity="thought"]')?.getAttribute('data-state')).toBe('running')
+    expect(screen.getByRole('button', { name: /已处理/ }).getAttribute('aria-expanded')).toBe('true')
+    expect(screen.getByRole('button', { name: 'Think' }).getAttribute('aria-expanded')).toBe('false')
     expect(screen.getByText('private reasoning')).toBeTruthy()
     expect(screen.getByTestId('tool-tree').textContent).toBe('bash')
-    expect(screen.getByRole('button', { name: /已处理/ }).textContent).not.toContain('bash')
+    expect(screen.queryByRole('button', { name: /耗时/ })).toBeNull()
+    for (const button of screen.getAllByRole('button', { name: /已处理/ })) {
+      expect(button.textContent).not.toContain('bash')
+    }
   })
 
   it('leaves answer text outside the collapsed activity row', () => {
@@ -157,6 +174,79 @@ describe('AssistantMarkdown activity row', () => {
     expect(screen.queryByText('private reasoning')).toBeNull()
     expect(screen.queryByTestId('tool-tree')).toBeNull()
     expect(screen.getByText('final answer')).toBeTruthy()
+  })
+
+  it('keeps settled thoughts collapsed inside the expanded turn row', () => {
+    renderMarkdown({
+      streaming: false,
+      blocks: [
+        { kind: 'reasoning', text: 'first thought\nhidden first' },
+        { kind: 'tool-call', callId: 'c1', name: 'bash', argsRaw: '{}' },
+        { kind: 'reasoning', text: 'second thought\nhidden second' },
+        { kind: 'text', text: 'final answer' },
+      ],
+      thinkingTiming: {
+        blocks: {
+          0: { startedAt: 1_000, endedAt: 2_000 },
+          2: { startedAt: 4_000, endedAt: 5_000 },
+        },
+        activity: { startedAt: 1_000, endedAt: 6_000 },
+        callIds: ['c1'],
+        pendingCallIds: [],
+      },
+    })
+    const outer = screen.getByRole('button', { name: '耗时 5秒' })
+    expect(outer.getAttribute('aria-expanded')).toBe('false')
+    fireEvent.click(outer)
+    expect(outer.getAttribute('aria-expanded')).toBe('true')
+    expect(screen.getByTestId('tool-tree').textContent).toBe('bash')
+    expect(screen.getAllByRole('button', { name: 'Think' })).toHaveLength(2)
+    expect(screen.getAllByRole('button', { name: /耗时/ })).toHaveLength(1)
+    expect(screen.getByText('first thought')).toBeTruthy()
+    expect(screen.getByText('second thought')).toBeTruthy()
+    expect(screen.queryByText('hidden first')).toBeNull()
+    expect(screen.queryByText('hidden second')).toBeNull()
+    const thoughts = document.querySelectorAll('[data-activity="thought"] button')
+    expect(thoughts).toHaveLength(2)
+    expect(thoughts[0]?.getAttribute('aria-expanded')).toBe('false')
+    expect(thoughts[1]?.getAttribute('aria-expanded')).toBe('false')
+    expect(thoughts[0]?.textContent).toBe('Think')
+    fireEvent.click(thoughts[0]!)
+    expect(screen.getByText(/hidden first/)).toBeTruthy()
+    expect(screen.queryByText('hidden second')).toBeNull()
+    expect(screen.getByText('final answer')).toBeTruthy()
+  })
+
+  it('keeps native Think rows collapsed and previews the live latest line', () => {
+    renderMarkdown({
+      streaming: true,
+      blocks: [
+        { kind: 'reasoning', text: 'first thought\nhidden first' },
+        { kind: 'tool-call', callId: 'c1', name: 'bash', argsRaw: '{}' },
+        { kind: 'reasoning', text: 'second thought\nlatest line' },
+      ],
+      thinkingTiming: {
+        blocks: {
+          0: { startedAt: 1_000, endedAt: 2_000 },
+          2: { startedAt: 4_000, endedAt: null },
+        },
+        activity: { startedAt: 1_000, endedAt: null },
+        callIds: ['c1'],
+        pendingCallIds: ['c1'],
+      },
+    })
+    expect(document.querySelector('[data-activity="outer"]')?.getAttribute('data-state')).toBe('running')
+    expect(screen.getAllByRole('button', { name: 'Think' })).toHaveLength(2)
+    expect(screen.queryByRole('button', { name: /耗时/ })).toBeNull()
+    expect(screen.getByText('first thought')).toBeTruthy()
+    expect(screen.queryByText('hidden first')).toBeNull()
+    expect(screen.queryByText('second thought')).toBeNull()
+    expect(screen.getByText('latest line')).toBeTruthy()
+    const thoughts = document.querySelectorAll('[data-activity="thought"]')
+    expect(thoughts[0]?.getAttribute('data-state')).toBe('ok')
+    expect(thoughts[1]?.getAttribute('data-state')).toBe('running')
+    expect(thoughts[0]?.querySelector('button')?.getAttribute('aria-expanded')).toBe('false')
+    expect(thoughts[1]?.querySelector('button')?.getAttribute('aria-expanded')).toBe('false')
   })
 
   it('leaves tools-only steps empty so the absorbed tool node can host the row', () => {

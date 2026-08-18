@@ -11,7 +11,7 @@ Verified with `@deepseek-ai/dsh@0.1.0-rc.6`.
 Requires Node.js 22 or later and `pnpm` on `PATH`. Install only the plugins you need into the DSH Web profile:
 
 ```bash
-dsh plugin --profile web add dsh-thinking-collapse@0.1.0
+dsh plugin --profile web add dsh-thinking-collapse@0.2.0
 dsh plugin --profile web add dsh-composer-skill-mention@0.1.0
 dsh plugin --profile web add dsh-session-tools@0.1.0
 dsh plugin --profile web add dsh-agent-plugins@0.1.0
@@ -24,7 +24,7 @@ Each package is independently installable. The commands pin the plugin release v
 
 ### [dsh-thinking-collapse](packages/dsh-thinking-collapse/README.md)
 
-Codex-style activity rows in the Web chat view. Each model step folds thinking and ordinary tool calls into one timed row; the answer stays outside.
+Codex-style activity rows in the Web chat view. Each turn folds thinking and ordinary tool calls into one timed row; inner thoughts keep the DSH Think row, and the answer stays outside.
 
 ![Collapsed thinking and tool activity](packages/dsh-thinking-collapse/screenshots/collapsed.png)
 
@@ -54,7 +54,7 @@ Create and archive Git linked worktrees. The same package exposes `/worktree`, a
 
 ## Repository
 
-This is a pnpm workspace. Package conventions are in [AGENTS.md](AGENTS.md). The plugin index is in [`packages/README.md`](packages/README.md).
+This is a pnpm workspace. Package conventions are in [AGENTS.md](AGENTS.md). The plugin index is in [`packages/README.md`](packages/README.md), and release history is tracked in [CHANGELOG.md](CHANGELOG.md).
 
 ## License
 

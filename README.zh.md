@@ -11,7 +11,7 @@
 需要 Node.js 22 或更高版本，并确保 `pnpm` 在 `PATH` 中。按需将插件安装到 DSH Web profile：
 
 ```bash
-dsh plugin --profile web add dsh-thinking-collapse@0.1.0
+dsh plugin --profile web add dsh-thinking-collapse@0.2.0
 dsh plugin --profile web add dsh-composer-skill-mention@0.1.0
 dsh plugin --profile web add dsh-session-tools@0.1.0
 dsh plugin --profile web add dsh-agent-plugins@0.1.0
@@ -24,7 +24,7 @@ dsh plugin --profile web add dsh-worktree-workspaces@0.1.0
 
 ### [dsh-thinking-collapse](packages/dsh-thinking-collapse/README.zh.md)
 
-为 Web 聊天视图提供 Codex 式活动行：每个模型 step 把思考和普通工具调用收成一条带耗时的行，正文留在行外。
+为 Web 聊天视图提供 Codex 式活动行：每一轮把思考和普通工具调用收成一条带耗时的行，内层思考保持 DSH 默认 Think 行，正文留在行外。
 
 ![折叠后的思考与工具活动行](packages/dsh-thinking-collapse/screenshots/collapsed.png)
 
@@ -54,7 +54,7 @@ dsh plugin --profile web add dsh-worktree-workspaces@0.1.0
 
 ## 仓库
 
-本仓库是 pnpm workspace。包约定见 [AGENTS.md](AGENTS.md)。插件索引见 [`packages/README.md`](packages/README.md)。
+本仓库是 pnpm workspace。包约定见 [AGENTS.md](AGENTS.md)。插件索引见 [`packages/README.md`](packages/README.md)，版本历史见 [CHANGELOG.md](CHANGELOG.md)。
 
 ## License
 

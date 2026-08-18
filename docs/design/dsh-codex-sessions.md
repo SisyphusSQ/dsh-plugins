@@ -1,8 +1,8 @@
 # DSH Codex 会话内登录卡设计
 
-- 状态：Host、Web dock 与 Settings 独立页已实现
-- 建议包名：`dsh-codex-login-dock`
-- 复用 OAuth 插件：[`dsh-openai-codex-oauth`](https://github.com/dyuan311/dsh-openai-codex-oauth)（Host 命令 `/codex-login`、`/codex-status`、`/codex-logout` + `llm-pi-ai` 的 `openai-codex` 路由）
+- 状态：Host silent 登录、Web dock 与 Settings 独立页已实现
+- 建议包名：`dsh-codex-login-dock` + 本仓库维护的 `dsh-openai-codex-oauth`
+- 复用 OAuth：本仓库 `packages/dsh-openai-codex-oauth`（fork 自 [`dyuan311/dsh-openai-codex-oauth@0.1.1`](https://github.com/dyuan311/dsh-openai-codex-oauth)；Host 命令 `/codex-login`、`/codex-status`、`/codex-logout`、silent `ctx.openaiCodexOAuth` + `llm-pi-ai` 的 `openai-codex` 路由）
 - DSH 验证基线：`@deepseek-ai/dsh@0.1.0-rc.6` / `deepseek-harness@47f943859bef60e4160492346772ded9b24f765a`
 - `@earendil-works/pi-ai` 审查基线：`0.82.1`
 - 画稿：`docs/web/dsh-codex.pen`（按 `@deepseek-ai/dsh@0.1.0-rc.6` Web chrome 重画：侧栏、对话/轨迹、composer 座位；无右栏、无 Codex CLI 壳）
@@ -12,7 +12,7 @@
 
 目标不是在 DSH 中增加一个 Codex Tab，也不是再实现一套 OAuth 或 LLM adapter。目标是：用户在 **DSH 原生模型选择器** 中选中 `openai-codex`（展示名「Codex 订阅」）后，若尚未登录，composer **上方 dock** 出现登录卡；主路径为 **浏览器 PKCE**。设置里另有独立的「Codex 订阅」页，已连接时显示「已连接」并可退出。登录成功后 dock 消失，后续对话、工具和审批全部走原生 DSH。
 
-OAuth 落盘、token refresh、以及把 access token 交给官方 `PiAiAdapter`，都复用已有 `dsh-openai-codex-oauth`。本仓库只补会话内登录卡、设置页和必要的无密钥状态面。
+OAuth 落盘、token refresh、以及把 access token 交给官方 `PiAiAdapter`，都走本仓库维护的 `dsh-openai-codex-oauth`。`dsh-codex-login-dock` 只补会话内登录卡、设置页和无密钥状态面。
 
 ```mermaid
 flowchart LR
@@ -38,9 +38,9 @@ flowchart LR
 - 主按钮启动浏览器 PKCE；登录中可取消；过期后同一张卡变成「重新登录」；
 - Client 只读取 `signedOut`、`authorizing`、`ready`、`expired`、`error`，以及稳定错误码；
 - 未登录时通过 `ctx.conversation.blocks` 禁用发送，模型座位保持可点；
-- 用 `cordis.patch.yml` 为 `openai-codex` 补 `displayName: Codex 订阅`，不重复注册 adapter，不覆盖 `apiKeyEnv`；
+- 用 `cordis.patch.yml` 为 `openai-codex` 补 `displayName: Codex 订阅`，不重复注册 adapter；`apiKeyEnv` 与 displayName 同写在 OAuth 包 patch 里，避免整对象替换丢掉 token env；
 - 登录失败、`1455` 端口占用和 refresh 失败都保持可见。
-- 没有 live agent 时登录/退出失败可见，不假装成功。
+- 设置页和 dock 走 silent `loginBrowser`，不依赖 live agent，不往会话写 `/codex-login`，不接管 composer。
 
 ### 2.2 明确不做
 
@@ -61,11 +61,12 @@ flowchart LR
 `dsh-openai-codex-oauth` 已交付：
 
 - `/codex-login [browser|device]`、`/codex-status`、`/codex-logout`；
+- Host silent 面 `ctx.openaiCodexOAuth.loginBrowser` / `logout`（设置页和 dock 主路径）；
 - 完整 OAuth 凭据写入 `OPENAI_CODEX_OAUTH_CREDENTIAL`，access token 写入 `OPENAI_CODEX_ACCESS_TOKEN`（默认落在 `$DSH_HOME/.credentials.yaml`）；
 - 请求前 refresh，并把 token 交给官方 `llm-pi-ai` 的 `openai-codex` 路由；
 - 不碰默认 Codex Home。
 
-本包把「在会话和设置里看见并完成登录 / 退出」补上，而不是再做一遍上述链路。
+本包把「在会话和设置里看见并完成登录 / 退出」补上，而不是再做一遍 PKCE。
 
 ## 3. 方案取舍
 
@@ -73,7 +74,7 @@ flowchart LR
 
 | 候选 | 结论 |
 | --- | --- |
-| `dsh-openai-codex-oauth` | **采用。** Codex-only，走官方 `llm-pi-ai` 与 `ctx.credentials`，浏览器 PKCE 已是 `/codex-login browser`。缺的只是会话内卡片。 |
+| `dsh-openai-codex-oauth` | **采用，并 fork 进本仓库维护。** Codex-only，走官方 `llm-pi-ai` 与 `ctx.credentials`。斜杠 `/codex-login` 仍可弹提问卡；设置页和 dock 走 silent `loginBrowser`。 |
 | `pi2dsh` | 不采用。它是整包 Pi 引擎，OAuth 只是其中一层，依赖面远大于登录卡。 |
 | `@jcy2387/dsh-codex-provider-plugin` | 不采用为首依赖。它自己注册 adapter 和 Settings 页，并展示用量；与「只补 dock、不抢路由」冲突。 |
 | 自建 `~/.dsh_codex/oauth.json` | **否决。** 与 DSH cookbook 的 credentials seam 重复，也和现有 OAuth 插件抢同一套 token。 |
@@ -89,17 +90,13 @@ flowchart LR
 
 这同时满足「不碰 `/Users/suqing/.codex`」和「不自造第二份密钥文件」。
 
-### 3.3 登录如何从 dock 启动
+### 3.3 登录如何从 dock / 设置启动
 
-OAuth 插件目前只把登录挂在命令上，浏览器等待期还会走 `userQuestions`（composer takeover）。这和 dock 抢同一块输入区。
+OAuth 插件的 `/codex-login` 在浏览器等待期会走 `userQuestions`（composer takeover），并且 `commands.execute` 会把命令卡写进当前会话。设置弹层会挡住这张提问卡。
 
-处理顺序：
+**已选定：** 设置页和 dock 调用 silent `ctx.openaiCodexOAuth.loginBrowser`。强制 browser、Host 打开系统浏览器、只回调完成 / 失败 / 取消，不再弹出提问卡，也不写会话命令日志。`/codex-login` 与 `/codex-login device` 保持交互式斜杠路径。
 
-1. Spike 先试 Client 触发 `/codex-login browser`。若 takeover 只在授权瞬间出现且可接受，就保持零分叉。
-2. 若 takeover 盖住 dock 或强迫用户再点一次确认，则向上游加一个 **silent browser login** 面（Host service 或 RPC）：强制 `browser`、只回调 `auth_url` / 完成 / 失败，不再弹出提问卡。
-3. 禁止在本包里再实现一遍 PKCE、callback server 或 refresh。
-
-Device Code 不进 dock 主按钮。无头场景继续用 OAuth 插件的 `/codex-login device`。
+禁止在 `dsh-codex-login-dock` 里再实现一遍 PKCE、callback server 或 refresh。
 
 ## 4. Web 产品设计
 
@@ -155,11 +152,12 @@ DSH Conversation
 ## 5. 包边界
 
 ```text
+packages/dsh-openai-codex-oauth/   # fork：凭据、PKCE、refresh、slash 命令、silent Host 面
 packages/dsh-codex-login-dock/
 ├── package.json
-├── cordis.patch.yml          # 补 displayName；声明对 oauth 插件的共存
+├── cordis.patch.yml          # 只插入 login-dock；displayName/apiKeyEnv 在 oauth 包
 ├── src/
-│   ├── index.ts              # Host：无密钥状态、触发登录/取消/退出
+│   ├── index.ts              # Host：无密钥状态、触发 silent 登录/取消/退出
 │   ├── protocol.ts           # 稳定状态与错误码
 │   └── client/
 │       ├── index.tsx         # conversation.input.dock + settings.section
@@ -169,9 +167,9 @@ packages/dsh-codex-login-dock/
 └── README.md / README.zh.md
 ```
 
-Host 与 Client 不能独立形成完整能力，首版保持一个包。只有真实 Client bundle 与 `cordis.patch.yml` 时才声明 `dsh.bundle`。
+Host 与 Client 不能独立形成完整能力，login-dock 仍是一个包。OAuth 引擎是另一个可独立安装的包。只有真实 Client bundle 与 `cordis.patch.yml` 时才声明 `dsh.bundle`。
 
-运行时依赖 `dsh-openai-codex-oauth` 已安装。缺失时 dock 显示「未安装 OAuth 插件」，并给出安装说明，不假装自己能登录。
+运行时依赖 `dsh-openai-codex-oauth` 已安装。缺失 silent 服务时 dock 显示「未安装 OAuth 插件」，并给出安装说明，不假装自己能登录。
 
 ## 6. 配置草案
 
@@ -182,7 +180,7 @@ Host 与 Client 不能独立形成完整能力，首版保持一个包。只有�
     providers:
       openai-codex:
         displayName: Codex 订阅
-        # apiKeyEnv 仍由 dsh-openai-codex-oauth 的 patch 提供
+        apiKeyEnv: OPENAI_CODEX_ACCESS_TOKEN
 
 - id: openai-codex-oauth
   name: dsh-openai-codex-oauth
@@ -190,9 +188,11 @@ Host 与 Client 不能独立形成完整能力，首版保持一个包。只有�
 - id: codex-login-dock
   name: dsh-codex-login-dock
   config:
-    providerId: openai-codex
-    oauthPluginId: openai-codex-oauth
+    oauthCredentialRef: OPENAI_CODEX_OAUTH_CREDENTIAL
+    accessTokenRef: OPENAI_CODEX_ACCESS_TOKEN
 ```
+
+`displayName` 与 `apiKeyEnv` 写在 OAuth 包的同一 overlay 里，避免 Cordis 整对象替换丢掉 token env。
 
 配置不接受 access token、refresh token、`CODEX_HOME` 或默认 `/Users/suqing/.codex/auth.json` 路径。
 
@@ -205,7 +205,7 @@ Host 与 Client 不能独立形成完整能力，首版保持一个包。只有�
 3. 选中 Provider / Model / Effort 后，下一条消息走 Codex 订阅并完成流式文本。
 4. 完成一次无副作用 DSH 工具调用和 tool result 回合。
 5. 本包 Host 能在不把密钥送到 Client 的前提下读出 signedOut / ready / expired。
-6. dock 触发浏览器登录时，不与 `userQuestions` takeover 死锁；否则改为上游 silent login 面。
+6. dock / 设置触发浏览器登录时，不与 `userQuestions` takeover 死锁；silent `loginBrowser` 是主路径。
 7. `127.0.0.1:1455` 被占用时错误可见，而不是转圈。
 8. 刷新失败后 dock 回到重新登录，请求不得伪装成模型错误。
 9. 切换到其他 Provider 后 dock 消失，composer block 解除。
@@ -220,7 +220,7 @@ Host 与 Client 不能独立形成完整能力，首版保持一个包。只有�
 
 ## 8. 验证策略
 
-自动验证覆盖状态机、dock 显隐、block/unblock、错误码和脱敏。真实 DSH Web E2E 仍以隔离 profile 安装 `dsh-openai-codex-oauth` + 本包为准，覆盖：原生选择器、浏览器登录、过期重登、工具审批、Stop、切换 Provider、端口冲突、以及默认 Codex Home 不变。
+自动验证覆盖状态机、dock 显隐、block/unblock、错误码和脱敏。真实 DSH Web E2E 直接把 `dsh-openai-codex-oauth` 和本包装进日常 `web` profile，在 `http://127.0.0.1:3080` 上测，覆盖：原生选择器、浏览器登录、过期重登、工具审批、Stop、切换 Provider、端口冲突、以及默认 Codex Home 不变。
 
 类型检查、bundle 构建和 mock OAuth 不能写成真实 Codex 订阅 E2E。
 
@@ -228,10 +228,10 @@ Host 与 Client 不能独立形成完整能力，首版保持一个包。只有�
 
 1. Contract Spike：复用 OAuth 插件的登录、refresh、文本流、工具回合、状态读取和 1455 冲突。
 2. 确定 dock 启动登录的接口（命令复用或 silent login 面）。
-3. Host 状态协议、登录委托、取消、日志脱敏。**已完成。**
+3. Host 状态协议、silent 登录委托、取消、日志脱敏。**已完成。**
 4. Client dock：未登录 / 登录中 / 过期。**已完成。**
-5. Settings 独立页：已连接可见、退出登录、无 live agent 失败可见。**已完成。**
-6. `displayName: Codex 订阅` 与原生选择器回归。
+5. Settings 独立页：已连接可见、退出登录；无 silent 插件时失败可见，不依赖 live agent。**已完成。**
+6. `displayName: Codex 订阅` 与 `apiKeyEnv` 同写在 OAuth patch。
 7. 固定 rc.6 真实 DSH Web E2E。
 8. README、兼容记录、npm pack 和 profile 安装回读。
 

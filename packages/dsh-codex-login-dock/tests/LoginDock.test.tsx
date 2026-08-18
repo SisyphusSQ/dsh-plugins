@@ -115,7 +115,7 @@ describe('LoginDockSession', () => {
     await act(async () => {
       fireEvent.click(screen.getByText('打开浏览器登录'))
     })
-    expect(deps.login).toHaveBeenCalledWith('session-1')
+    expect(deps.login).toHaveBeenCalledTimes(1)
     await waitFor(() => {
       expect(screen.queryByText('Codex 订阅需要登录')).toBeNull()
     })

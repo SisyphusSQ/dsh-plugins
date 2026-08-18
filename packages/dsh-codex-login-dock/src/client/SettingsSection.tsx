@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState, type JSX } from 'react'
 import type {} from '@deepseek-ai/dsh-client-runtime/client'
 import type { PropsLocale, PropsRuntime, TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
 import {
-  SESSION_UNAVAILABLE_MESSAGE,
+  AUTH_OPERATION_FAILED_MESSAGE,
   unavailableSessionSnapshot,
   type CodexAuthSnapshot,
 } from '../protocol.js'
@@ -32,11 +32,11 @@ export function SettingsSectionView({
   const [logoutPending, setLogoutPending] = useState(false)
 
   const loadStatus = useCallback((): void => {
-    void deps.api.status(sessionId).then(setSnapshot).catch((error: unknown) => {
-      const message = error instanceof Error ? error.message : SESSION_UNAVAILABLE_MESSAGE
+    void deps.api.status().then(setSnapshot).catch((error: unknown) => {
+      const message = error instanceof Error ? error.message : AUTH_OPERATION_FAILED_MESSAGE
       setSnapshot(unavailableSessionSnapshot(message))
     })
-  }, [deps.api, sessionId])
+  }, [deps.api])
 
   useEffect(() => {
     setLoginPending(false)
@@ -61,30 +61,30 @@ export function SettingsSectionView({
   const onPrimary = (): void => {
     if (copy?.primary?.action === 'cancel') {
       setLoginPending(false)
-      void deps.api.cancel(sessionId).then(setSnapshot).catch((error: unknown) => {
-        const message = error instanceof Error ? error.message : SESSION_UNAVAILABLE_MESSAGE
+      void deps.api.cancel().then(setSnapshot).catch((error: unknown) => {
+        const message = error instanceof Error ? error.message : AUTH_OPERATION_FAILED_MESSAGE
         setSnapshot(unavailableSessionSnapshot(message))
       })
       return
     }
     if (copy?.primary?.action === 'logout') {
       setLogoutPending(true)
-      void deps.api.logout(sessionId).then((next) => {
+      void deps.api.logout().then((next) => {
         setSnapshot(next)
         setLogoutPending(false)
       }).catch((error: unknown) => {
-        const message = error instanceof Error ? error.message : SESSION_UNAVAILABLE_MESSAGE
+        const message = error instanceof Error ? error.message : AUTH_OPERATION_FAILED_MESSAGE
         setSnapshot(unavailableSessionSnapshot(message))
         setLogoutPending(false)
       })
       return
     }
     setLoginPending(true)
-    void deps.api.login(sessionId).then((next) => {
+    void deps.api.login().then((next) => {
       setSnapshot(next)
       setLoginPending(false)
     }).catch((error: unknown) => {
-      const message = error instanceof Error ? error.message : SESSION_UNAVAILABLE_MESSAGE
+      const message = error instanceof Error ? error.message : AUTH_OPERATION_FAILED_MESSAGE
       setSnapshot(unavailableSessionSnapshot(message))
       setLoginPending(false)
     })

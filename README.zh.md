@@ -54,7 +54,7 @@ dsh plugin --profile web add dsh-worktree-workspaces@0.1.0
 
 ## 仓库
 
-本仓库是 pnpm workspace。包约定见 [AGENTS.md](AGENTS.md)。插件索引见 [`packages/README.md`](packages/README.md)。
+本仓库是 pnpm workspace。包约定见 [AGENTS.md](AGENTS.md)。插件索引见 [`packages/README.md`](packages/README.md)，版本历史见 [CHANGELOG.md](CHANGELOG.md)。
 
 ## License
 

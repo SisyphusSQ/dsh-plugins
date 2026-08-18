@@ -30,7 +30,7 @@ describe('client plugin contribution', () => {
     apply(ctx)
 
     expect(name).toBe('codex-login-dock')
-    expect(inject).toEqual(['slots', 'conversation', 'connection', 'locale', 'modelDirectories'])
+    expect(inject).toEqual(['slots', 'conversation', 'connection', 'locale', 'modelDirectories', 'remote'])
     expect(registerLocale).toHaveBeenCalledWith(CODEX_LOGIN_NS, { zh, en })
     expect(injectSlot).toHaveBeenCalledWith('conversation.input.dock', expect.any(Function))
     expect(injectSlot).toHaveBeenCalledWith('settings.section', expect.any(Function))

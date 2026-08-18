@@ -1,6 +1,6 @@
 {
   "name": "dsh-codex-login-dock",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Session login card, Settings page, and Host auth status for Codex subscription in DeepSeek Harness.",
   "license": "MIT",
   "repository": {

@@ -80,7 +80,7 @@ describe('SettingsSectionView', () => {
     await act(async () => {
       fireEvent.click(screen.getByText('退出登录'))
     })
-    expect(deps.logout).toHaveBeenCalledWith('session-1')
+    expect(deps.logout).toHaveBeenCalledTimes(1)
     await waitFor(() => {
       expect(screen.getByText('Codex 订阅需要登录')).toBeTruthy()
     })

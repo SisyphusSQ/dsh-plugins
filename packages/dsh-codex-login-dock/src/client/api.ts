@@ -2,10 +2,10 @@ import type { ClientConnectionRpc } from '@deepseek-ai/dsh-client-connection/cli
 import { CODEX_LOGIN_DOCK_SERVICE, parseAuthSnapshot, type CodexAuthSnapshot } from '../protocol.js'
 
 export interface CodexAuthClient {
-  status(sessionId: string): Promise<CodexAuthSnapshot>
-  login(sessionId: string): Promise<CodexAuthSnapshot>
-  cancel(sessionId: string): Promise<CodexAuthSnapshot>
-  logout(sessionId: string): Promise<CodexAuthSnapshot>
+  status(): Promise<CodexAuthSnapshot>
+  login(): Promise<CodexAuthSnapshot>
+  cancel(): Promise<CodexAuthSnapshot>
+  logout(): Promise<CodexAuthSnapshot>
 }
 
 interface RpcResultEnvelope {
@@ -29,15 +29,14 @@ function snapshotFromRpc(result: unknown, fallback: string): CodexAuthSnapshot {
 export function createCodexAuthClient(rpc: ClientConnectionRpc): CodexAuthClient {
   const call = async (
     method: 'status' | 'login' | 'cancel' | 'logout',
-    sessionId: string,
   ): Promise<CodexAuthSnapshot> => {
-    const result = await rpc.call('/api', `${CODEX_LOGIN_DOCK_SERVICE}/${method}`, { args: { sessionId } })
+    const result = await rpc.call('/api', `${CODEX_LOGIN_DOCK_SERVICE}/${method}`, { args: {} })
     return snapshotFromRpc(result, `codexLoginDock/${method} returned an unreadable snapshot`)
   }
   return {
-    status: (sessionId) => call('status', sessionId),
-    login: (sessionId) => call('login', sessionId),
-    cancel: (sessionId) => call('cancel', sessionId),
-    logout: (sessionId) => call('logout', sessionId),
+    status: () => call('status'),
+    login: () => call('login'),
+    cancel: () => call('cancel'),
+    logout: () => call('logout'),
   }
 }

@@ -14,5 +14,6 @@ Verified with `@deepseek-ai/dsh@0.1.0-rc.6`.
 | [dsh-agent-plugins](dsh-agent-plugins/README.md) | Agent Plugins adapter with CLI and a Web sidebar panel |
 | [dsh-worktree-workspaces](dsh-worktree-workspaces/README.md) | Git worktree slash command, model tool, CLI, and Web picker |
 | [dsh-codex-login-dock](dsh-codex-login-dock/README.md) | Session login card, Settings page, and Host auth status for Codex subscription |
+| [dsh-openai-codex-oauth](dsh-openai-codex-oauth/README.md) | ChatGPT subscription OAuth, token refresh, slash login commands, and silent browser login |
 
 Collaboration and package-boundary rules are in [`AGENTS.md`](../AGENTS.md).

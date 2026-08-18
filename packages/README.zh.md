@@ -14,5 +14,6 @@
 | [dsh-agent-plugins](dsh-agent-plugins/README.zh.md) | Agent Plugins 适配，含 CLI 与 Web 侧栏面板 |
 | [dsh-worktree-workspaces](dsh-worktree-workspaces/README.zh.md) | Git worktree 斜杠命令、模型工具、CLI 与 Web 弹层 |
 | [dsh-codex-login-dock](dsh-codex-login-dock/README.zh.md) | Codex 订阅的会话登录卡、设置页与 Host 认证状态 |
+| [dsh-openai-codex-oauth](dsh-openai-codex-oauth/README.zh.md) | ChatGPT 订阅 OAuth、token refresh、斜杠登录命令和 silent 浏览器登录 |
 
 协作与包边界约定见 [`AGENTS.md`](../AGENTS.md)。

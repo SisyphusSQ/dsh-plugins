@@ -75,8 +75,8 @@ export function LoginDockSession({
   const [loginPending, setLoginPending] = useState(false)
 
   const loadStatus = useCallback((): void => {
-    void deps.api.status(String(sessionId)).then(setSnapshot).catch(() => undefined)
-  }, [deps.api, sessionId])
+    void deps.api.status().then(setSnapshot).catch(() => undefined)
+  }, [deps.api])
 
   useEffect(() => {
     setDismissed(false)
@@ -117,12 +117,12 @@ export function LoginDockSession({
   const onPrimary = (): void => {
     if (copy.primary?.action === 'cancel') {
       setLoginPending(false)
-      void deps.api.cancel(String(sessionId)).then(setSnapshot).catch(() => undefined)
+      void deps.api.cancel().then(setSnapshot).catch(() => undefined)
       return
     }
     setDismissed(false)
     setLoginPending(true)
-    void deps.api.login(String(sessionId)).then((next) => {
+    void deps.api.login().then((next) => {
       setSnapshot(next)
       setLoginPending(false)
     }).catch(() => {

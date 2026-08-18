@@ -3,9 +3,6 @@ export const CODEX_PROVIDER_ID = 'openai-codex'
 
 export const DEFAULT_OAUTH_CREDENTIAL_REF = 'OPENAI_CODEX_OAUTH_CREDENTIAL'
 export const DEFAULT_ACCESS_TOKEN_REF = 'OPENAI_CODEX_ACCESS_TOKEN'
-export const DEFAULT_LOGIN_LINE = '/codex-login browser'
-export const DEFAULT_LOGOUT_LINE = '/codex-logout'
-export const DEFAULT_LOGIN_COMMAND = 'codex-login'
 
 export type CodexAuthState =
   | 'missingPlugin'
@@ -59,6 +56,9 @@ export function mapLoginFailure(text: string): {
   const redacted = redactCredentialText(text)
   if (/cancel|abort/iu.test(redacted)) {
     return { code: 'LOGIN_CANCELLED', message: '浏览器登录已取消。' }
+  }
+  if (/另一个.*登录正在进行|in progress/iu.test(redacted)) {
+    return { code: 'LOGIN_IN_PROGRESS', message: '另一个浏览器登录正在进行。' }
   }
   if (/1455|EADDRINUSE|listen/iu.test(redacted)) {
     return {
@@ -190,9 +190,9 @@ export const SETTINGS_SECTION_ID = 'codex-subscription'
 /** After Models (10); before typical Plugins / later product sections. */
 export const SETTINGS_SECTION_ORDER = 25
 
-export const SESSION_UNAVAILABLE_MESSAGE = '当前没有可用会话，请先打开一个对话后再登录。'
+export const AUTH_OPERATION_FAILED_MESSAGE = 'Codex 订阅操作失败，请重试。'
 
-export function unavailableSessionSnapshot(message: string = SESSION_UNAVAILABLE_MESSAGE): CodexAuthSnapshot {
+export function unavailableSessionSnapshot(message: string = AUTH_OPERATION_FAILED_MESSAGE): CodexAuthSnapshot {
   return {
     state: 'error',
     providerId: CODEX_PROVIDER_ID,

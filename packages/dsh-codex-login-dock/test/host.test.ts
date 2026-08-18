@@ -1,15 +1,11 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import type { Agent } from '@deepseek-ai/dsh-agent'
-import type { CommandExecution, CommandId } from '@deepseek-ai/dsh-commands'
 import { credentialRef, type CredentialRef } from '@deepseek-ai/dsh-credentials'
 import type { CredentialInfo, ResolvedCredential } from '@deepseek-ai/dsh-credentials'
 
-import { createCodexLoginDockHost } from '../lib/host.js'
+import { createCodexLoginDockHost, type CodexOAuthSilent } from '../lib/host.js'
 import {
   DEFAULT_ACCESS_TOKEN_REF,
-  DEFAULT_LOGIN_LINE,
-  DEFAULT_LOGOUT_LINE,
   DEFAULT_OAUTH_CREDENTIAL_REF,
 } from '../lib/protocol.js'
 import type { CredentialStore } from '../lib/status.js'
@@ -18,7 +14,6 @@ const ACCESS = 'test-access-token-aaa-secret'
 const REFRESH = 'test-refresh-token-bbb-secret'
 const oauthRef = credentialRef(DEFAULT_OAUTH_CREDENTIAL_REF)
 const accessRef = credentialRef(DEFAULT_ACCESS_TOKEN_REF)
-const agent = { session: { header: { id: 'session-1' } } } as unknown as Agent
 
 function memoryStore(values: Record<string, ResolvedCredential | undefined>): CredentialStore {
   return {
@@ -33,49 +28,50 @@ function memoryStore(values: Record<string, ResolvedCredential | undefined>): Cr
   }
 }
 
-test('startBrowserLogin delegates to /codex-login browser and rereads status', async () => {
+function persist(values: Record<string, ResolvedCredential | undefined>): void {
+  values[oauthRef] = {
+    value: JSON.stringify({
+      type: 'oauth',
+      access: ACCESS,
+      refresh: REFRESH,
+      expires: Date.now() + 60_000,
+    }),
+    source: 'file',
+  }
+}
+
+test('startBrowserLogin calls silent loginBrowser and rereads status', async () => {
   const values: Record<string, ResolvedCredential | undefined> = {}
-  const lines: string[] = []
+  let calls = 0
   const host = createCodexLoginDockHost({
     credentials: memoryStore(values),
     oauthCredentialRef: oauthRef,
     accessTokenRef: accessRef,
-    findLoginCommand: () => true,
-    executeCommand: async (_agent, line) => {
-      lines.push(line)
-      values[oauthRef] = {
-        value: JSON.stringify({
-          type: 'oauth',
-          access: ACCESS,
-          refresh: REFRESH,
-          expires: Date.now() + 60_000,
-        }),
-        source: 'file',
-      }
-      return {
-        commandId: 'cmd-1' as CommandId,
-        result: { kind: 'success', text: `logged in ${ACCESS}` },
-      } satisfies CommandExecution
-    },
+    getOAuth: (): CodexOAuthSilent => ({
+      async loginBrowser() {
+        calls += 1
+        persist(values)
+      },
+      async logout() {
+        assert.fail('login must not logout')
+      },
+    }),
   })
 
-  const snapshot = await host.startBrowserLogin(agent)
-  assert.deepEqual(lines, [DEFAULT_LOGIN_LINE])
+  const snapshot = await host.startBrowserLogin()
+  assert.equal(calls, 1)
   assert.equal(snapshot.state, 'ready')
   assert.equal(JSON.stringify(snapshot).includes(ACCESS), false)
 })
 
-test('missing login command is missingPlugin', async () => {
+test('missing silent service is missingPlugin', async () => {
   const host = createCodexLoginDockHost({
     credentials: memoryStore({}),
     oauthCredentialRef: oauthRef,
     accessTokenRef: accessRef,
-    findLoginCommand: () => false,
-    executeCommand: async () => {
-      assert.fail('must not start PKCE when the OAuth plugin is absent')
-    },
+    getOAuth: () => undefined,
   })
-  const snapshot = await host.startBrowserLogin(agent)
+  const snapshot = await host.startBrowserLogin()
   assert.equal(snapshot.state, 'missingPlugin')
   assert.equal(snapshot.errorCode, 'OAUTH_PLUGIN_MISSING')
 })
@@ -85,16 +81,16 @@ test('port conflict maps to CALLBACK_PORT_BUSY without raw details', async () =>
     credentials: memoryStore({}),
     oauthCredentialRef: oauthRef,
     accessTokenRef: accessRef,
-    findLoginCommand: () => true,
-    executeCommand: async () => ({
-      commandId: 'cmd-1' as CommandId,
-      result: {
-        kind: 'error',
-        text: `listen EADDRINUSE 127.0.0.1:1455 token=${ACCESS}`,
+    getOAuth: () => ({
+      async loginBrowser() {
+        throw new Error(`listen EADDRINUSE 127.0.0.1:1455 token=${ACCESS}`)
+      },
+      async logout() {
+        assert.fail('port conflict must not logout')
       },
     }),
   })
-  const snapshot = await host.startBrowserLogin(agent)
+  const snapshot = await host.startBrowserLogin()
   assert.equal(snapshot.state, 'error')
   assert.equal(snapshot.errorCode, 'CALLBACK_PORT_BUSY')
   assert.equal(JSON.stringify(snapshot).includes(ACCESS), false)
@@ -103,50 +99,54 @@ test('port conflict maps to CALLBACK_PORT_BUSY without raw details', async () =>
 
 test('status is authorizing while login is in flight', async () => {
   let release: (() => void) | undefined
-  const pending = new Promise<CommandExecution>((resolve) => {
-    release = () => resolve({
-      commandId: 'cmd-1' as CommandId,
-      result: { kind: 'success', text: 'ok' },
-    })
+  const pending = new Promise<void>((resolve) => {
+    release = () => resolve()
   })
   const host = createCodexLoginDockHost({
     credentials: memoryStore({}),
     oauthCredentialRef: oauthRef,
     accessTokenRef: accessRef,
-    findLoginCommand: () => true,
-    executeCommand: async (_agent, _line, signal) => {
-      if (signal.aborted) throw new Error('login cancelled')
-      return pending
-    },
+    getOAuth: () => ({
+      async loginBrowser(signal) {
+        if (signal?.aborted === true) throw new Error('login cancelled')
+        return pending
+      },
+      async logout() {
+        assert.fail('in-flight login must not logout')
+      },
+    }),
   })
 
-  const started = host.startBrowserLogin(agent)
-  const mid = await host.status(agent)
+  const started = host.startBrowserLogin()
+  const mid = await host.status()
   assert.equal(mid.state, 'authorizing')
-  const second = await host.startBrowserLogin(agent)
+  const second = await host.startBrowserLogin()
   assert.equal(second.errorCode, 'LOGIN_IN_PROGRESS')
   release?.()
   const done = await started
   assert.equal(done.state, 'signedOut')
 })
 
-test('cancelLogin aborts the delegated login', async () => {
+test('cancelLogin aborts the silent login', async () => {
   const host = createCodexLoginDockHost({
     credentials: memoryStore({}),
     oauthCredentialRef: oauthRef,
     accessTokenRef: accessRef,
-    findLoginCommand: () => true,
-    executeCommand: async (_agent, _line, signal) => {
-      if (signal.aborted) throw new Error('login cancelled')
-      await new Promise<void>((_resolve, reject) => {
-        signal.addEventListener('abort', () => reject(new Error('login cancelled')), { once: true })
-      })
-      return undefined
-    },
+    getOAuth: () => ({
+      async loginBrowser(signal) {
+        if (signal?.aborted === true) throw new Error('login cancelled')
+        await new Promise<void>((_resolve, reject) => {
+          signal?.addEventListener('abort', () => reject(new Error('login cancelled')), { once: true })
+        })
+      },
+      async logout() {
+        assert.fail('cancel must not logout')
+      },
+    }),
   })
 
-  const started = host.startBrowserLogin(agent)
-  const mid = await host.status(agent)
+  const started = host.startBrowserLogin()
+  const mid = await host.status()
   assert.equal(mid.state, 'authorizing')
   const cancelled = await host.cancelLogin()
   assert.equal(cancelled.errorCode, 'LOGIN_CANCELLED')
@@ -154,52 +154,40 @@ test('cancelLogin aborts the delegated login', async () => {
   assert.equal(settled.errorCode, 'LOGIN_CANCELLED')
 })
 
-test('logout delegates to /codex-logout and rereads a secret-free snapshot', async () => {
-  const values: Record<string, ResolvedCredential | undefined> = {
-    [oauthRef]: {
-      value: JSON.stringify({
-        type: 'oauth',
-        access: ACCESS,
-        refresh: REFRESH,
-        expires: Date.now() + 60_000,
-      }),
-      source: 'file',
-    },
-  }
-  const lines: string[] = []
+test('logout calls silent logout and rereads a secret-free snapshot', async () => {
+  const values: Record<string, ResolvedCredential | undefined> = {}
+  persist(values)
+  let calls = 0
   const host = createCodexLoginDockHost({
     credentials: memoryStore(values),
     oauthCredentialRef: oauthRef,
     accessTokenRef: accessRef,
-    findLoginCommand: () => true,
-    executeCommand: async (_agent, line) => {
-      lines.push(line)
-      delete values[oauthRef]
-      return {
-        commandId: 'cmd-logout' as CommandId,
-        result: { kind: 'success', text: `logged out ${ACCESS}` },
-      } satisfies CommandExecution
-    },
+    getOAuth: () => ({
+      async loginBrowser() {
+        assert.fail('logout must not login')
+      },
+      async logout() {
+        calls += 1
+        delete values[oauthRef]
+      },
+    }),
   })
 
-  const snapshot = await host.logout(agent)
-  assert.deepEqual(lines, [DEFAULT_LOGOUT_LINE])
+  const snapshot = await host.logout()
+  assert.equal(calls, 1)
   assert.equal(snapshot.state, 'signedOut')
   assert.equal(JSON.stringify(snapshot).includes(ACCESS), false)
   assert.equal(JSON.stringify(snapshot).includes(REFRESH), false)
 })
 
-test('logout without the OAuth plugin is missingPlugin and does not run a command', async () => {
+test('logout without the OAuth plugin is missingPlugin and does not clear credentials', async () => {
   const host = createCodexLoginDockHost({
     credentials: memoryStore({}),
     oauthCredentialRef: oauthRef,
     accessTokenRef: accessRef,
-    findLoginCommand: () => false,
-    executeCommand: async () => {
-      assert.fail('must not clear credentials when the OAuth plugin is absent')
-    },
+    getOAuth: () => undefined,
   })
-  const snapshot = await host.logout(agent)
+  const snapshot = await host.logout()
   assert.equal(snapshot.state, 'missingPlugin')
   assert.equal(snapshot.errorCode, 'OAUTH_PLUGIN_MISSING')
 })
@@ -209,8 +197,10 @@ test('commands register secret-free status login and cancel', () => {
     credentials: memoryStore({}),
     oauthCredentialRef: oauthRef,
     accessTokenRef: accessRef,
-    findLoginCommand: () => true,
-    executeCommand: async () => undefined,
+    getOAuth: () => ({
+      async loginBrowser() {},
+      async logout() {},
+    }),
   })
   assert.deepEqual(host.commands().map((command) => command.name), [
     'codex-auth-status',

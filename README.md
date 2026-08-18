@@ -54,7 +54,7 @@ Create and archive Git linked worktrees. The same package exposes `/worktree`, a
 
 ## Repository
 
-This is a pnpm workspace. Package conventions are in [AGENTS.md](AGENTS.md). The plugin index is in [`packages/README.md`](packages/README.md).
+This is a pnpm workspace. Package conventions are in [AGENTS.md](AGENTS.md). The plugin index is in [`packages/README.md`](packages/README.md), and release history is tracked in [CHANGELOG.md](CHANGELOG.md).
 
 ## License
 

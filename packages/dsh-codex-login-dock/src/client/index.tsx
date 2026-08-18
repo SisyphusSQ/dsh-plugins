@@ -17,7 +17,7 @@ import { createSettingsSection } from './SettingsSection.js'
 
 export const name = 'codex-login-dock'
 
-export const inject = ['slots', 'conversation', 'connection', 'locale', 'modelDirectories']
+export const inject = ['slots', 'conversation', 'connection', 'locale', 'modelDirectories', 'remote']
 
 export function apply(ctx: ClientContext): void {
   ctx.effect(

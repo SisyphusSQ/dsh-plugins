@@ -1,10 +1,18 @@
-# dsh-thinking-collapse
+# @suqingsq/dsh-thinking-collapse
 
 English | [中文](README.zh.md)
 
 Codex-style live activity collapse for the DeepSeek Harness Web chat view.
 
 Verified with `@deepseek-ai/dsh@0.1.0-rc.6`.
+
+## Install
+
+```bash
+dsh plugin --profile web add @suqingsq/dsh-thinking-collapse@0.2.0
+```
+
+Remove it with `dsh plugin --profile web remove @suqingsq/dsh-thinking-collapse`.
 
 ## What it does
 

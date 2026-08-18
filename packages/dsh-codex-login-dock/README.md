@@ -1,4 +1,4 @@
-# dsh-codex-login-dock
+# @suqingsq/dsh-codex-login-dock
 
 English | [中文](README.zh.md)
 
@@ -7,6 +7,17 @@ Session login card, Settings page, and Host auth status for Codex subscription i
 When the native model selector is on `openai-codex` (display name `Codex 订阅`) and credentials are not ready, a card appears above the composer. Settings also has a **Codex 订阅** section that stays visible after sign-in. The primary path is silent browser PKCE through `dsh-openai-codex-oauth`. After sign-in the session card disappears and the rest of the session stays native DSH.
 
 Host and Web client APIs target `@deepseek-ai/dsh@0.1.0-rc.6`. Fixture tests cover status, silent login, logout, cancel, port-busy mapping, redaction, dock visibility, composer block, and the Settings section. That is not a live DSH Web or Headless E2E.
+
+## Install
+
+Install the OAuth dependency first, then the dock in the same profile:
+
+```bash
+dsh plugin --profile web add @suqingsq/dsh-openai-codex-oauth@0.2.0
+dsh plugin --profile web add @suqingsq/dsh-codex-login-dock@0.2.0
+```
+
+Remove the dock with `dsh plugin --profile web remove @suqingsq/dsh-codex-login-dock`.
 
 ## Requires
 

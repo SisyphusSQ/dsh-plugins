@@ -1,10 +1,18 @@
-# dsh-worktree-workspaces
+# @suqingsq/dsh-worktree-workspaces
 
 English | [中文](README.zh.md)
 
 Create and archive Git linked worktrees for DeepSeek Harness. One package provides the `/worktree` slash command, the `worktree_create` model tool, the `dsh-worktree` CLI, and a Web picker that switches DSH Workspace.
 
 Verified with `@deepseek-ai/dsh@0.1.0-rc.6`.
+
+## Install
+
+```bash
+dsh plugin --profile web add @suqingsq/dsh-worktree-workspaces@0.2.0
+```
+
+Remove it with `dsh plugin --profile web remove @suqingsq/dsh-worktree-workspaces`.
 
 ## What it does
 
@@ -69,7 +77,7 @@ The CLI is a separate process. `--base-dir` and `--archive-dir` override the def
 
 ```yaml
 - id: worktree-workspaces
-  name: 'dsh-worktree-workspaces'
+  name: '@suqingsq/dsh-worktree-workspaces'
   config:
     baseDir: '~/.dsh/worktrees'
 ```

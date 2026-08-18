@@ -1,10 +1,18 @@
-# dsh-session-tools
+# @suqingsq/dsh-session-tools
 
 English | [中文](README.zh.md)
 
 Session tools for DeepSeek Harness. One package gives the model six session tools, and gives the Web composer `@` session candidates that inject another session as sourced context.
 
 Verified with `@deepseek-ai/dsh@0.1.0-rc.6`.
+
+## Install
+
+```bash
+dsh plugin --profile web add @suqingsq/dsh-session-tools@0.2.0
+```
+
+Remove it with `dsh plugin --profile web remove @suqingsq/dsh-session-tools`.
 
 ## Tools
 

@@ -1,4 +1,4 @@
-# dsh-openai-codex-oauth
+# @suqingsq/dsh-openai-codex-oauth
 
 English | [中文](README.zh.md)
 
@@ -9,6 +9,14 @@ This package stores OAuth credentials, refreshes access tokens before Codex requ
 It does not register an LLM adapter. `@deepseek-ai/dsh-llm-pi-ai` stays the `openai-codex` route. PKCE, the callback server, and refresh stay in `@earendil-works/pi-ai`.
 
 Host APIs target `@deepseek-ai/dsh@0.1.0-rc.6`. Fixture tests cover silent login, cancel, in-flight exclusion, port-busy mapping, and command registration. That is not a live DSH Web or Headless E2E.
+
+## Install
+
+```bash
+dsh plugin --profile web add @suqingsq/dsh-openai-codex-oauth@0.2.0
+```
+
+Remove it with `dsh plugin --profile web remove @suqingsq/dsh-openai-codex-oauth`.
 
 ## Behavior
 

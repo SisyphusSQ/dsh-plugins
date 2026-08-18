@@ -1,10 +1,18 @@
-# dsh-session-tools
+# @suqingsq/dsh-session-tools
 
 [English](README.md) | 中文
 
 DeepSeek Harness 的会话能力插件。同一包提供六个模型侧工具，以及 Web 输入框的 `@` 会话候选：选中后把另一会话作为带出处的上下文注入。
 
 已按 `@deepseek-ai/dsh@0.1.0-rc.6` 验证。
+
+## 安装
+
+```bash
+dsh plugin --profile web add @suqingsq/dsh-session-tools@0.2.0
+```
+
+卸载命令：`dsh plugin --profile web remove @suqingsq/dsh-session-tools`。
 
 ## 工具
 

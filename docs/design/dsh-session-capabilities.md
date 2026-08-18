@@ -1,6 +1,6 @@
 # DSH 会话能力套件设计
 
-- 状态：`dsh-session-tools` 已完成 rc.6 工具与 `@会话` Live E2E；分屏仍等待 DSH Core API
+- 状态：`dsh-session-tools` 已完成 rc.6 工具与 `@会话` Live E2E；`@suqingsq/dsh-session-tools@0.2.0` 已发布并在日常 rc.7 Web profile 中激活；分屏仍等待 DSH Core API
 - 首个验证目标：`@deepseek-ai/dsh@0.1.0-rc.6`
 - 设计日期：2026-08-14
 - 对应插件包：`dsh-session-tools`（工具、`@会话` 菜单与 pre-step 注入；分屏就绪后也落本包）
@@ -22,8 +22,8 @@ DSH 的 Session Log 是会话的持久事实，但 rc.6 的模型侧缺少通用
 
 | 交付物 | 所在仓库 | 责任 | rc.6 状态 |
 | --- | --- | --- | --- |
-| `dsh-session-tools` 模型工具 | 本仓库 `packages/dsh-session-tools` | 六个模型工具、授权、快照读取、跨会话 relay | 已完成 Live E2E；`0.1.0` 已发布 |
-| `dsh-session-tools` `@会话` | 同一包的 Web client + host `pre-step` | 输入框候选、`dsh-session:` mention、快照注入 | 已完成 Live E2E；日志保留 markdown URI；`0.1.0` 已发布 |
+| `dsh-session-tools` 模型工具 | 本仓库 `packages/dsh-session-tools` | 六个模型工具、授权、快照读取、跨会话 relay | 已完成 Live E2E；当前发布包为 `@suqingsq/dsh-session-tools@0.2.0` |
+| `dsh-session-tools` `@会话` | 同一包的 Web client + host `pre-step` | 输入框候选、`dsh-session:` mention、快照注入 | 已完成 Live E2E；日志保留 markdown URI；当前发布包为 `@suqingsq/dsh-session-tools@0.2.0` |
 | 多会话 UI Core 扩展 | DSH 上游 | 多会话保活、任意会话渲染、根布局扩展槽 | 需要新增 |
 | 分屏 UI | 同一包，待 Core API | 主辅双会话 UI、响应式抽屉、会话选择 | 等待 Core API，不单开包 |
 

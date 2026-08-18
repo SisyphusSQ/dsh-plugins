@@ -1,10 +1,18 @@
-# dsh-agent-plugins
+# @suqingsq/dsh-agent-plugins
 
 English | [中文](README.zh.md)
 
 An [Agent Plugins 1.0.0](https://github.com/agentplugins/agent-plugins-spec) adapter for [DeepSeek Harness (DSH)](https://github.com/deepseek-ai/deepseek-harness). One package covers the host bundle, a Web sidebar panel, and the `agent-plugins` CLI.
 
 Verified with `@deepseek-ai/dsh@0.1.0-rc.6`.
+
+## Install
+
+```bash
+dsh plugin --profile web add @suqingsq/dsh-agent-plugins@0.2.0
+```
+
+Remove it with `dsh plugin --profile web remove @suqingsq/dsh-agent-plugins`.
 
 ## What it does
 

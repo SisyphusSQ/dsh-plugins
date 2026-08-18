@@ -1,10 +1,18 @@
-# dsh-composer-skill-mention
+# @suqingsq/dsh-composer-skill-mention
 
 [English](README.md) | 中文
 
 为 DeepSeek Harness Web 输入框提供 Codex 风格的 Skill 提及。
 
 已按 `@deepseek-ai/dsh@0.1.0-rc.6` 验证。
+
+## 安装
+
+```bash
+dsh plugin --profile web add @suqingsq/dsh-composer-skill-mention@0.2.0
+```
+
+卸载命令：`dsh plugin --profile web remove @suqingsq/dsh-composer-skill-mention`。
 
 ## 做什么
 

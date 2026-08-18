@@ -1,10 +1,18 @@
-# dsh-worktree-workspaces
+# @suqingsq/dsh-worktree-workspaces
 
 [English](README.md) | 中文
 
 为 DeepSeek Harness 创建和归档 Git linked worktree。同一包提供 `/worktree` 斜杠命令、`worktree_create` 模型工具、`dsh-worktree` CLI，以及用于切换 DSH Workspace 的 Web 弹层。
 
 已按 `@deepseek-ai/dsh@0.1.0-rc.6` 验证。
+
+## 安装
+
+```bash
+dsh plugin --profile web add @suqingsq/dsh-worktree-workspaces@0.2.0
+```
+
+卸载命令：`dsh plugin --profile web remove @suqingsq/dsh-worktree-workspaces`。
 
 ## 做什么
 
@@ -69,7 +77,7 @@ CLI 是独立进程，不读取 Cordis profile 配置。`--base-dir`、`--archiv
 
 ```yaml
 - id: worktree-workspaces
-  name: 'dsh-worktree-workspaces'
+  name: '@suqingsq/dsh-worktree-workspaces'
   config:
     baseDir: '~/.dsh/worktrees'
 ```

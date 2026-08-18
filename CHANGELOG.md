@@ -4,15 +4,25 @@
 
 ## Unreleased
 
-- feature
-  - 新增 `dsh-codex-login-dock`，在 DSH Web 会话输入区和设置页提供 Codex 订阅登录状态、silent 浏览器登录、取消与退出入口。
-  - 新增 `dsh-openai-codex-oauth`，维护 `openai-codex` 的 OAuth 凭据、PKCE 登录、请求前 refresh、斜杠命令和供 Web 登录界面使用的 Host silent 服务。
-- optimization
-  - `dsh-codex-login-dock` 改为直接使用 OAuth Host 服务，不再依赖 live agent 或通过会话命令触发登录。
-- script
-  - 新增 monorepo npm 包发版 Skill，统一包检查、发布和 registry 回读流程。
+- 暂无。
 
 ## History
+
+### v0.2.0(20260818)
+
+- feature
+  - 首次发布 `@suqingsq/dsh-codex-login-dock@0.2.0`，在 DSH Web 会话输入区和设置页提供 Codex 订阅登录状态、silent 浏览器登录、取消与退出入口。
+  - 首次发布 `@suqingsq/dsh-openai-codex-oauth@0.2.0`，维护 `openai-codex` 的 OAuth 凭据、PKCE 登录、请求前 refresh、斜杠命令和供 Web 登录界面使用的 Host silent 服务。
+- optimization
+  - 将仓库内全部七个 npm 包统一迁移到 `@suqingsq/*@0.2.0`；Cordis bundle module name 与 Web client module ID 同步使用 scoped 包名，既有稳定配置行 ID 保持不变。
+  - `dsh-codex-login-dock` 改为直接使用 OAuth Host 服务，不再依赖 live agent 或通过会话命令触发登录。
+- deprecated
+  - 弃用 `dsh-agent-plugins`、`dsh-composer-skill-mention`、`dsh-session-tools`、`dsh-thinking-collapse` 和 `dsh-worktree-workspaces` 的全部 unscoped 历史版本；registry 弃用消息指向对应的 `@suqingsq/*@0.2.0`。
+- script
+  - 新增 monorepo npm 包发版 Skill，统一包检查、发布和 registry 回读流程。
+- note
+  - 七个 scoped 包均完成 npm registry 版本、`latest`、integrity、shasum 与 tar 内容回读。
+  - 日常 DSH `web` profile 已迁移至七个 scoped 包；在 `@deepseek-ai/dsh@0.1.0-rc.7` 上回读到全部插件 `enabled: true`、`fiberPhase: active`，旧 unscoped 模块为零。
 
 ### dsh-thinking-collapse v0.2.0(20260817)
 

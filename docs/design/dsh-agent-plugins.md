@@ -2,8 +2,8 @@
 
 > 仓库内设计文档。
 > 适用环境：`@deepseek-ai/dsh@0.1.0-rc.6`（本机 sqmc04，web profile）
-> 当前状态：M0–M5 已完成 rc.6 实现与隔离 profile 验证；`dsh-agent-plugins@0.1.0` 已于 2026-08-15 发布到 npm registry，并完成 registry 版本与隔离 profile 安装回读
-> 更新：2026-08-15
+> 当前状态：M0–M5 已完成 rc.6 实现与隔离 profile 验证；`dsh-agent-plugins@0.1.0` 于 2026-08-15 首发，当前 `@suqingsq/dsh-agent-plugins@0.2.0` 已发布并在日常 rc.7 Web profile 中激活
+> 更新：2026-08-18
 
 ## 目标
 

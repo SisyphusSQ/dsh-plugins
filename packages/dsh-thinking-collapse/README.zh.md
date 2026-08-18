@@ -1,10 +1,18 @@
-# dsh-thinking-collapse
+# @suqingsq/dsh-thinking-collapse
 
 [English](README.md) | 中文
 
 为 DeepSeek Harness Web 聊天视图提供 Codex 式活动折叠。
 
 已按 `@deepseek-ai/dsh@0.1.0-rc.6` 验证。
+
+## 安装
+
+```bash
+dsh plugin --profile web add @suqingsq/dsh-thinking-collapse@0.2.0
+```
+
+卸载命令：`dsh plugin --profile web remove @suqingsq/dsh-thinking-collapse`。
 
 ## 做什么
 

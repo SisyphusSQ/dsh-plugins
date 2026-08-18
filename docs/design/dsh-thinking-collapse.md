@@ -1,6 +1,6 @@
 # DSH 思考折叠插件设计
 
-- 状态：已完成 rc.6 实现与隔离 Web profile 验证；`dsh-thinking-collapse@0.1.0` 已于 2026-08-15 首发，`dsh-thinking-collapse@0.2.0` 已于 2026-08-17 发布。2026-08-16 将聊天契约改为整轮一条外层耗时；同日先做成内层嵌套耗时行，随后改为内层恢复 DSH 默认 Think 行
+- 状态：已完成 rc.6 实现与隔离 Web profile 验证；`dsh-thinking-collapse@0.1.0` 于 2026-08-15 首发，unscoped `0.2.0` 于 2026-08-17 发布，当前 `@suqingsq/dsh-thinking-collapse@0.2.0` 已发布并在日常 rc.7 Web profile 中激活。2026-08-16 将聊天契约改为整轮一条外层耗时；同日先做成内层嵌套耗时行，随后改为内层恢复 DSH 默认 Think 行
 
 ## 1. 背景与目标
 
@@ -67,7 +67,7 @@ assistant/chunk / tool/call / tool/result / step/end / assistant/message / llm/r
 ```yaml
 - insert:
     - id: dsh-thinking-collapse
-      name: 'dsh-thinking-collapse'
+      name: '@suqingsq/dsh-thinking-collapse'
 ```
 
 `package.json` 同时声明：

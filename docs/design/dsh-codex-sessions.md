@@ -1,7 +1,7 @@
 # DSH Codex 会话内登录卡设计
 
-- 状态：Host silent 登录、Web dock 与 Settings 独立页已实现
-- 建议包名：`dsh-codex-login-dock` + 本仓库维护的 `dsh-openai-codex-oauth`
+- 状态：Host silent 登录、Web dock 与 Settings 独立页已实现；`@suqingsq/dsh-openai-codex-oauth@0.2.0` 与 `@suqingsq/dsh-codex-login-dock@0.2.0` 已发布并在日常 rc.7 Web profile 中激活
+- 发布包：`@suqingsq/dsh-codex-login-dock` + 本仓库维护的 `@suqingsq/dsh-openai-codex-oauth`
 - 复用 OAuth：本仓库 `packages/dsh-openai-codex-oauth`（fork 自 [`dyuan311/dsh-openai-codex-oauth@0.1.1`](https://github.com/dyuan311/dsh-openai-codex-oauth)；Host 命令 `/codex-login`、`/codex-status`、`/codex-logout`、silent `ctx.openaiCodexOAuth` + `llm-pi-ai` 的 `openai-codex` 路由）
 - DSH 验证基线：`@deepseek-ai/dsh@0.1.0-rc.6` / `deepseek-harness@47f943859bef60e4160492346772ded9b24f765a`
 - `@earendil-works/pi-ai` 审查基线：`0.82.1`

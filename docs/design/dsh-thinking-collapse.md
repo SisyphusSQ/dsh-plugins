@@ -1,5 +1,8 @@
 # DSH 思考折叠插件设计
 
+> **已退役（2026-10-06）**：`@suqingsq/dsh-thinking-collapse` 已从 `packages/` 删除，本文件仅作历史记录保留。
+> 退役依据与本地处置见 [CHANGELOG.md](../../CHANGELOG.md) 的 `Unreleased → deprecated`。文中的实现、激活与验证结论均描述退役前状态；`UPSTREAM.md` 记录的宿主 fork 对齐基线随包一并移除。
+
 - 状态：已完成 rc.6 实现与隔离 Web profile 验证；`dsh-thinking-collapse@0.1.0` 于 2026-08-15 首发，unscoped `0.2.0` 于 2026-08-17 发布，当前 `@suqingsq/dsh-thinking-collapse@0.2.0` 已发布并在日常 rc.7 Web profile 中激活。2026-08-16 将聊天契约改为整轮一条外层耗时；同日先做成内层嵌套耗时行，随后改为内层恢复 DSH 默认 Think 行
 
 ## 1. 背景与目标

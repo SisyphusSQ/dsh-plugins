@@ -2,6 +2,8 @@
 
 本文件记录本仓库从 DSH `0.1.0-rc.6` 迁移到 `0.2.0-rc.2` 的完整过程：为什么必须迁移、四个仓库级根因、逐包 API 变更台账，以及当前验证状态与回滚方式。
 
+> **2026-10-06 退役更新**：本文件迁移时覆盖的八个包中，`dsh-agent-plugins`、`dsh-thinking-collapse`、`dsh-codex-login-dock`、`dsh-openai-codex-oauth`、`dsh-composer-skill-mention` 已退役并从 `packages/` 删除。下文针对这五个包的台账与验证条目保留为历史记录；当前在维护的包只有 `dsh-session-tools`、`dsh-worktree-workspaces` 和 `dsh-ui-zoom`。详见 [CHANGELOG.md](../../CHANGELOG.md) 的 `Unreleased → deprecated`。
+
 各包的 `## 兼容边界` 小节指向本文件，不再各自重复。
 
 ## 1. 为什么必须迁移

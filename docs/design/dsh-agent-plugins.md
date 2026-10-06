@@ -1,5 +1,8 @@
 # dsh-agent-plugins 设计
 
+> **已退役（2026-10-06）**：`@suqingsq/dsh-agent-plugins` 已从 `packages/` 删除，本文件仅作历史记录保留。
+> 退役依据与本地处置见 [CHANGELOG.md](../../CHANGELOG.md) 的 `Unreleased → deprecated`。文中的安装、激活与验证结论均描述退役前状态。
+
 > 仓库内设计文档。
 > 适用环境：`@deepseek-ai/dsh@0.1.0-rc.6`（本机 sqmc04，web profile）
 本轮 0.1.0-rc.6 → 0.2.0-rc.2 迁移的台账、根因与验证状态见 [dsh-0.2-migration.md](dsh-0.2-migration.md)。

@@ -1,5 +1,8 @@
 # DSH Composer Skill 提及设计
 
+> **已退役（2026-10-06）**：`@suqingsq/dsh-composer-skill-mention` 已从 `packages/` 删除，本文件仅作历史记录保留。
+> 退役依据与本地处置见 [CHANGELOG.md](../../CHANGELOG.md) 的 `Unreleased → deprecated`。文中的发布、激活与验证结论均描述退役前状态。
+
 - 状态：已完成 rc.6 实现与隔离 Web profile 验证；`dsh-composer-skill-mention@0.1.0` 于 2026-08-15 首发，当前 `@suqingsq/dsh-composer-skill-mention@0.2.0` 已发布并在日常 rc.7 Web profile 中激活
 - 目标包：`dsh-composer-skill-mention`
 - 验证基线：`@deepseek-ai/dsh@0.1.0-rc.6`

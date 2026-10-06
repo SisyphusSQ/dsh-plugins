@@ -14,9 +14,15 @@
   - 客户端入口类型从已删除的 `ClientContext` 改为 Cordis 的 `Context`；`ctx.slots` 改由 `dsh-client-ui-renderer` 合并。
   - 将 `@deepseek-ai/schemastery` 全仓库统一到 `^3.18.4`，消除 3.18.1 / 3.18.4 双实例导致的 declaration merging 静默失效与 `TS2742`。
   - 为使用 `@deepseek-ai/dsh-client-store` 的包显式声明 `zustand` 与 `immer`：该包构建产物会导入二者，但自身未声明运行时依赖。
+- deprecated
+  - 退役五个包并从 `packages/` 删除：`@suqingsq/dsh-agent-plugins`、`@suqingsq/dsh-thinking-collapse`、`@suqingsq/dsh-codex-login-dock`、`@suqingsq/dsh-openai-codex-oauth`、`@suqingsq/dsh-composer-skill-mention`。仓库保留 3 个包：`dsh-session-tools`、`dsh-worktree-workspaces`、`dsh-ui-zoom`。
+    - 退役依据：`dsh-thinking-collapse` 是宿主 chat 渲染的 fork，每次 DSH 升级都要重新对齐上游 commit 并做真机流式验证；`dsh-agent-plugins` 体量最大（3069 行 / 30 个测试 / 唯一 `yaml` 运行时依赖），且它管理的 `~/.dsh/agent-plugins` 与 data 目录都不存在、生成的 home 托管块为空；Codex 登录对（`dsh-codex-login-dock` + `dsh-openai-codex-oauth`）在 `~/.dsh/.credentials.yaml` 中没有任何 codex/openai 凭据；`dsh-composer-skill-mention` 为最小包。
+    - 本地处置：desktop profile 的 `dependencies` 与 `dsh.profile.bundles` 各移除 5 行后重装，`@suqingsq` 回读为 3；`~/.dsh/cordis.patch.yml` 中 agent-plugins 生成的托管块已清除。
+    - npm 侧未做任何操作：已发布版本（`0.2.0`）保持原样，既未 deprecate 也未下架；三个旧 unscoped 包的弃用消息仍指向已退役的 scoped 包名。
+  - 移除 `README` 与 `packages/README` 中退役包的小节与安装命令（7 条 → 2 条），并把 `dsh-ui-zoom` 的能力描述改为与实现一致：不含键盘快捷键。
 - note
-  - 八个包全部通过 typecheck（0 错误）与各自测试套件。
-  - 八个包已装入本机 desktop profile；真机冷启动验收记录按包写入对应 `docs/design/`。
+  - 迁移后退役前，八个包全部通过 typecheck（0 错误）与各自测试套件；退役后保留的 3 个包重新通过 typecheck 与测试。
+  - 八个包曾装入本机 desktop profile，真机冷启动验收记录按包写入对应 `docs/design/`；退役 5 个后 desktop profile 回读为 3 个 `@suqingsq` 行，`ui-zoom` 的 `zoomPercent: 115` 配置行保留。
   - 本轮变更尚未发布到 npm；`dsh-ui-zoom` 为首次引入，发布前 README 不写安装命令与 registry 包名。
 
 ## History

@@ -1,5 +1,7 @@
 # DSH 思考折叠视觉 QA
 
+> **已退役（2026-10-06）**：本文件是 `@suqingsq/dsh-thinking-collapse` 的视觉 QA 记录，该插件已从 `packages/` 删除。本文件仅作历史记录保留，其中所有 profile、端口与构建结论均已失效。退役依据见 [CHANGELOG.md](CHANGELOG.md) 的 `Unreleased → deprecated`。
+
 2026-08-16 起，活动行契约改为「整轮一条外层耗时，内层恢复 DSH 默认 Think 行」。下文是 2026-08-14 对「一步一条耗时、展开后直接露出思考正文」的视觉复核，**不再代表当前实现**。
 
 2026-08-16 live Web：隔离 profile `web-thinking-collapse-e2e`，`127.0.0.1:3082`，`fixture-repo`，`DeepSeek V4 Flash / Max`。一轮两步只渲染一条外层「耗时 4秒」；展开后工具在体内，内层为 DSH Think 行（图标 + `Think` + 首行预览），不再出现内层「耗时」。轨迹页保持逐步 timeline。

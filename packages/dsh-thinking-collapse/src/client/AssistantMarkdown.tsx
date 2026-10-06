@@ -1,22 +1,20 @@
-import { memo, useMemo } from 'react'
+import { Fragment, memo, useMemo } from 'react'
 import type { ReactNode } from 'react'
 import type {
   AssistantBlock,
   ConversationLocation,
-  ConversationSnapshot,
+  MessageImageSource,
+  RenderMessageImages,
   StepLocation,
   ToolCallBlock,
-} from '@deepseek-ai/dsh-client-runtime/client'
-import type { ImageLoader } from '@deepseek-ai/dsh-client-ui-attachment'
-import { ImageGallery } from '@deepseek-ai/dsh-client-ui-attachment'
-import type { MarkdownFileMentions } from '@deepseek-ai/dsh-client-ui-primitives'
+} from '@deepseek-ai/dsh-client-ui-conversation/client'
+import type { AssistantChatData, ChatNodeViewProps } from '@deepseek-ai/dsh-client-ui-chat/client'
+import type { HostObservable } from '@deepseek-ai/dsh-client-ui-slots'
+import type { MarkdownFileMentions, MarkdownLabels } from '@deepseek-ai/dsh-client-ui-primitives'
 import { JsonBlock, MarkdownText } from '@deepseek-ai/dsh-client-ui-primitives'
-import type { ChatViewSlotProps } from '@deepseek-ai/dsh-client-ui-conversation/client'
 import type { TranslateNS } from '@deepseek-ai/dsh-client-locale/client'
-import type { SnapshotSelectorHook } from '@deepseek-ai/dsh-client-ui-slots'
 import type {} from '@deepseek-ai/dsh-client-ui-tool/client'
 import type { AtomicToolViewKit, ToolViewSlots } from './toolview.js'
-import { messageImageLabels } from './image-labels.js'
 import type { THINKING_COLLAPSE_NS } from './locales.js'
 import {
   collectTurnActivityItems,
@@ -44,7 +42,8 @@ export interface AssistantMarkdownProps {
   readonly blocks: readonly AssistantBlock[]
   readonly streaming: boolean
   readonly interrupted?: boolean | undefined
-  readonly loadImage?: ImageLoader
+  /** Chat-owned image-group renderer; the attachment plugin supplies the gallery. */
+  readonly renderMessageImages: RenderMessageImages
   readonly mentions?: MarkdownFileMentions | undefined
   readonly thinkingTiming?: ThinkingTimingData | undefined
   readonly turn: number
@@ -52,21 +51,22 @@ export interface AssistantMarkdownProps {
   readonly location?: ConversationLocation | undefined
   readonly slots: ToolViewSlots
   readonly kit: AtomicToolViewKit
-  readonly useSession: SnapshotSelectorHook<ConversationSnapshot>
-  readonly selectedCallId?: string | undefined
+  readonly useChat: ChatNodeViewProps['useChat']
+  /** This Step's assistant source, forwarded to preparing Tool rows. */
+  readonly assistant?: HostObservable<Readonly<AssistantChatData> | undefined> | undefined
   readonly cwd?: string | undefined
-  readonly openFile: (path: string) => void
-  readonly inspectCall: (callId: string) => void
-  readonly t: ChatViewSlotProps['t']
+  readonly openFile: ChatNodeViewProps['openFile']
+  readonly inspectCall: ChatNodeViewProps['inspectCall']
+  readonly t: TranslateNS<'chat'>
   readonly thinkingT: TranslateNS<typeof THINKING_COLLAPSE_NS>
 }
 
-/** Preserve rc.6 Assistant block behavior while replacing the activity row. */
+/** Upstream Assistant block behavior with the activity row replaced. */
 export const AssistantMarkdown = memo(function AssistantMarkdown({
   blocks,
   streaming,
   interrupted,
-  loadImage,
+  renderMessageImages,
   mentions,
   thinkingTiming,
   turn,
@@ -74,22 +74,24 @@ export const AssistantMarkdown = memo(function AssistantMarkdown({
   location,
   slots,
   kit,
-  useSession,
-  selectedCallId,
+  useChat,
+  assistant,
   cwd,
   openFile,
   inspectCall,
   t,
   thinkingT,
 }: AssistantMarkdownProps) {
-  const imageLoader = loadImage ?? (() => Promise.reject(new Error(t('image.serviceUnavailable'))))
-  const codeLabels = useMemo(() => ({
-    copyLabel: t('copy'),
-    copiedLabel: t('copied'),
+  const labels = useMemo<MarkdownLabels>(() => ({
+    code: {
+      copyLabel: t('copy'),
+      copiedLabel: t('copied'),
+    },
+    footnotes: t('markdown.footnotes'),
   }), [t])
   const stepLocs = location === undefined ? [] : stepLocationsOf(location)
   const stepNumbers = stepLocs.length > 0 ? stepLocs.map(item => item.step) : [step]
-  const toolRootsByStep = useSession(snapshot => absorbableToolRootsByStep(snapshot, turn, stepNumbers))
+  const toolRootsByStep = useChat(chat => absorbableToolRootsByStep(chat, turn, stepNumbers))
   const sources = useMemo<StepActivitySource[]>(() => {
     if (stepLocs.length === 0) {
       return [{
@@ -118,8 +120,9 @@ export const AssistantMarkdown = memo(function AssistantMarkdown({
   const host = isAssistantTurnActivityHost(sources, step)
   const answers = renderAnswerBlocks(blocks, {
     streaming,
-    imageLoader,
+    renderMessageImages,
     mentions,
+    labels,
     t,
   })
   if (!host) {
@@ -161,7 +164,7 @@ export const AssistantMarkdown = memo(function AssistantMarkdown({
             historyKind={hasReasoning ? 'reasoning' : 'tools'}
             t={t}
             thinkingT={thinkingT}
-            codeLabels={codeLabels}
+            codeLabels={labels.code}
           >
             <TurnActivityBody
               items={items}
@@ -169,7 +172,7 @@ export const AssistantMarkdown = memo(function AssistantMarkdown({
               streamingSteps={streamingSteps}
               slots={slots}
               kit={kit}
-              selectedCallId={selectedCallId}
+              assistant={assistant}
               cwd={cwd}
               openFile={openFile}
               inspectCall={inspectCall}
@@ -208,16 +211,13 @@ function renderAnswerBlocks(
   blocks: readonly AssistantBlock[],
   input: {
     readonly streaming: boolean
-    readonly imageLoader: ImageLoader
+    readonly renderMessageImages: RenderMessageImages
     readonly mentions: MarkdownFileMentions | undefined
-    readonly t: ChatViewSlotProps['t']
+    readonly labels: MarkdownLabels
+    readonly t: TranslateNS<'chat'>
   },
 ): ReactNode[] {
   const rendered: ReactNode[] = []
-  const codeLabels = {
-    copyLabel: input.t('copy'),
-    copiedLabel: input.t('copied'),
-  }
   for (let i = 0; i < blocks.length; i += 1) {
     const block = blocks[i]
     if (block === undefined || isActivityBlock(block)) continue
@@ -228,28 +228,24 @@ function renderAnswerBlocks(
             key={i}
             text={block.text}
             streaming={input.streaming}
-            codeLabels={codeLabels}
+            labels={input.labels}
             fileMentions={input.mentions}
           />,
         )
         break
       case 'image': {
         const start = i
-        const images = [block]
+        const images: MessageImageSource[] = [{ attachment: block.attachment }]
         while (i + 1 < blocks.length) {
           const next = blocks[i + 1]
           if (next === undefined || next.kind !== 'image') break
-          images.push(next)
+          images.push({ attachment: next.attachment })
           i += 1
         }
         rendered.push(
-          <ImageGallery
-            key={start}
-            images={images}
-            load={input.imageLoader}
-            align="start"
-            labels={messageImageLabels(input.t)}
-          />,
+          <Fragment key={start}>
+            {input.renderMessageImages({ images, align: 'start' })}
+          </Fragment>,
         )
         break
       }

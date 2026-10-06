@@ -1,4 +1,5 @@
-import type { ChatNodeViewProps } from '@deepseek-ai/dsh-client-ui-conversation/client'
+import { useMemo } from 'react'
+import type { ChatNodeViewProps } from '@deepseek-ai/dsh-client-ui-chat/client'
 import type { TranslateNS } from '@deepseek-ai/dsh-client-locale/client'
 import {
   collectTurnActivityItems,
@@ -28,6 +29,8 @@ import { ToolCallTree } from './ToolCallTree.js'
 export interface ToolCallNodeViewProps extends ChatNodeViewProps<'tool-call'> {
   readonly slots: ToolViewSlots
   readonly thinkingT: TranslateNS<typeof THINKING_COLLAPSE_NS>
+  /** Tool views own the `conversation` namespace; Chat nodes own `chat`. */
+  readonly conversationT: TranslateNS<'conversation'>
 }
 
 /**
@@ -39,13 +42,13 @@ export interface ToolCallNodeViewProps extends ChatNodeViewProps<'tool-call'> {
 export function ToolCallNodeView(props: ToolCallNodeViewProps) {
   const {
     node,
-    selectedCallId,
     cwd,
     openFile,
     inspectCall,
     slots,
     thinkingT,
-    useSession,
+    conversationT,
+    useChat,
     t,
   } = props
   const root = node.data.root
@@ -54,14 +57,30 @@ export function ToolCallNodeView(props: ToolCallNodeViewProps) {
   const stepNo = node.location.kind === 'step' ? node.location.step.step : 0
   const stepLocs = stepLocationsOf(node.location)
   const stepNumbers = stepLocs.length > 0 ? stepLocs.map(item => item.step) : [stepNo]
-  const toolRootsByStep = useSession(snapshot => absorbableToolRootsByStep(snapshot, turn, stepNumbers))
-  const kit = atomicKitFromChatNode(props)
+  const toolRootsByStep = useChat(chat => absorbableToolRootsByStep(chat, turn, stepNumbers))
+  const assistant = node.location.kind === 'step'
+    ? node.location.step.data.source('assistant-step')
+    : undefined
+  const kit = useMemo(
+    () => atomicKitFromChatNode(props, conversationT),
+    // The kit is only as stable as the standard members it forwards.
+    [
+      conversationT,
+      props.t,
+      props.sessionId,
+      props.useSession,
+      props.useProjection,
+      props.useSessions,
+      props.useDisclosure,
+      props.loadImage,
+    ],
+  )
   const tree = (
     <ToolCallTree
       slots={slots}
       kit={kit}
       block={root}
-      selectedCallId={selectedCallId}
+      assistant={assistant}
       cwd={cwd}
       openFile={openFile}
       inspectCall={inspectCall}
@@ -124,7 +143,7 @@ export function ToolCallNodeView(props: ToolCallNodeViewProps) {
         streamingSteps={streamingSteps}
         slots={slots}
         kit={kit}
-        selectedCallId={selectedCallId}
+        assistant={assistant}
         cwd={cwd}
         openFile={openFile}
         inspectCall={inspectCall}

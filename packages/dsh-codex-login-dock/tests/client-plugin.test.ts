@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import type { ClientContext } from '@deepseek-ai/dsh-client-runtime/client'
+import type { Context as ClientContext } from '@deepseek-ai/cordis'
 import { LOGIN_DOCK_ID, LOGIN_DOCK_ORDER, SETTINGS_SECTION_ID, SETTINGS_SECTION_ORDER } from '../src/protocol.js'
 import { apply, inject, name } from '../src/client/index.js'
 import { CODEX_LOGIN_NS, en, zh } from '../src/client/locales.js'
@@ -13,6 +13,9 @@ describe('client plugin contribution', () => {
     const effect = vi.fn((install: () => unknown) => install())
     const onRemote = vi.fn(() => vi.fn())
     const onEvent = vi.fn(() => vi.fn())
+    // The Settings row mirrors the renderer's main Session binding, so the fake
+    // context carries the same observable shape (`getSnapshot` + `subscribe`).
+    const currentBinding = { getSnapshot: () => ({ key: undefined }), subscribe: vi.fn(() => vi.fn()) }
     const ctx = {
       slots: { inject: injectSlot, register: registerSlot },
       locale: { register: registerLocale, bind: bindLocale },
@@ -22,6 +25,7 @@ describe('client plugin contribution', () => {
         if (key === 'modelDirectories') return { directoryFor: vi.fn() }
         return undefined
       },
+      uiSession: { adapter: { current: currentBinding } },
       remote: { $on: onRemote },
       on: onEvent,
       effect,
@@ -30,7 +34,8 @@ describe('client plugin contribution', () => {
     apply(ctx)
 
     expect(name).toBe('codex-login-dock')
-    expect(inject).toEqual(['slots', 'conversation', 'connection', 'locale', 'modelDirectories', 'remote'])
+    expect(inject).toEqual(['slots', 'conversation', 'connection', 'locale', 'modelDirectories', 'remote', 'uiSession'])
+    expect(currentBinding.subscribe).toHaveBeenCalled()
     expect(registerLocale).toHaveBeenCalledWith(CODEX_LOGIN_NS, { zh, en })
     expect(injectSlot).toHaveBeenCalledWith('conversation.input.dock', expect.any(Function))
     expect(injectSlot).toHaveBeenCalledWith('settings.section', expect.any(Function))
@@ -46,6 +51,8 @@ describe('client plugin contribution', () => {
       order: SETTINGS_SECTION_ORDER,
       label: expect.any(Function),
       locale: CODEX_LOGIN_NS,
+      store: expect.anything(),
+      inject: expect.any(Function),
     }, expect.any(Function))
   })
 })

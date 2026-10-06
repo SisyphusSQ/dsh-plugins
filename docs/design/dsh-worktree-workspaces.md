@@ -53,7 +53,7 @@ Web 选择器的当前界面证据见 [`picker.png`](../../packages/dsh-worktree
 
 ## 兼容与发布边界
 
-- 当前只声明兼容 `@deepseek-ai/dsh@0.1.0-rc.6`。
+- 当前声明兼容 `@deepseek-ai/dsh@^0.2.0-rc.1`（本轮迁移前为 `0.1.0-rc.6`）。本轮 0.1.0-rc.6 → 0.2.0-rc.2 迁移的台账、根因与验证状态见 [dsh-0.2-migration.md](dsh-0.2-migration.md)。
 - DSH developer preview 升级后，必须重新核对命令、工具、Workspace 与 client-runtime 契约，并重做真实 profile 验证。
 - 2026-08-15 已完成 npm tarball 内容、registry 安装和 registry 版本回读；GitHub Release 以同一 `v0.1.0` tag 记录首发结果。
 - 2026-08-18 已完成 scoped 包迁移、registry tar 内容回读与日常 rc.7 Web profile 加载回读；旧 unscoped 包已弃用并指向 `@suqingsq/dsh-worktree-workspaces@0.2.0`。

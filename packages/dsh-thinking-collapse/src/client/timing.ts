@@ -1,7 +1,7 @@
 import type {
   ConversationLocationData,
   ConversationNodeDefinition,
-} from '@deepseek-ai/dsh-client-runtime/client'
+} from '@deepseek-ai/dsh-client-ui-conversation/client'
 import type {} from '@deepseek-ai/dsh-llm-retry/types'
 
 export const THINKING_TIMING_KEY = 'thinking-collapse-timing' as const
@@ -33,7 +33,7 @@ export interface ThinkingTimingState {
   readonly stepClosed: boolean
 }
 
-declare module '@deepseek-ai/dsh-client-runtime/client' {
+declare module '@deepseek-ai/dsh-client-ui-conversation/client' {
   interface ConversationStepDataMap {
     'thinking-collapse-timing': ThinkingTimingData
   }
@@ -188,7 +188,7 @@ export function advanceThinkingTiming(
 }
 
 function updateChunk(state: ThinkingTimingState, match: Parameters<NonNullable<ConversationNodeDefinition<ThinkingTimingState>['update']>>[1]): ThinkingTimingState {
-  if (match.event.type !== 'assistant/chunk') return state
+  if (match.event.type !== 'assistant/live-chunk') return state
   const { chunk } = match.event.data
   switch (chunk.type) {
     case 'block-start':
@@ -257,7 +257,7 @@ export const thinkingTimingDefinition: ConversationNodeDefinition<ThinkingTiming
     if (event.type === 'step/start') {
       return { id: `${event.data.turn}:${event.data.step}`, role: 'start' }
     }
-    if (event.type === 'assistant/chunk'
+    if (event.type === 'assistant/live-chunk'
       || event.type === 'step/end'
       || event.type === 'llm/retry'
       || event.type === 'tool/call'
@@ -274,7 +274,7 @@ export const thinkingTimingDefinition: ConversationNodeDefinition<ThinkingTiming
     return createThinkingTimingState(match.event.data.turn, match.event.data.step)
   },
   update(context, match) {
-    if (match.event.type === 'assistant/chunk') return updateChunk(context.state, match)
+    if (match.event.type === 'assistant/live-chunk') return updateChunk(context.state, match)
     if (match.event.type === 'llm/retry') {
       return advanceThinkingTiming(context.state, { type: 'retry' })
     }
@@ -302,7 +302,7 @@ export const thinkingTimingDefinition: ConversationNodeDefinition<ThinkingTiming
     return context.state
   },
   publication(match) {
-    return match.event.type === 'assistant/chunk' ? 'animation-frame' : 'immediate'
+    return match.event.type === 'assistant/live-chunk' ? 'animation-frame' : 'immediate'
   },
   buildLocationData(context, scope): ConversationLocationData | null {
     const state = context.state

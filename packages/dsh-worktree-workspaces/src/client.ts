@@ -1,9 +1,14 @@
-import type { ClientContext, ObservableSnapshot } from "@deepseek-ai/dsh-client-runtime/client";
+import type { Context as ClientContext } from "@deepseek-ai/cordis";
+// 0.2 split what 0.1's `dsh-client-runtime` barrel owned: the Workspace row
+// vocabulary and the Client Workspace service now belong to the Workspace
+// Controller, and Workspace navigation to the Workspace UI capability.
+import type {} from "@deepseek-ai/dsh-api-workspace-controller/client";
+import type { WorkspaceView } from "@deepseek-ai/dsh-api-workspace-controller/types";
+import type {} from "@deepseek-ai/dsh-client-ui-workspace/client";
 import type {
   CommandDecoration,
   SelectOption,
 } from "@deepseek-ai/dsh-client-ui-commands/client";
-import type { WorkspaceView } from "@deepseek-ai/dsh-api-remotes/client";
 
 import {
   defaultWorktreeBranch,
@@ -14,9 +19,20 @@ import {
 export { defaultWorktreeBranch, managedWorkspaceTitle };
 
 export const name = "worktree-workspaces";
-export const inject = ["workspaces", "sessions", "remote", "remote.commands", "commandUi"];
+export const inject = ["workspaces", "remote", "remote.commands", "commandUi", "uiWorkspace"];
 
 const WORKSPACE_WAIT_MS = 10_000;
+
+/**
+ * The observable Workspace-list read face this module consumes. 0.1 spelled it
+ * `ObservableSnapshot<{ items }>` from the removed `dsh-client-runtime`; the
+ * 0.2 owner exposes it as `IWorkspaces['list']`, and this structural shape is
+ * exactly the part used here.
+ */
+export interface WorkspaceListSource {
+  getSnapshot(): { readonly items: readonly WorkspaceView[] };
+  subscribe(listener: () => void): () => void;
+}
 
 function pathBasename(path: string): string {
   const normalized = path.replace(/[\\/]+$/, "");
@@ -90,7 +106,7 @@ export function worktreeOptions(
 }
 
 export async function waitForWorkspace(
-  source: ObservableSnapshot<{ items: readonly WorkspaceView[] }>,
+  source: WorkspaceListSource,
   title: string,
   timeoutMs = WORKSPACE_WAIT_MS,
 ): Promise<WorkspaceView> {
@@ -123,9 +139,11 @@ export async function waitForWorkspace(
   });
 }
 
+// 0.2: connecting a Workspace to its reusable-or-new blank Session and showing
+// that Session became one navigation action owned by the Workspace UI
+// capability; `ctx.workspaces.connectWorkspace` and `ctx.sessions.open` are gone.
 async function openWorkspace(ctx: ClientContext, workspace: WorkspaceView): Promise<void> {
-  const sessionId = await ctx.workspaces.connectWorkspace(workspace.workspaceId);
-  ctx.sessions.open(sessionId);
+  await ctx.uiWorkspace.openWorkspace(workspace.workspaceId);
 }
 
 function remoteFailure(error: { code: string; message: string }): string {
@@ -171,6 +189,7 @@ export function createWorktreeDecoration(ctx: ClientContext): CommandDecoration 
         const execution = await ctx.remote.commands.execute(
           session.sessionId,
           `/worktree new ${branch}`,
+          [],
         );
         if (!execution.ok) throw new Error(`执行 /worktree 失败：${remoteFailure(execution.error)}`);
         if (execution.value === undefined) throw new Error("当前 Host 没有注册 /worktree 命令。");

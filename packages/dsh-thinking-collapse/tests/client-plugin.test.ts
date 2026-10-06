@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import type { ClientContext } from '@deepseek-ai/dsh-client-runtime/client'
+import type { Context } from '@deepseek-ai/cordis'
 
 const assistantNodeView = vi.hoisted(() => ({ name: 'AssistantNodeView' }))
 const toolCallNodeView = vi.hoisted(() => ({ name: 'ToolCallNodeView' }))
@@ -30,11 +30,11 @@ describe('client plugin contribution', () => {
     const bindLocale = vi.fn(() => thinkingT)
     const effect = vi.fn((install: () => unknown) => install())
     const ctx = {
-      conversationEvents: { register: registerEvent },
+      uiConversation: { events: { register: registerEvent } },
       slots: { inject: injectSlot, register: registerSlot },
       locale: { register: registerLocale, bind: bindLocale },
       effect,
-    } as unknown as ClientContext
+    } as unknown as Context
 
     apply(ctx)
 
@@ -48,13 +48,13 @@ describe('client plugin contribution', () => {
       name: 'conversation.chat.node',
       key: 'assistant-step',
       priority: -1,
-      locale: 'conversation',
+      locale: 'chat',
     }, expect.any(Function))
     expect(registerSlot).toHaveBeenNthCalledWith(2, {
       name: 'conversation.chat.node',
       key: 'tool-call',
       priority: -1,
-      locale: 'conversation',
+      locale: 'chat',
     }, expect.any(Function))
     expect(registerSlot.mock.calls[0]?.[0]).not.toHaveProperty('children')
     expect(registerSlot.mock.calls[1]?.[0]).not.toHaveProperty('children')

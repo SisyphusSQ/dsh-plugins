@@ -1,12 +1,12 @@
 import type { ReactNode } from 'react'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { ToolCallBlock } from '@deepseek-ai/dsh-client-runtime/client'
+import type { ToolCallBlock } from '@deepseek-ai/dsh-client-ui-conversation/client'
 import { AssistantMarkdown } from '../src/client/AssistantMarkdown.js'
 
 vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => ({
-  IconChevronRightOutline14: () => <span data-testid="chevron-right" />,
-  IconThinkOutline14: () => <span data-testid="think-icon" />,
+  IconChevronRightOutlineRegular: () => <span data-testid="chevron-right" />,
+  IconThinkOutlineRegular: () => <span data-testid="think-icon" />,
   MarkdownText: ({ text }: { text: string }) => <div data-testid="markdown">{text}</div>,
   JsonBlock: ({ label }: { label: string }) => <div>{label}</div>,
   DisclosureRow: ({
@@ -30,10 +30,6 @@ vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => ({
   ),
 }))
 
-vi.mock('@deepseek-ai/dsh-client-ui-attachment', () => ({
-  ImageGallery: () => null,
-}))
-
 vi.mock('../src/client/ToolCallTree.js', () => ({
   ToolCallTree: ({ block }: { block: ToolCallBlock }) => (
     <div data-testid="tool-tree">{'name' in block ? block.name : block.callId}</div>
@@ -55,13 +51,13 @@ const thinkingT = ((key: string, params?: Record<string, unknown>) => {
 }) as never
 
 const bashCall: ToolCallBlock = {
+  phase: 'start',
   callId: 'c1',
   name: 'bash',
   argsRaw: '{"command":"ls"}',
   turn: 1,
   step: 1,
   time: 1,
-  callView: null,
   subCalls: [],
 }
 
@@ -74,8 +70,6 @@ const settledBash: ToolCallBlock = {
   callTime: 1,
   content: [],
   isError: false,
-  callView: null,
-  resultView: null,
   subCalls: [],
 }
 
@@ -83,17 +77,13 @@ function renderMarkdown(
   overrides: Partial<Parameters<typeof AssistantMarkdown>[0]> = {},
   root: ToolCallBlock = bashCall,
 ) {
-  const useSession = vi.fn((select: (snapshot: {
-    chat: {
-      locations: { getStep: () => string[] }
-      nodes: { get: (key: string) => { kind: 'tool-call'; data: { root: ToolCallBlock } } }
-    }
+  const useChat = vi.fn((select: (snapshot: {
+    locations: { getStep: () => string[] }
+    nodes: { get: (key: string) => { kind: 'tool-call'; data: { root: ToolCallBlock } } }
   }) => unknown) => select({
-    chat: {
-      locations: { getStep: () => ['tool'] },
-      nodes: {
-        get: () => ({ kind: 'tool-call', data: { root } }),
-      },
+    locations: { getStep: () => ['tool'] },
+    nodes: {
+      get: () => ({ kind: 'tool-call', data: { root } }),
     },
   }))
   return render(
@@ -105,22 +95,24 @@ function renderMarkdown(
       streaming
       turn={1}
       step={1}
+      renderMessageImages={() => null}
       slots={{
         entriesOfSlot: () => [],
         subscribe: () => () => {},
         getVersion: () => 0,
+        spec: () => undefined,
       }}
       kit={{
         t: ((key: string) => key) as never,
+        fallbackT: ((key: string) => key) as never,
         sessionId: 's1' as never,
-        useSession: useSession as never,
+        useSession: useChat as never,
         useProjection: vi.fn() as never,
         useSessions: vi.fn() as never,
-        useWorkspaces: vi.fn() as never,
-        useInput: vi.fn() as never,
-        inputActions: {} as never,
+        useDisclosure: vi.fn() as never,
+        loadImage: vi.fn() as never,
       }}
-      useSession={useSession as never}
+      useChat={useChat as never}
       openFile={vi.fn()}
       inspectCall={vi.fn()}
       t={((key: string) => key) as never}
@@ -271,13 +263,13 @@ describe('AssistantMarkdown activity row', () => {
         { kind: 'tool-call', callId: 'q1', name: 'ask_user_question', argsRaw: '{}' },
       ],
     }, {
+      phase: 'start',
       callId: 'q1',
       name: 'ask_user_question',
       argsRaw: '{}',
       turn: 1,
       step: 1,
       time: 1,
-      callView: null,
       subCalls: [],
     })
     expect(screen.getByText('private reasoning')).toBeTruthy()

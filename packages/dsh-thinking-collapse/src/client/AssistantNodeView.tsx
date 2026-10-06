@@ -1,8 +1,6 @@
 import { memo, useMemo } from 'react'
-import type {
-  ChatNodeViewProps,
-  TurnTailOwnerProps,
-} from '@deepseek-ai/dsh-client-ui-conversation/client'
+import type { AssistantChatData, ChatNodeViewProps, TurnTailOwnerProps } from '@deepseek-ai/dsh-client-ui-chat/client'
+import type { HostObservable } from '@deepseek-ai/dsh-client-ui-slots'
 import type { TranslateNS } from '@deepseek-ai/dsh-client-locale/client'
 import type {} from '@deepseek-ai/dsh-client-ui-tool/client'
 import { AssistantMarkdown } from './AssistantMarkdown.js'
@@ -13,23 +11,25 @@ import type { ToolViewSlots } from './toolview.js'
 
 export interface AssistantNodeViewProps extends ChatNodeViewProps<'assistant-step'> {
   readonly thinkingT: TranslateNS<typeof THINKING_COLLAPSE_NS>
+  /** Tool views own the `conversation` namespace; Chat nodes own `chat`. */
+  readonly conversationT: TranslateNS<'conversation'>
   readonly slots: ToolViewSlots
 }
 
-/** rc.6-compatible Assistant renderer with a replaced activity row. */
+/** Assistant renderer with a replaced activity row. */
 export const AssistantNodeView = memo(function AssistantNodeView(props: AssistantNodeViewProps) {
   const {
     node,
     useTurnData,
-    useSession,
-    selectedCallId,
+    useChat,
     cwd,
     openFile,
     inspectCall,
-    loadImage,
+    renderMessageImages,
     fileMentions,
     t,
     thinkingT,
+    conversationT,
     slots,
   } = props
   const data = node.data
@@ -49,25 +49,43 @@ export const AssistantNodeView = memo(function AssistantNodeView(props: Assistan
   const thinkingTiming = node.location.kind === 'step'
     ? node.location.step.data.get(THINKING_TIMING_KEY)
     : undefined
+  const assistant = useMemo<HostObservable<Readonly<AssistantChatData> | undefined> | undefined>(
+    () => node.location.kind === 'step' ? node.location.step.data.source('assistant-step') : undefined,
+    [node.location],
+  )
+  const kit = useMemo(
+    () => atomicKitFromChatNode(props, conversationT),
+    // The kit is only as stable as the standard members it forwards.
+    [
+      conversationT,
+      props.t,
+      props.sessionId,
+      props.useSession,
+      props.useProjection,
+      props.useSessions,
+      props.useDisclosure,
+      props.loadImage,
+    ],
+  )
 
   return (
     <AssistantMarkdown
       blocks={data.blocks}
       streaming={data.status === 'running'}
       interrupted={data.status === 'interrupted'}
-      loadImage={loadImage}
+      renderMessageImages={renderMessageImages}
       mentions={mentions}
       thinkingTiming={thinkingTiming}
       turn={data.turn}
       step={data.step}
       location={node.location}
       slots={slots}
-      kit={atomicKitFromChatNode(props)}
-      useSession={useSession}
-      selectedCallId={selectedCallId}
+      kit={kit}
+      useChat={useChat}
       cwd={cwd}
       openFile={openFile}
       inspectCall={inspectCall}
+      assistant={assistant}
       t={t}
       thinkingT={thinkingT}
     />

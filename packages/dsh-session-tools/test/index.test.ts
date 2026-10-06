@@ -5,7 +5,7 @@ import type { Agent } from '@deepseek-ai/dsh-agent'
 import { HarnessError, type CallId } from '@deepseek-ai/dsh-llm'
 import { SessionId } from '@deepseek-ai/dsh-session'
 import type { ToolDefinition, ToolRunContext } from '@deepseek-ai/dsh-tools'
-import { TypertLookupFailure } from '@deepseek-ai/dsh-typert-protocol'
+import { RemoteError } from '@deepseek-ai/dsh-typert-protocol'
 import * as plugin from '../lib/index.js'
 import { apply, inject, name } from '../lib/index.js'
 import { defaultSessionToolsConfig } from '../lib/tools.js'
@@ -22,7 +22,7 @@ test('apply registers the complete six-tool surface', () => {
     },
     agents: {},
     approval: {},
-    apiProxy: { sessions: {} },
+    sessionController: {},
     sessionQuery: {},
     sessionReferenceResolver: {},
     typert: { lookups: { get: () => undefined } },
@@ -40,7 +40,7 @@ test('apply registers the complete six-tool surface', () => {
     'tools',
     'agents',
     'approval',
-    'apiProxy',
+    'sessionController',
     'sessionQuery',
     'sessionReferenceResolver',
     'typert',
@@ -76,17 +76,15 @@ test('Typert agent lookup policy failures become stable Harness tool errors', as
       roots: () => [caller],
     },
     approval: { request: async () => 'allowed-once' },
-    apiProxy: { sessions: {} },
+    sessionController: {},
     sessionQuery: {},
     sessionReferenceResolver: {},
     typert: {
       lookups: {
         get: () => ({
           resolve: async () => {
-            throw new TypertLookupFailure({
-              code: 'session-not-found',
-              message: 'target session not found',
-              details: { sessionId: 'missing' },
+            throw new RemoteError('session/not-found', 'target session not found', {
+              sessionId: SessionId('missing'),
             })
           },
         }),

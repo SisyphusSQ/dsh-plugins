@@ -6,3 +6,11 @@ coverage/
 .DS_Store
 .idea/
 .vscode/
+
+# dsh-upgrade-audit output: two materialized published package trees.
+tmp/
+# npm pack output kept beside each package: the desktop profile installs
+# from these tarballs, so they are artifacts rather than sources.
+*.tgz
+# Playwright MCP scratch output from browser-side debugging.
+.playwright-mcp/

@@ -1,14 +1,14 @@
 import { cleanup, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { ConversationLocation, ToolCallBlock } from '@deepseek-ai/dsh-client-runtime/client'
-import type { ChatNode } from '@deepseek-ai/dsh-client-ui-conversation/client'
+import type { ChatNode } from '@deepseek-ai/dsh-client-ui-chat/client'
+import type { ConversationLocation, ToolCallBlock } from '@deepseek-ai/dsh-client-ui-conversation/client'
 import { ToolCallNodeView } from '../src/client/ToolCallNodeView.js'
 import type { ToolCallNodeViewProps } from '../src/client/ToolCallNodeView.js'
 import { THINKING_TIMING_KEY } from '../src/client/timing.js'
 
 vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => ({
-  IconChevronRightOutline14: () => <span data-testid="chevron-right" />,
-  IconThinkOutline14: () => <span data-testid="think-icon" />,
+  IconChevronRightOutlineRegular: () => <span data-testid="chevron-right" />,
+  IconThinkOutlineRegular: () => <span data-testid="think-icon" />,
   MarkdownText: ({ text }: { text: string }) => <div>{text}</div>,
   JsonBlock: ({ label }: { label: string }) => <div>{label}</div>,
   DisclosureRow: ({
@@ -50,6 +50,19 @@ function locationWithCall(input: {
   readonly pending?: boolean
   readonly activity?: { startedAt: number; endedAt: number | null }
 }): ConversationLocation {
+  const assistant = input.assistantBlocks === undefined
+    ? undefined
+    : {
+        status: 'settled',
+        turn: 1,
+        step: 1,
+        blocks: input.assistantBlocks,
+        time: 1,
+      }
+  const source = {
+    getSnapshot: () => assistant,
+    subscribe: () => () => {},
+  }
   return {
     kind: 'step',
     turn: { steps: [] } as never,
@@ -66,16 +79,11 @@ function locationWithCall(input: {
               pendingCallIds: input.pending === true ? [input.callId] : [],
             }
           }
-          if (key === 'assistant-step' && input.assistantBlocks !== undefined) {
-            return {
-              status: 'settled',
-              turn: 1,
-              step: 1,
-              blocks: input.assistantBlocks,
-              time: 1,
-            }
-          }
+          if (key === 'assistant-step') return assistant
           return undefined
+        },
+        source(key: string) {
+          return key === 'assistant-step' ? source : { getSnapshot: () => undefined, subscribe: () => () => {} }
         },
       },
     },
@@ -84,13 +92,13 @@ function locationWithCall(input: {
 
 function toolRoot(callId: string, name = 'bash'): ToolCallBlock {
   return {
+    phase: 'start',
     callId,
     name,
     argsRaw: '{}',
     turn: 1,
     step: 1,
     time: 1,
-    callView: null,
     subCalls: [],
   }
 }
@@ -105,8 +113,6 @@ function settledRoot(callId: string, name = 'bash'): ToolCallBlock {
     callTime: 1,
     content: [],
     isError: false,
-    callView: null,
-    resultView: null,
     subCalls: [],
   }
 }
@@ -123,20 +129,16 @@ function toolNode(input: {
   } as ChatNode<'tool-call'>
 }
 
-function useSessionWithRoots(roots: readonly ToolCallBlock[]) {
+function useChatWithRoots(roots: readonly ToolCallBlock[]) {
   return vi.fn((select: (snapshot: {
-    chat: {
-      locations: { getStep: () => string[] }
-      nodes: { get: (key: string) => { kind: 'tool-call'; data: { root: ToolCallBlock } } | undefined }
-    }
+    locations: { getStep: () => string[] }
+    nodes: { get: (key: string) => { kind: 'tool-call'; data: { root: ToolCallBlock } } | undefined }
   }) => unknown) => select({
-    chat: {
-      locations: { getStep: () => roots.map((_, index) => `t${index}`) },
-      nodes: {
-        get: (key: string) => {
-          const root = roots[Number(key.slice(1))]
-          return root === undefined ? undefined : { kind: 'tool-call', data: { root } }
-        },
+    locations: { getStep: () => roots.map((_, index) => `t${index}`) },
+    nodes: {
+      get: (key: string) => {
+        const root = roots[Number(key.slice(1))]
+        return root === undefined ? undefined : { kind: 'tool-call', data: { root } }
       },
     },
   }))
@@ -147,18 +149,19 @@ const slotProps = {
     entriesOfSlot: () => [],
     subscribe: () => () => {},
     getVersion: () => 0,
+    spec: () => undefined,
   },
   thinkingT,
+  conversationT: ((key: string) => key),
+  renderMessageImages: () => null,
   openFile: vi.fn(),
   inspectCall: vi.fn(),
   t: ((key: string) => key),
-  useSession: vi.fn(),
-  useInput: vi.fn(),
-  inputActions: {},
+  useChat: vi.fn(),
   sessionId: 's1',
   useProjection: vi.fn(),
   useSessions: vi.fn(),
-  useWorkspaces: vi.fn(),
+  useDisclosure: vi.fn(),
   useTurnData: vi.fn(),
   loadImage: vi.fn(),
   fileMentions: vi.fn(),
@@ -174,7 +177,7 @@ describe('ToolCallNodeView', () => {
     const { container } = render(
       <ToolCallNodeView
         {...slotProps}
-        useSession={useSessionWithRoots([toolRoot('c1')]) as never}
+        useChat={useChatWithRoots([toolRoot('c1')]) as never}
         node={toolNode({
           callId: 'c1',
           name: 'bash',
@@ -192,7 +195,7 @@ describe('ToolCallNodeView', () => {
     render(
       <ToolCallNodeView
         {...slotProps}
-        useSession={useSessionWithRoots([settledRoot('c1')]) as never}
+        useChat={useChatWithRoots([settledRoot('c1')]) as never}
         node={toolNode({
           callId: 'c1',
           name: 'bash',
@@ -211,7 +214,7 @@ describe('ToolCallNodeView', () => {
     render(
       <ToolCallNodeView
         {...slotProps}
-        useSession={useSessionWithRoots([toolRoot('c1')]) as never}
+        useChat={useChatWithRoots([toolRoot('c1')]) as never}
         node={toolNode({
           callId: 'c1',
           name: 'bash',
@@ -232,7 +235,7 @@ describe('ToolCallNodeView', () => {
     const { container } = render(
       <ToolCallNodeView
         {...slotProps}
-        useSession={useSessionWithRoots([toolRoot('c1'), toolRoot('c2')]) as never}
+        useChat={useChatWithRoots([toolRoot('c1'), toolRoot('c2')]) as never}
         node={toolNode({
           callId: 'c2',
           name: 'bash',

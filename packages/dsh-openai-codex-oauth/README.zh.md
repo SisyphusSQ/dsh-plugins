@@ -8,7 +8,7 @@
 
 不注册 LLM adapter。`openai-codex` 路由仍是 `@deepseek-ai/dsh-llm-pi-ai`。PKCE、回调服务和 refresh 仍在 `@earendil-works/pi-ai`。
 
-Host API 对齐 `@deepseek-ai/dsh@0.1.0-rc.6`。fixture 测试覆盖 silent 登录、取消、进行中互斥、端口占用和命令注册。这不是真实 DSH Web / Headless E2E。
+Host API 对齐 `@deepseek-ai/dsh@0.2.0-rc.2`。已发布的 `0.2.0` 版本按 `@deepseek-ai/dsh@0.1.0-rc.6` 验证。fixture 测试覆盖 silent 登录、取消、进行中互斥、端口占用和命令注册。这不是真实 DSH Web / Headless E2E。
 
 ## 安装
 

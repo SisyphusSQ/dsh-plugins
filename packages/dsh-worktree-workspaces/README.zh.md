@@ -4,7 +4,7 @@
 
 为 DeepSeek Harness 创建和归档 Git linked worktree。同一包提供 `/worktree` 斜杠命令、`worktree_create` 模型工具、`dsh-worktree` CLI，以及用于切换 DSH Workspace 的 Web 弹层。
 
-已按 `@deepseek-ai/dsh@0.1.0-rc.6` 验证。
+目标版本为 `@deepseek-ai/dsh@0.2.0-rc.2`；已发布的 `0.2.0` 版本按 `@deepseek-ai/dsh@0.1.0-rc.6` 验证。
 
 ## 安装
 
@@ -84,7 +84,7 @@ CLI 是独立进程，不读取 Cordis profile 配置。`--base-dir`、`--archiv
 
 ## 验证
 
-兼容边界与验证证据记录在[设计文档](https://github.com/SisyphusSQ/dsh-plugins/blob/main/docs/design/dsh-worktree-workspaces.md)中。当前兼容基线为 `@deepseek-ai/dsh@0.1.0-rc.6`。
+兼容边界与验证证据记录在[设计文档](https://github.com/SisyphusSQ/dsh-plugins/blob/main/docs/design/dsh-worktree-workspaces.md)中。已发布版本的兼容基线为 `@deepseek-ai/dsh@0.1.0-rc.6`；迁移后的源码目标版本为 `@deepseek-ai/dsh@0.2.0-rc.2`。
 
 ## License
 

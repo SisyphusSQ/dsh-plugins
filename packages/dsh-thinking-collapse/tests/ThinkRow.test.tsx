@@ -3,7 +3,7 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => ({
-  IconThinkOutline14: () => <span data-testid="think-icon" />,
+  IconThinkOutlineRegular: () => <span data-testid="think-icon" />,
   DisclosureRow: ({
     icon,
     title,

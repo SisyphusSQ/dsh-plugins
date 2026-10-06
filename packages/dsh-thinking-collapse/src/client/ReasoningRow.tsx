@@ -1,12 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
-import type { MarkdownCodeLabels } from '@deepseek-ai/dsh-client-ui-primitives'
+import type { MarkdownCodeLabels, MarkdownLabels } from '@deepseek-ai/dsh-client-ui-primitives'
 import {
   DisclosureRow,
-  IconChevronRightOutline14,
+  IconChevronRightOutlineRegular,
   MarkdownText,
 } from '@deepseek-ai/dsh-client-ui-primitives'
-import type { ChatViewSlotProps } from '@deepseek-ai/dsh-client-ui-conversation/client'
 import type { TranslateNS } from '@deepseek-ai/dsh-client-locale/client'
 import type { THINKING_COLLAPSE_NS } from './locales.js'
 import type { ReasoningBlockTiming } from './timing.js'
@@ -43,7 +42,7 @@ export interface ReasoningRowProps {
   readonly timing?: ReasoningBlockTiming | undefined
   /** Fallback title when no recoverable duration exists. */
   readonly historyKind?: 'reasoning' | 'tools' | undefined
-  readonly t: ChatViewSlotProps['t']
+  readonly t: TranslateNS<'chat'>
   readonly thinkingT: TranslateNS<typeof THINKING_COLLAPSE_NS>
   readonly codeLabels: MarkdownCodeLabels
 }
@@ -63,6 +62,11 @@ export function ReasoningRow({
   const [expanded, setExpanded] = useState(false)
   const [now, setNow] = useState(() => Date.now())
   const ticking = timing !== undefined && timing.endedAt === null
+  /** MarkdownText compares labels by identity, so keep one object per locale. */
+  const labels = useMemo<MarkdownLabels>(
+    () => ({ code: codeLabels, footnotes: t('markdown.footnotes') }),
+    [codeLabels, t],
+  )
 
   useEffect(() => {
     if (live) setExpanded(false)
@@ -109,7 +113,7 @@ export function ReasoningRow({
           leadingClassName={css.leading}
           titleClassName={css.title}
           chevronClassName={css.chevron}
-          icon={<IconChevronRightOutline14 size={14} />}
+          icon={<IconChevronRightOutlineRegular size={14} />}
           title={title}
           open={open}
           expandable
@@ -124,7 +128,7 @@ export function ReasoningRow({
         <div className={css.activityBody}>
           {text !== undefined && text.length > 0 && (
             <div className={css.thinkBody}>
-              <MarkdownText text={text} streaming={active} codeLabels={codeLabels} />
+              <MarkdownText text={text} streaming={active} labels={labels} />
             </div>
           )}
           {children}

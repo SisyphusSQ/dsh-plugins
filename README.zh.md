@@ -4,7 +4,7 @@
 
 [DeepSeek Harness (DSH)](https://github.com/deepseek-ai/deepseek-harness) 的第三方插件仓库。`packages/` 下每个目录都是一个可独立安装的插件。
 
-已按 `@deepseek-ai/dsh@0.1.0-rc.6` 验证。
+已发布的 `0.2.0` 集合按 `@deepseek-ai/dsh@0.1.0-rc.6` 验证。仓库源码已迁移到 `0.2.0-rc.2` 线，版本号为 `0.3.0`（并新增 `dsh-ui-zoom` 包）；该源码集合尚未发布。
 
 ## 安装
 
@@ -63,6 +63,10 @@ composer 上方的 Codex 订阅登录卡、持续可见的设置页，以及无�
 创建和归档 Git linked worktree。同一包提供 `/worktree`、模型工具、CLI，以及用于切换 DSH Workspace 的 Web 弹层。
 
 ![Git 工作树选择器](packages/dsh-worktree-workspaces/screenshots/picker.png)
+
+### [@suqingsq/dsh-ui-zoom](packages/dsh-ui-zoom/README.zh.md)
+
+Web 与桌面端的整体界面缩放：`Cmd/Ctrl` + `=` / `-` / `0` 快捷键、设置页行，以及可按 profile 持久化的缩放百分比。尚未发布。
 
 ## 仓库
 

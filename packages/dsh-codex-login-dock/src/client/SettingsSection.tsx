@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useState, type JSX } from 'react'
-import type {} from '@deepseek-ai/dsh-client-runtime/client'
-import type { PropsLocale, PropsRuntime, TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
+import type {} from '@deepseek-ai/dsh-client-ui-session/client'
+import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
+import type { PropsLocale, PropsRuntime, PropsStore, TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
 import {
   AUTH_OPERATION_FAILED_MESSAGE,
   unavailableSessionSnapshot,
   type CodexAuthSnapshot,
 } from '../protocol.js'
 import type { CodexAuthClient } from './api.js'
+import type { createMainSessionStore } from './session-store.js'
 import { AuthCard } from './AuthCard.js'
 import { copyForSnapshot, overlayAuthorizing } from './auth-ui.js'
 import css from './LoginDock.module.css'
@@ -16,7 +18,9 @@ export interface SettingsSectionDeps {
   readonly onAuthChange?: (listener: () => void) => () => void
 }
 
-export type SettingsSectionProps = PropsRuntime<'settings.section'> & PropsLocale<'codex-login-dock'>
+export type SettingsSectionProps =
+  PropsRuntime<'settings.section'> & PropsLocale<'codex-login-dock'>
+  & PropsStore<ReturnType<typeof createMainSessionStore>>
 
 export function SettingsSectionView({
   sessionId,
@@ -110,11 +114,13 @@ export function SettingsSectionView({
 }
 
 export function createSettingsSection(deps: SettingsSectionDeps) {
-  return function SettingsSection({ t, useSessions }: SettingsSectionProps): JSX.Element {
-    const current = useSessions((list) => list.current)
+  return function SettingsSection({ t, useStore }: SettingsSectionProps): JSX.Element {
+    // The main-view Session id arrives through the registered store: 0.2 has no
+    // `current` on the session list state, and this row is root-scoped.
+    const sessionId = useStore(state => state.sessionId) ?? ''
     return (
       <SettingsSectionView
-        sessionId={current ?? ''}
+        sessionId={sessionId}
         t={t}
         deps={deps}
       />

@@ -4,6 +4,7 @@
 - 发布包：`@suqingsq/dsh-codex-login-dock` + 本仓库维护的 `@suqingsq/dsh-openai-codex-oauth`
 - 复用 OAuth：本仓库 `packages/dsh-openai-codex-oauth`（fork 自 [`dyuan311/dsh-openai-codex-oauth@0.1.1`](https://github.com/dyuan311/dsh-openai-codex-oauth)；Host 命令 `/codex-login`、`/codex-status`、`/codex-logout`、silent `ctx.openaiCodexOAuth` + `llm-pi-ai` 的 `openai-codex` 路由）
 - DSH 验证基线：`@deepseek-ai/dsh@0.1.0-rc.6` / `deepseek-harness@47f943859bef60e4160492346772ded9b24f765a`
+本轮 0.1.0-rc.6 → 0.2.0-rc.2 迁移的台账、根因与验证状态见 [dsh-0.2-migration.md](dsh-0.2-migration.md)。
 - `@earendil-works/pi-ai` 审查基线：`0.82.1`
 - 画稿：`docs/web/dsh-codex.pen`（按 `@deepseek-ai/dsh@0.1.0-rc.6` Web chrome 重画：侧栏、对话/轨迹、composer 座位；无右栏、无 Codex CLI 壳）
 - 设计日期：2026-08-16

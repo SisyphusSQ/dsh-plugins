@@ -1,5 +1,7 @@
-import type { ConversationSnapshot, ToolCallBlock } from '@deepseek-ai/dsh-client-runtime/client'
-import type { ChatViewSlotProps } from '@deepseek-ai/dsh-client-ui-conversation/client'
+import type { AssistantChatData, ChatNodeViewProps, ChatSnapshot } from '@deepseek-ai/dsh-client-ui-chat/client'
+import type { ToolCallBlock } from '@deepseek-ai/dsh-client-ui-conversation/client'
+import type { HostObservable } from '@deepseek-ai/dsh-client-ui-slots'
+import type { TranslateNS } from '@deepseek-ai/dsh-client-locale/client'
 import {
   absorbableToolRoots,
   liveReasoningItem,
@@ -16,11 +18,12 @@ export interface TurnActivityBodyProps {
   readonly streamingSteps: ReadonlySet<number>
   readonly slots: ToolViewSlots
   readonly kit: AtomicToolViewKit
-  readonly selectedCallId?: string | undefined
+  /** Step assistant source, forwarded to preparing Tool rows. */
+  readonly assistant?: HostObservable<Readonly<AssistantChatData> | undefined> | undefined
   readonly cwd?: string | undefined
-  readonly openFile: (path: string) => void
-  readonly inspectCall: (callId: string) => void
-  readonly t: ChatViewSlotProps['t']
+  readonly openFile: ChatNodeViewProps['openFile']
+  readonly inspectCall: ChatNodeViewProps['inspectCall']
+  readonly t: TranslateNS<'chat'>
 }
 
 /** Native DSH Think rows and official tool trees in turn activity order. */
@@ -30,7 +33,7 @@ export function TurnActivityBody({
   streamingSteps,
   slots,
   kit,
-  selectedCallId,
+  assistant,
   cwd,
   openFile,
   inspectCall,
@@ -59,7 +62,7 @@ export function TurnActivityBody({
               slots={slots}
               kit={kit}
               block={root}
-              selectedCallId={selectedCallId}
+              assistant={assistant}
               cwd={cwd}
               openFile={openFile}
               inspectCall={inspectCall}
@@ -80,7 +83,7 @@ export function toolRootMap(
 }
 
 export function absorbableToolRootsByStep(
-  snapshot: ConversationSnapshot,
+  snapshot: ChatSnapshot,
   turn: number,
   steps: readonly number[],
 ): Record<number, ToolCallBlock[]> {

@@ -3,7 +3,7 @@ import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => ({
-  IconChevronRightOutline14: () => <span data-testid="chevron-right" />,
+  IconChevronRightOutlineRegular: () => <span data-testid="chevron-right" />,
   MarkdownText: ({ text }: { text: string }) => <div data-testid="reasoning-markdown">{text}</div>,
   DisclosureRow: ({
     icon,

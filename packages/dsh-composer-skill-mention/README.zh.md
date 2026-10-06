@@ -4,7 +4,7 @@
 
 为 DeepSeek Harness Web 输入框提供 Codex 风格的 Skill 提及。
 
-已按 `@deepseek-ai/dsh@0.1.0-rc.6` 验证。
+目标版本为 `@deepseek-ai/dsh@0.2.0-rc.2`；已发布的 `0.2.0` 版本按 `@deepseek-ai/dsh@0.1.0-rc.6` 验证。
 
 ## 安装
 
@@ -33,7 +33,7 @@ dsh plugin --profile web add @suqingsq/dsh-composer-skill-mention@0.2.0
 
 ## 验证
 
-兼容边界与验证证据记录在[设计文档](https://github.com/SisyphusSQ/dsh-plugins/blob/main/docs/design/dsh-composer-skill-mention.md)中。当前兼容基线为 `@deepseek-ai/dsh@0.1.0-rc.6`。
+兼容边界与验证证据记录在[设计文档](https://github.com/SisyphusSQ/dsh-plugins/blob/main/docs/design/dsh-composer-skill-mention.md)中。已发布版本的兼容基线为 `@deepseek-ai/dsh@0.1.0-rc.6`；迁移后的源码目标版本为 `@deepseek-ai/dsh@0.2.0-rc.2`。
 
 ## License
 

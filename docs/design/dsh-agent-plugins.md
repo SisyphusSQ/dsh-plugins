@@ -2,6 +2,7 @@
 
 > 仓库内设计文档。
 > 适用环境：`@deepseek-ai/dsh@0.1.0-rc.6`（本机 sqmc04，web profile）
+本轮 0.1.0-rc.6 → 0.2.0-rc.2 迁移的台账、根因与验证状态见 [dsh-0.2-migration.md](dsh-0.2-migration.md)。
 > 当前状态：M0–M5 已完成 rc.6 实现与隔离 profile 验证；`dsh-agent-plugins@0.1.0` 于 2026-08-15 首发，当前 `@suqingsq/dsh-agent-plugins@0.2.0` 已发布并在日常 rc.7 Web profile 中激活
 > 更新：2026-08-18
 

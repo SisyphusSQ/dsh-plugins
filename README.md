@@ -4,7 +4,7 @@ English | [中文](README.zh.md)
 
 Third-party plugins for [DeepSeek Harness (DSH)](https://github.com/deepseek-ai/deepseek-harness). Each directory under `packages/` is an independently installable plugin.
 
-Verified with `@deepseek-ai/dsh@0.1.0-rc.6`.
+The released `0.2.0` set is verified with `@deepseek-ai/dsh@0.1.0-rc.6`. Repository source is migrated to the `0.2.0-rc.2` line as `0.3.0` (plus the new `dsh-ui-zoom` package); that source set is not published yet.
 
 ## Install
 
@@ -63,6 +63,10 @@ An [Agent Plugins](https://github.com/agentplugins/agent-plugins-spec) adapter: 
 Create and archive Git linked worktrees. The same package exposes `/worktree`, a model tool, a CLI, and a Web picker that switches DSH Workspace.
 
 ![Git worktree picker](packages/dsh-worktree-workspaces/screenshots/picker.png)
+
+### [@suqingsq/dsh-ui-zoom](packages/dsh-ui-zoom/README.md)
+
+Whole-interface zoom for the Web and Desktop GUI: `Cmd/Ctrl` + `=` / `-` / `0`, a Settings row, and a durable per-profile zoom percentage. Not published yet.
 
 ## Repository
 

@@ -4,7 +4,7 @@ English | [中文](README.zh.md)
 
 An [Agent Plugins 1.0.0](https://github.com/agentplugins/agent-plugins-spec) adapter for [DeepSeek Harness (DSH)](https://github.com/deepseek-ai/deepseek-harness). One package covers the host bundle, a Web sidebar panel, and the `agent-plugins` CLI.
 
-Verified with `@deepseek-ai/dsh@0.1.0-rc.6`.
+Verified with `@deepseek-ai/dsh@0.2.0-rc.2`: the package loads on the macOS Desktop profile cold start. Behavioural coverage and limits are in the design doc.
 
 ## Install
 
@@ -56,7 +56,7 @@ Project skills are discovered from `cwd/.agent-plugins` and the project-root `.a
 
 ## Verification
 
-The compatibility boundary and verification evidence are recorded in the [design document](https://github.com/SisyphusSQ/dsh-plugins/blob/main/docs/design/dsh-agent-plugins.md). The current compatibility baseline is `@deepseek-ai/dsh@0.1.0-rc.6`.
+The compatibility boundary and verification evidence are recorded in the [design document](https://github.com/SisyphusSQ/dsh-plugins/blob/main/docs/design/dsh-agent-plugins.md). The published release's compatibility baseline is `@deepseek-ai/dsh@0.1.0-rc.6`; the migrated source targets `@deepseek-ai/dsh@0.2.0-rc.2`.
 
 ## License
 

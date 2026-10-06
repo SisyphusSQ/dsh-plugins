@@ -1,7 +1,7 @@
 import { memo } from 'react'
 import { act, cleanup, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { ToolCallBlock } from '@deepseek-ai/dsh-client-runtime/client'
+import type { ToolCallBlock } from '@deepseek-ai/dsh-client-ui-conversation/client'
 import type { ToolCallOwnerProps } from '@deepseek-ai/dsh-client-ui-tool/client'
 import { AtomicToolView } from '../src/client/toolview.js'
 import type { AtomicToolViewKit, ToolViewSlots } from '../src/client/toolview.js'
@@ -15,32 +15,35 @@ afterEach(() => {
 })
 
 const bashCall: ToolCallBlock = {
+  phase: 'start',
   callId: 'c1',
   name: 'bash',
   argsRaw: '{"command":"ls"}',
   turn: 1,
   step: 1,
   time: 1,
-  callView: null,
   subCalls: [],
 }
 
 const owner: ToolCallOwnerProps = {
   callId: 'c1',
   toolName: 'bash',
+  phase: 'start',
   block: bashCall,
   openFile: () => {},
+  useDisclosure: (() => ({ expanded: false, setExpanded: () => {}, toggle: () => {} })) as never,
+  loadImage: (() => Promise.resolve('')) as never,
 }
 
 const kit: AtomicToolViewKit = {
   t: ((key: string) => key) as never,
+  fallbackT: ((key: string) => key) as never,
   sessionId: 's1' as never,
   useSession: (() => undefined) as never,
   useProjection: (() => undefined) as never,
   useSessions: (() => undefined) as never,
-  useWorkspaces: (() => undefined) as never,
-  useInput: (() => undefined) as never,
-  inputActions: {} as never,
+  useDisclosure: (() => ({ expanded: false, setExpanded: () => {}, toggle: () => {} })) as never,
+  loadImage: (() => Promise.resolve('')) as never,
 }
 
 function createSlots(entries: ReadonlyArray<{ key: string; component: unknown }>): ToolViewSlots & {
@@ -61,6 +64,7 @@ function createSlots(entries: ReadonlyArray<{ key: string; component: unknown }>
       }
     },
     getVersion: () => version,
+    spec: () => undefined,
     bump(next) {
       current = next
       version += 1

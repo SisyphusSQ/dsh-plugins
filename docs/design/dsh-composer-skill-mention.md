@@ -75,7 +75,7 @@ Client 入口完成两件事：
 - 检测结果仍交给原 controller 的 roster、menu reducer 与异步候选流程；
 - plugin dispose 时，仅当 prototype 仍由本包持有才恢复原方法，避免覆盖其他后来安装的兼容层。
 
-这是有意限制在 `rc.6` 私有形状上的兼容层。包的 peer dependency 固定为 `0.1.0-rc.6`，运行时还会检查 controller 所需成员；形状不匹配时回退原 `track` 并输出一次明确错误，不破坏 `/` 与 `@`。
+这是有意限制在该 controller 私有形状上的兼容层。包的 peer dependency 已随本轮迁移改为 `^0.2.0-rc.1`；运行时仍会检查 controller 所需成员，形状不匹配时回退原 `track` 并输出一次明确错误，不破坏 `/` 与 `@`。**该私有形状是否在 0.2.0-rc.2 上变化未经真机验证。**本轮 0.1.0-rc.6 → 0.2.0-rc.2 迁移的台账、根因与验证状态见 [dsh-0.2-migration.md](dsh-0.2-migration.md)。
 
 选择结果沿用 DSH 内置 `/skill` 的 plain-text-reference 决策，写入 `$name `。这样 Web 选择、手输、粘贴和非 Web 文本入口共享同一个宿主协议。由于 rc.6 的 composer 装饰正则仍是 `/`、`@`，`$name` 不会获得内置引用着色；这属于已知视觉边界，不影响候选或 Skill 注入。
 

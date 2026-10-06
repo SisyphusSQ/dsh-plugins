@@ -6,7 +6,7 @@ DeepSeek Harness 的 Codex 订阅会话登录卡、设置页与 Host 认证状�
 
 当原生模型选择器选中 `openai-codex`（展示名「Codex 订阅」）且凭据未就绪时，composer 上方出现登录卡。设置里也有独立的「Codex 订阅」页，登录成功后仍显示已连接。主路径是 `dsh-openai-codex-oauth` 的 silent 浏览器 PKCE。登录成功后会话卡片消失，后续对话仍走原生 DSH。
 
-Host 与 Web client API 对齐 `@deepseek-ai/dsh@0.1.0-rc.6`。fixture 测试覆盖状态、silent 登录、退出登录、取消、端口占用映射、脱敏、dock 显隐、composer block 和设置页。这不是真实 DSH Web / Headless E2E。
+Host 与 Web client API 对齐 `@deepseek-ai/dsh@0.2.0-rc.2`。已发布的 `0.2.0` 版本按 `@deepseek-ai/dsh@0.1.0-rc.6` 验证。fixture 测试覆盖状态、silent 登录、退出登录、取消、端口占用映射、脱敏、dock 显隐、composer block 和设置页。这不是真实 DSH Web / Headless E2E。
 
 ## 安装
 

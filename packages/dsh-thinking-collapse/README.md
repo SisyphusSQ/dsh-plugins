@@ -4,7 +4,7 @@ English | [中文](README.zh.md)
 
 Codex-style live activity collapse for the DeepSeek Harness Web chat view.
 
-Verified with `@deepseek-ai/dsh@0.1.0-rc.6`.
+Verified with `@deepseek-ai/dsh@0.2.0-rc.2`: the package loads on the macOS Desktop profile cold start. Behavioural coverage and limits are in the design doc.
 
 ## Install
 
@@ -41,7 +41,7 @@ When the turn settles — the answer appears, or every tool in the turn has fini
 
 ## Verification
 
-The compatibility boundary and verification evidence are recorded in the [design document](https://github.com/SisyphusSQ/dsh-plugins/blob/main/docs/design/dsh-thinking-collapse.md). The current compatibility baseline is `@deepseek-ai/dsh@0.1.0-rc.6`.
+The compatibility boundary and verification evidence are recorded in the [design document](https://github.com/SisyphusSQ/dsh-plugins/blob/main/docs/design/dsh-thinking-collapse.md). The published release's compatibility baseline is `@deepseek-ai/dsh@0.1.0-rc.6`; the migrated source targets `@deepseek-ai/dsh@0.2.0-rc.2`.
 
 ## License
 

@@ -4,7 +4,7 @@
 
 [DeepSeek Harness (DSH)](https://github.com/deepseek-ai/deepseek-harness) 的 [Agent Plugins 1.0.0](https://github.com/agentplugins/agent-plugins-spec) 适配插件。一个包覆盖 host bundle、Web 侧栏面板和 `agent-plugins` CLI。
 
-已按 `@deepseek-ai/dsh@0.1.0-rc.6` 验证。
+目标版本为 `@deepseek-ai/dsh@0.2.0-rc.2`；已发布的 `0.2.0` 版本按 `@deepseek-ai/dsh@0.1.0-rc.6` 验证。
 
 ## 安装
 
@@ -56,7 +56,7 @@ agent-plugins doctor
 
 ## 验证
 
-兼容边界与验证证据记录在[设计文档](https://github.com/SisyphusSQ/dsh-plugins/blob/main/docs/design/dsh-agent-plugins.md)中。当前兼容基线为 `@deepseek-ai/dsh@0.1.0-rc.6`。
+兼容边界与验证证据记录在[设计文档](https://github.com/SisyphusSQ/dsh-plugins/blob/main/docs/design/dsh-agent-plugins.md)中。已发布版本的兼容基线为 `@deepseek-ai/dsh@0.1.0-rc.6`；迁移后的源码目标版本为 `@deepseek-ai/dsh@0.2.0-rc.2`。
 
 ## License
 

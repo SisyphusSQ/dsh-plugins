@@ -1,11 +1,14 @@
-# dsh-session-tools mounts the bounded snapshot resolver, then the model-facing
-# tools and @session pre-step adapter. The Web client entry is declared on the
-# package, not this patch. Row order is documentary; Cordis activation waits
-# for injected services.
+# dsh-session-tools mounts the model-facing tools and the @session pre-step
+# adapter. The Web client entry is declared on the package, not this patch.
+# Row order is documentary; Cordis activation waits for injected services.
+
+# The bounded snapshot resolver (`@deepseek-ai/dsh-session-reference`) is NOT
+# mounted here. Since DSH 0.2 the default web-app bundle already inserts it as
+# row `session-reference`, so mounting it again under a second row id would
+# load the same module twice — the shape that fails the whole plugin tree at
+# boot with a duplicate registration. This package consumes the resolver
+# service; it does not own its row.
 
 - insert:
-    - id: session-reference-resolver
-      name: '@deepseek-ai/dsh-session-reference'
-
     - id: session-tools
       name: '@suqingsq/dsh-session-tools'

@@ -8,7 +8,7 @@ This package stores OAuth credentials, refreshes access tokens before Codex requ
 
 It does not register an LLM adapter. `@deepseek-ai/dsh-llm-pi-ai` stays the `openai-codex` route. PKCE, the callback server, and refresh stay in `@earendil-works/pi-ai`.
 
-Host APIs target `@deepseek-ai/dsh@0.1.0-rc.6`. Fixture tests cover silent login, cancel, in-flight exclusion, port-busy mapping, and command registration. That is not a live DSH Web or Headless E2E.
+Host APIs target `@deepseek-ai/dsh@0.2.0-rc.2`. The published `0.2.0` release was verified with `@deepseek-ai/dsh@0.2.0-rc.2`: the package loads on the macOS Desktop profile cold start. Fixture tests cover silent login, cancel, in-flight exclusion, port-busy mapping, and command registration. That is not a live DSH Web or Headless E2E.
 
 ## Install
 

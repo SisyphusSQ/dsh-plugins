@@ -4,7 +4,7 @@
 
 DeepSeek Harness 的会话能力插件。同一包提供六个模型侧工具，以及 Web 输入框的 `@` 会话候选：选中后把另一会话作为带出处的上下文注入。
 
-已按 `@deepseek-ai/dsh@0.1.0-rc.6` 验证。
+目标版本为 `@deepseek-ai/dsh@0.2.0-rc.2`；已发布的 `0.2.0` 版本按 `@deepseek-ai/dsh@0.1.0-rc.6` 验证。
 
 ## 安装
 
@@ -54,7 +54,7 @@ Approval 只有 `allowed-once` 会继续，其他回答全部失败关闭。
 
 ## 验证
 
-兼容边界与验证证据记录在[设计文档](https://github.com/SisyphusSQ/dsh-plugins/blob/main/docs/design/dsh-session-capabilities.md)中。当前兼容基线为 `@deepseek-ai/dsh@0.1.0-rc.6`。
+兼容边界与验证证据记录在[设计文档](https://github.com/SisyphusSQ/dsh-plugins/blob/main/docs/design/dsh-session-capabilities.md)中。已发布版本的兼容基线为 `@deepseek-ai/dsh@0.1.0-rc.6`；迁移后的源码目标版本为 `@deepseek-ai/dsh@0.2.0-rc.2`。
 
 ## License
 

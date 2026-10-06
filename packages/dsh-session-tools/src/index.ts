@@ -1,11 +1,13 @@
 /** Model-facing cross-session capabilities for DeepSeek Harness. */
 import type { Context } from '@deepseek-ai/cordis'
 import type { Agent, PreStepDecision } from '@deepseek-ai/dsh-agent'
-import type {} from '@deepseek-ai/dsh-host-apiproxy'
+// 0.2 owner of the Host session business API: this type-only edge merges
+// `ctx.sessionController` onto Cordis `Context` (0.1's `dsh-host-apiproxy` is gone).
+import type {} from '@deepseek-ai/dsh-api-session-controller'
 import { HarnessError } from '@deepseek-ai/dsh-llm'
 import type { SessionId } from '@deepseek-ai/dsh-session'
 import type {} from '@deepseek-ai/dsh-session-reference'
-import { TypertLookupFailure } from '@deepseek-ai/dsh-typert-protocol'
+import { remoteErrorOf, type RemoteFailure } from '@deepseek-ai/dsh-typert-protocol'
 import z from '@deepseek-ai/schemastery'
 import { injectMentionedSessionReferences } from './inject.js'
 import {
@@ -20,7 +22,7 @@ export const inject = [
   'tools',
   'agents',
   'approval',
-  'apiProxy',
+  'sessionController',
   'sessionQuery',
   'sessionReferenceResolver',
   'typert',
@@ -35,18 +37,16 @@ export const Config = z.object({
   approveSend: z.boolean().default(true),
 })
 
-function lookupFailure(error: TypertLookupFailure): HarnessError {
-  const failure = error.failure
-  const record = typeof failure === 'object' && failure !== null
-    ? failure as { code?: unknown; message?: unknown }
-    : {}
-  const code = typeof record.code === 'string' ? record.code : 'rejected'
-  const message = typeof record.message === 'string'
-    ? record.message
-    : 'the Host rejected the target session lookup'
+function lookupFailure(failure: RemoteFailure): HarnessError {
+  // 0.2 folds the old `TypertLookupFailure.failure` payload into the failure
+  // itself: `code` is a non-empty literal union and `message` is the Error text.
+  const message = failure.message === ''
+    ? 'the Host rejected the target session lookup'
+    : failure.message
   return new HarnessError(
     message,
-    `SESSION_TOOLS_LOOKUP_${code.toUpperCase().replaceAll('-', '_')}`,
+    // 0.2 Remote codes are namespaced with '/' where 0.1 used '-'; both fold to '_'.
+    `SESSION_TOOLS_LOOKUP_${failure.code.toUpperCase().replaceAll(/[/-]/g, '_')}`,
   )
 }
 
@@ -63,7 +63,8 @@ async function lookupAgent(ctx: Context, sessionId: SessionId): Promise<Agent | 
       provider.resolve(sessionId) as Agent | undefined | Promise<Agent | undefined>,
     )
   } catch (error) {
-    if (error instanceof TypertLookupFailure) throw lookupFailure(error)
+    const failure = remoteErrorOf(error)
+    if (failure !== undefined) throw lookupFailure(failure)
     throw error
   }
 }
@@ -75,7 +76,7 @@ export function apply(ctx: Context, config: Partial<SessionToolsConfig> = {}): v
     approval: ctx.approval,
     sessionQuery: ctx.sessionQuery,
     sessionReferenceResolver: ctx.sessionReferenceResolver,
-    sessionsApi: ctx.apiProxy.sessions,
+    sessionsApi: ctx.sessionController,
     resolveAgent: (sessionId) => lookupAgent(ctx, sessionId),
   }, resolvedConfig)
 

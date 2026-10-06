@@ -1,7 +1,9 @@
 import { memo, useMemo } from 'react'
 import type { ReactNode } from 'react'
-import type { ToolCallBlock } from '@deepseek-ai/dsh-client-runtime/client'
-import type { ToolCallOwnerProps } from '@deepseek-ai/dsh-client-ui-tool/client'
+import type { AssistantChatData, ChatNodeViewProps } from '@deepseek-ai/dsh-client-ui-chat/client'
+import type { ToolCallBlock } from '@deepseek-ai/dsh-client-ui-conversation/client'
+import type { HostObservable } from '@deepseek-ai/dsh-client-ui-slots'
+import type { ToolCallCommonProps, ToolCallHookContext, ToolCallOwnerProps } from '@deepseek-ai/dsh-client-ui-tool/client'
 import { toolCallName } from './activity.js'
 import type { AtomicToolViewKit, ToolViewSlots } from './toolview.js'
 import { AtomicToolView } from './toolview.js'
@@ -11,10 +13,19 @@ export interface ToolCallTreeProps {
   readonly slots: ToolViewSlots
   readonly kit: AtomicToolViewKit
   readonly block: ToolCallBlock
-  readonly selectedCallId?: string | undefined
+  /** This call's Step assistant source; a preparing call streams its raw arguments from it. */
+  readonly assistant?: HostObservable<Readonly<AssistantChatData> | undefined> | undefined
   readonly cwd?: string | undefined
-  readonly openFile: (path: string) => void
-  readonly inspectCall: (callId: string) => void
+  readonly openFile: ChatNodeViewProps['openFile']
+  readonly inspectCall: ChatNodeViewProps['inspectCall']
+}
+
+/** Split one Tool lifecycle value into the stage-discriminated owner share. */
+function toolCallOwner(block: ToolCallBlock, common: ToolCallCommonProps): ToolCallOwnerProps {
+  if ('kind' in block) return { ...common, phase: 'result', block }
+  return block.phase === 'preparing'
+    ? { ...common, phase: 'preparing', block }
+    : { ...common, phase: 'start', block }
 }
 
 const ToolCall = memo(function ToolCall({
@@ -23,8 +34,8 @@ const ToolCall = memo(function ToolCall({
   callId,
   toolName,
   block,
+  assistant,
   openFile,
-  selected,
   cwd,
   inspectCall,
   children,
@@ -34,31 +45,36 @@ const ToolCall = memo(function ToolCall({
   readonly callId: string
   readonly toolName: string
   readonly block: ToolCallBlock
-  readonly openFile: (path: string) => void
-  readonly selected: boolean
+  readonly assistant?: HostObservable<Readonly<AssistantChatData> | undefined> | undefined
+  readonly openFile: ChatNodeViewProps['openFile']
   readonly cwd?: string | undefined
-  readonly inspectCall: (callId: string) => void
+  readonly inspectCall: ChatNodeViewProps['inspectCall']
   readonly children?: ReactNode
 }) {
-  const owner = useMemo<ToolCallOwnerProps>(() => ({
+  const preparing = !('kind' in block) && block.phase === 'preparing'
+  const hookContext = useMemo<ToolCallHookContext>(
+    () => ({ callId, assistant: preparing ? assistant : undefined }),
+    [assistant, callId, preparing],
+  )
+  const owner = useMemo<ToolCallOwnerProps>(() => toolCallOwner(block, {
+    useDisclosure: kit.useDisclosure,
     callId,
     toolName,
-    block,
-    openFile,
     cwd,
-    inspect: () => {
+    openFile,
+    loadImage: kit.loadImage,
+    inspect: inspectCall === undefined ? undefined : () => {
       inspectCall(callId)
     },
-  }), [block, callId, cwd, inspectCall, openFile, toolName])
+  }), [block, callId, cwd, inspectCall, kit.loadImage, kit.useDisclosure, openFile, toolName])
 
   return (
     <div
       className={css.callRow}
       data-chat-anchor-key={`call:${callId}`}
       data-chat-call-id={callId}
-      data-selected={selected || undefined}
     >
-      <AtomicToolView owner={owner} kit={kit} slots={slots} />
+      <AtomicToolView owner={owner} kit={kit} slots={slots} hookContext={hookContext} />
       {children}
     </div>
   )
@@ -68,7 +84,7 @@ const ToolCallBranch = memo(function ToolCallBranch({
   slots,
   kit,
   block,
-  selectedCallId,
+  assistant,
   cwd,
   openFile,
   inspectCall,
@@ -80,21 +96,21 @@ const ToolCallBranch = memo(function ToolCallBranch({
       callId={block.callId}
       toolName={toolCallName(block)}
       block={block}
+      assistant={assistant}
       openFile={openFile}
-      selected={block.callId === selectedCallId}
       cwd={cwd}
       inspectCall={inspectCall}
     >
       {block.subCalls.length > 0
         ? (
             <div className={css.subCalls} data-subcalls>
-              {block.subCalls.map(child => (
+              {block.subCalls.map((child: ToolCallBlock) => (
                 <ToolCallBranch
                   key={child.callId}
                   slots={slots}
                   kit={kit}
                   block={child}
-                  selectedCallId={selectedCallId}
+                  assistant={assistant}
                   cwd={cwd}
                   openFile={openFile}
                   inspectCall={inspectCall}

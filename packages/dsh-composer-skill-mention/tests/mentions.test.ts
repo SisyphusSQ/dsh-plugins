@@ -48,9 +48,12 @@ describe('Skill mention parsing', () => {
       ],
       source: { kind: 'user' },
     });
+    // A producer-supplied source that is not the user: since 0.2 the source
+    // map carries no `plugin` kind, so a system-prompt source stands in for
+    // "some other producer injected this text".
     const forged = createUserMessage({
       content: [{ type: 'text', text: '$plugin-creator' }],
-      source: { kind: 'plugin', plugin: 'fixture' },
+      source: { kind: 'system-prompt' },
     });
 
     expect(typeof mentions.invokedSkillMentionNamesFromMessages).toBe(

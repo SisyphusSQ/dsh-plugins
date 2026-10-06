@@ -4,7 +4,20 @@
 
 ## Unreleased
 
-- 暂无。
+- feature
+  - 新增 `@suqingsq/dsh-ui-zoom`：DSH 整体界面缩放，入口为设置页「整体界面缩放」行（−/+ 与重置），以及可写入 profile 的 `zoomPercent` 长期默认值。缩放作用于文档元素，因此菜单、弹窗、toast 等 portal 浮层一并缩放。
+    - 解决 CSS `zoom` 放大绝对长度带来的两处错乱：视口单位被再次相乘导致外壳溢出（115% 下 720→828px，底部吸附的账号区与菜单被推出窗口），以及用 `getBoundingClientRect()` 定位的浮层偏移被二次缩放。前者由注入样式把外壳尺寸除以倍数抵消，后者由 `MutationObserver` 把内联偏移除以倍数还原。
+    - 未提供键盘快捷键：首版曾注册 `Cmd/Ctrl` + `=` / `-` / `0`，但在桌面端实测不触发，已按用户决定移除，设置行是唯一入口。
+- optimization
+  - 将仓库内七个包从 DSH `0.1.0-rc.6` 迁移到 `0.2.0-rc.2`：DSH peer 改为 `^0.2.0-rc.1`（`^0.1.x` 与 `^0.2.0` 都会被 0.2 宿主拒绝），`@deepseek-ai/cordis` 统一 `~4.0.4`，devDependencies 精确钉 `0.2.0-rc.2`。
+  - 移除 0.2 已删除的 `@deepseek-ai/dsh-client-runtime` 与 `@deepseek-ai/dsh-host-apiproxy`，补齐其 0.2 替代包（`dsh-api-session-controller`、`dsh-api-workspace-controller`、`dsh-client-ui-workspace`、`dsh-client-ui-chat`、`dsh-client-ui-renderer`、`dsh-client-ui-session`、`dsh-client-ui-settings`）。
+  - 客户端入口类型从已删除的 `ClientContext` 改为 Cordis 的 `Context`；`ctx.slots` 改由 `dsh-client-ui-renderer` 合并。
+  - 将 `@deepseek-ai/schemastery` 全仓库统一到 `^3.18.4`，消除 3.18.1 / 3.18.4 双实例导致的 declaration merging 静默失效与 `TS2742`。
+  - 为使用 `@deepseek-ai/dsh-client-store` 的包显式声明 `zustand` 与 `immer`：该包构建产物会导入二者，但自身未声明运行时依赖。
+- note
+  - 八个包全部通过 typecheck（0 错误）与各自测试套件。
+  - 八个包已装入本机 desktop profile；真机冷启动验收记录按包写入对应 `docs/design/`。
+  - 本轮变更尚未发布到 npm；`dsh-ui-zoom` 为首次引入，发布前 README 不写安装命令与 registry 包名。
 
 ## History
 

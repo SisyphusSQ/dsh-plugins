@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import {
   DisclosureRow,
-  IconThinkOutline14,
+  IconThinkOutlineRegular,
 } from '@deepseek-ai/dsh-client-ui-primitives'
-import type { ChatViewSlotProps } from '@deepseek-ai/dsh-client-ui-conversation/client'
+import type { TranslateNS } from '@deepseek-ai/dsh-client-locale/client'
 import a11yCss from './accessibility.module.css'
 import css from './ThinkRow.module.css'
 
@@ -48,7 +48,7 @@ function useThrottledVisualUpdate(update: () => void, intervalFrames = DEFAULT_I
 export interface ThinkRowProps {
   readonly text: string
   readonly running: boolean
-  readonly t: ChatViewSlotProps['t']
+  readonly t: TranslateNS<'chat'>
 }
 
 /** Upstream DSH Think disclosure: icon, first/latest-line preview, independent expand. */
@@ -78,7 +78,7 @@ export function ThinkRow({ text, running, t }: ThinkRowProps) {
         leadingClassName={css.leading}
         titleClassName={css.title}
         chevronClassName={css.chevron}
-        icon={<IconThinkOutline14 size={14} />}
+        icon={<IconThinkOutlineRegular size={14} />}
         title="Think"
         open={expanded}
         expandable

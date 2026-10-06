@@ -1,11 +1,10 @@
 import type {
   AssistantBlock,
   ConversationLocation,
-  ConversationSnapshot,
   StepLocation,
   ToolCallBlock,
-} from '@deepseek-ai/dsh-client-runtime/client'
-import type { ChatNode } from '@deepseek-ai/dsh-client-ui-conversation/client'
+} from '@deepseek-ai/dsh-client-ui-conversation/client'
+import type { ChatNode, ChatSnapshot } from '@deepseek-ai/dsh-client-ui-chat/client'
 import {
   THINKING_TIMING_KEY,
   type ActivityTiming,
@@ -132,16 +131,18 @@ export function missingAbsorbableToolBlocks(
 }
 
 export function absorbableToolRoots(
-  snapshot: ConversationSnapshot,
+  snapshot: ChatSnapshot,
   turn: number,
   step: number,
 ): ToolCallBlock[] {
-  const keys = snapshot.chat.locations.getStep(turn, step)
+  const keys = snapshot.locations.getStep(turn, step)
   const roots: ToolCallBlock[] = []
   for (const key of keys) {
-    const node = snapshot.chat.nodes.get(key)
-    if (node?.kind !== 'tool-call') continue
-    const root = (node as ChatNode<'tool-call'>).data.root
+    const node = snapshot.nodes.get(key)
+    if (node === undefined) continue
+    const chatNode = node as ChatNode
+    if (chatNode.kind !== 'tool-call') continue
+    const root = chatNode.data.root
     if (!isAbsorbableToolName(toolCallName(root))) continue
     roots.push(root)
   }
@@ -262,8 +263,10 @@ export function liveReasoningItem(
   return live
 }
 
+/** Raw argument JSON; a preparing call has not received its arguments yet. */
 export function toolArgsRaw(block: ToolCallBlock): string {
-  return 'kind' in block ? block.call?.argsRaw ?? '' : block.argsRaw
+  if ('kind' in block) return block.call?.argsRaw ?? ''
+  return block.phase === 'start' ? block.argsRaw : ''
 }
 
 export function toStepActivityTools(

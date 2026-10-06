@@ -25,7 +25,7 @@ DeepSeek Harness（DSH）`0.1.0-rc.6` 的聊天视图会把 reasoning 渲染为�
 ## 2. 兼容边界
 
 - 已验证目标：`@deepseek-ai/dsh@0.1.0-rc.6`。思考折叠与普通工具吸收均已完成隔离 profile live Web E2E。
-- DSH 仍处于 developer preview；所有 DSH peer dependency 精确锁定到 `0.1.0-rc.6`。
+- DSH 仍处于 developer preview；本轮已迁移到 `0.2.0-rc.2`：peer 声明 `^0.2.0-rc.1`、devDependency 精确 `0.2.0-rc.2`、`@deepseek-ai/cordis` `~4.0.4`。本轮 0.1.0-rc.6 → 0.2.0-rc.2 迁移的台账、根因与验证状态见 [dsh-0.2-migration.md](dsh-0.2-migration.md)。
 - 插件依赖 `conversation.chat.node` keyed slot、`assistant-step` 与 `tool-call` key、`tool.call.toolview` 子 slot、Conversation Definition 和 Step Location data 契约。
 - 同一 slot cell 的同优先级注册会失败。插件使用 `priority: -1` shadow 默认 `priority: 0` renderer，并把其他相同 key 的 shadow 插件视为显式冲突。
 - 历史窗口不包含原始 chunk 或 tool 事件时无法恢复准确起止时间。此时折叠行显示「思考过程」或「工具调用」，不会用整段回答时长伪装成活动时长。

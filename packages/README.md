@@ -4,10 +4,11 @@ English | [中文](README.zh.md)
 
 Independently installable DeepSeek Harness plugins. Each package has its own README, tests, and verification record.
 
-Verified with `@deepseek-ai/dsh@0.1.0-rc.6`.
+The released `0.2.0` set is verified with `@deepseek-ai/dsh@0.1.0-rc.6`. Repository source targets `@deepseek-ai/dsh@0.2.0-rc.2` as `0.3.0`. The sections below are written per package.
 
 | Package | What it does |
 | --- | --- |
+| [@suqingsq/dsh-ui-zoom](dsh-ui-zoom/README.md) | Whole-interface zoom for the Web and Desktop GUI, with keyboard commands and a Settings row |
 | [@suqingsq/dsh-thinking-collapse](dsh-thinking-collapse/README.md) | Codex-style collapse: one elapsed row per turn; inner thoughts keep DSH Think rows |
 | [@suqingsq/dsh-composer-skill-mention](dsh-composer-skill-mention/README.md) | `$` / `￥` Skill mentions in the Web composer |
 | [@suqingsq/dsh-session-tools](dsh-session-tools/README.md) | Session list/read/create/rename/fork/relay tools and Web `@` session mentions |

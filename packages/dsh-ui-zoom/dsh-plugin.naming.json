@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "policy": "dsh-plugin-naming/v1",
+  "plugin": {
+    "namespace": "suqingsq",
+    "name": "ui-zoom",
+    "coordinate": "suqingsq/ui-zoom",
+    "packageName": "@suqingsq/dsh-ui-zoom"
+  },
+  "names": {
+    "pluginNames": ["dsh-ui-zoom"],
+    "loaderIds": ["ui-zoom"],
+    "services": [],
+    "tools": [],
+    "commands": ["ui-zoom-in", "ui-zoom-out", "ui-zoom-reset"],
+    "skills": [],
+    "skillProviders": [],
+    "events": [],
+    "settingsNamespaces": ["ui-zoom"],
+    "routes": []
+  }
+}

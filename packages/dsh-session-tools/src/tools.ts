@@ -1,10 +1,14 @@
 import type { Agent } from '@deepseek-ai/dsh-agent'
-import { RpcId, type RpcResponse, type SessionsApi } from '@deepseek-ai/dsh-host-apiproxy/api'
+// The 0.1 `dsh-host-apiproxy` business API and its `{rpcId, payload}` -> `RpcResponse`
+// envelope are gone in 0.2. Its successor is the Session Controller service, which owns
+// the same create/rename/fork business operations and returns their values directly.
+import type { SessionController } from '@deepseek-ai/dsh-api-session-controller'
 import { createUserMessage, HarnessError } from '@deepseek-ai/dsh-llm'
 import { SessionId } from '@deepseek-ai/dsh-session'
 import type { SessionQueryEngine } from '@deepseek-ai/dsh-session-query'
 import type { SessionReferenceResolver } from '@deepseek-ai/dsh-session-reference'
 import { defineTool, type ToolDefinition } from '@deepseek-ai/dsh-tools'
+import { remoteErrorOf } from '@deepseek-ai/dsh-typert-protocol'
 import {
   requireApproval,
   requireRootExecution,
@@ -37,21 +41,27 @@ export interface SessionToolServices {
   approval: ApprovalRequester
   sessionQuery: Pick<SessionQueryEngine, 'listSessions' | 'readTitleSnapshots'>
   sessionReferenceResolver: Pick<SessionReferenceResolver, 'prepare'>
-  sessionsApi: Pick<SessionsApi, 'create' | 'rename' | 'fork'>
+  sessionsApi: Pick<SessionController, 'create' | 'rename' | 'fork'>
   resolveAgent(sessionId: SessionId): Promise<Agent | undefined>
 }
 
-function rpcId(exec: { agent?: Agent; callId: string }, operation: string): ReturnType<typeof RpcId> {
-  return RpcId(`${exec.agent?.id ?? 'agentless'}:${exec.callId}:${operation}`)
-}
-
-function unwrapApiResponse<T>(response: RpcResponse<T>, operation: string): T {
-  if (response.result.ok) return response.result.value
-  const { error } = response.result
-  throw new HarnessError(
-    `${operation} failed: ${error.message}`,
-    `SESSION_TOOLS_API_${error.code.toUpperCase().replaceAll('-', '_')}`,
-  )
+/**
+ * Await one Session Controller business call, folding a Remote failure into the
+ * same stable `SESSION_TOOLS_API_*` Harness error the 0.1 RPC envelope produced.
+ * A non-Remote throw (a programming fault) propagates unchanged.
+ */
+async function callSessionsApi<T>(operation: string, call: () => Promise<T>): Promise<T> {
+  try {
+    return await call()
+  } catch (error: unknown) {
+    const failure = remoteErrorOf(error)
+    if (failure === undefined) throw error
+    throw new HarnessError(
+      `${operation} failed: ${failure.message}`,
+      // 0.2 Remote codes are namespaced with '/' where 0.1 used '-'; both fold to '_'.
+      `SESSION_TOOLS_API_${failure.code.toUpperCase().replaceAll(/[/-]/g, '_')}`,
+    )
+  }
 }
 
 export function createSessionToolDefinitions(
@@ -238,14 +248,10 @@ export function createSessionToolDefinitions(
           `Create a new session in ${cwd ?? 'the Host cwd'} with agent preset ${agentPreset ?? 'the deployment default'}`,
         )
       }
-      const response = await services.sessionsApi.create({
-        rpcId: rpcId(exec, 'create'),
-        payload: {
-          ...(cwd === undefined ? {} : { cwd }),
-          ...(agentPreset === undefined ? {} : { agentPreset }),
-        },
-      })
-      const created = unwrapApiResponse(response, 'create_session')
+      const created = await callSessionsApi('create_session', () => services.sessionsApi.create({
+        ...(cwd === undefined ? {} : { cwd }),
+        ...(agentPreset === undefined ? {} : { agentPreset }),
+      }))
       const effectiveAgentPreset = created.agentPreset ?? agentPreset
       return {
         sessionId: created.sessionId,
@@ -297,11 +303,10 @@ export function createSessionToolDefinitions(
             : `Rename session ${targetId} to ${JSON.stringify(args.title)}`,
         )
       }
-      const response = await services.sessionsApi.rename({
-        rpcId: rpcId(exec, 'rename'),
-        payload: { sessionId: targetId, title: args.title },
-      })
-      const renamed = unwrapApiResponse(response, 'rename_session')
+      const renamed = await callSessionsApi('rename_session', () => services.sessionsApi.rename({
+        sessionId: targetId,
+        title: args.title,
+      }))
       return { sessionId: targetId, title: renamed.title, seq: renamed.seq }
     },
   }), defineTool({
@@ -349,14 +354,10 @@ export function createSessionToolDefinitions(
             : `Fork session ${sourceId} at or after seq ${args.at_seq}`,
         )
       }
-      const response = await services.sessionsApi.fork({
-        rpcId: rpcId(exec, 'fork'),
-        payload: {
-          sessionId: sourceId,
-          ...(args.at_seq === undefined ? {} : { atSeq: args.at_seq }),
-        },
-      })
-      const forked = unwrapApiResponse(response, 'fork_session')
+      const forked = await callSessionsApi('fork_session', () => services.sessionsApi.fork({
+        sessionId: sourceId,
+        ...(args.at_seq === undefined ? {} : { atSeq: args.at_seq }),
+      }))
       return {
         sourceSessionId: sourceId,
         sessionId: forked.sessionId,

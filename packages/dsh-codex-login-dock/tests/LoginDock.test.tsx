@@ -1,6 +1,6 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { SessionId } from '@deepseek-ai/dsh-client-runtime/client'
+import type { SessionId } from '@deepseek-ai/dsh-client-connection/client'
 import { CODEX_PROVIDER_ID, type CodexAuthSnapshot } from '../src/protocol.js'
 import { LoginDockSession, type LoginDockDeps } from '../src/client/LoginDock.js'
 import { zh } from '../src/client/locales.js'

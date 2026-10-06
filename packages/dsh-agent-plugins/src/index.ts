@@ -54,6 +54,23 @@ export interface AgentPluginsConfig {
   managedPatch?: string
 }
 
+/**
+ * Resolved configuration after the schema applies its defaults — the shape the
+ * Loader hands the class. Kept separate from {@link AgentPluginsConfig} because
+ * the declaration emit needs a nameable type here, and the caller-facing
+ * interface stays optional for direct construction.
+ */
+export interface ResolvedAgentPluginsConfig {
+  /** Machine-level store directories. */
+  stores: string[]
+  /** Whether the skills half is enabled. */
+  skillsEnabled: boolean
+  /** Whether the MCP half is enabled. */
+  mcpEnabled: boolean
+  /** Home patch file receiving the generated MCP rows. */
+  managedPatch: string
+}
+
 /** Expand a leading `~` in configured paths. */
 export function expandHome(value: string): string {
   return value === '~' ? homedir() : value.startsWith('~/') ? join(homedir(), value.slice(2)) : value
@@ -69,7 +86,7 @@ export function expandHome(value: string): string {
 export default class AgentPluginsService extends TypertRemoteService<never> {
   static inject = ['skills']
 
-  static Config = z.object({
+  static Config: z<ResolvedAgentPluginsConfig> = z.object({
     stores: z.array(z.string()).default([]),
     skillsEnabled: z.boolean().default(true),
     mcpEnabled: z.boolean().default(true),

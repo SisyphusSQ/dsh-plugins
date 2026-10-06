@@ -1,10 +1,11 @@
+import type { Context as ClientContext } from '@deepseek-ai/cordis';
 import type {} from '@deepseek-ai/dsh-api-remotes/client';
 import type {} from '@deepseek-ai/dsh-client-connection/client';
-import type {
-  ClientContext,
-  ISessions,
-  SessionId,
-} from '@deepseek-ai/dsh-client-runtime/client';
+// SessionId and the client `sessions` service live in different packages since
+// 0.2: the id brand belongs to the connection contract, the service to the
+// session controller. The old `dsh-client-runtime` barrel no longer exists.
+import type { SessionId } from '@deepseek-ai/dsh-client-connection/client';
+import type { ISessions } from '@deepseek-ai/dsh-api-session-controller/client';
 import { InputTriggerController } from '@deepseek-ai/dsh-client-ui-input-trigger/client';
 
 import { createSkillCatalog } from './catalog.js';

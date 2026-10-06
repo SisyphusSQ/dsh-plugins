@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import type { ClientContext } from "@deepseek-ai/dsh-client-runtime/client";
-import type { WorkspaceView } from "@deepseek-ai/dsh-api-remotes/client";
+import type { Context as ClientContext } from "@deepseek-ai/cordis";
+import type { WorkspaceView } from "@deepseek-ai/dsh-api-workspace-controller/types";
 
 import {
   createWorktreeDecoration,
@@ -21,14 +21,15 @@ function workspace(
     workspaceId: workspaceId as WorkspaceView["workspaceId"],
     path,
     title,
-    sessionIds: sessionIds as WorkspaceView["sessionIds"],
+    // 0.2 brands SessionId; the fixture supplies plain ids.
+    sessionIds: sessionIds as unknown as WorkspaceView["sessionIds"],
     createdAt: "2026-08-14T00:00:00.000Z",
     updatedAt: "2026-08-14T00:00:00.000Z",
   };
 }
 
 test("menu uses native rows for local, current worktree, and new worktree", () => {
-  assert.deepEqual(inject, ["workspaces", "sessions", "remote", "remote.commands", "commandUi"]);
+  assert.deepEqual(inject, ["workspaces", "remote", "remote.commands", "commandUi", "uiWorkspace"]);
   const local = workspace("local", "/repo/fixture-repo", "fixture-repo", []);
   const managed = workspace(
     "managed",
@@ -54,8 +55,7 @@ test("new option executes host command, waits for Workspace, and opens its sessi
   let items: readonly WorkspaceView[] = [local];
   const listeners = new Set<() => void>();
   let executedLine = "";
-  let connectedWorkspace = "";
-  let openedSession = "";
+  let openedWorkspace = "";
 
   const ctx = {
     workspaces: {
@@ -66,14 +66,10 @@ test("new option executes host command, waits for Workspace, and opens its sessi
           return () => listeners.delete(listener);
         },
       },
-      async connectWorkspace(workspaceId: string) {
-        connectedWorkspace = workspaceId;
-        return "new-session";
-      },
     },
-    sessions: {
-      open(sessionId: string) {
-        openedSession = sessionId;
+    uiWorkspace: {
+      async openWorkspace(workspaceId: string) {
+        openedWorkspace = workspaceId;
       },
     },
     remote: {
@@ -104,16 +100,18 @@ test("new option executes host command, waits for Workspace, and opens its sessi
   } as unknown as ClientContext;
 
   const decoration = createWorktreeDecoration(ctx);
-  const option = (await decoration.ui.options(
+  const ui = decoration.ui;
+  // 0.2 CommandUiSpec is a discriminated union; a decoration that selects is a popupSelect.
+  if (ui.kind !== "popupSelect") throw new Error("expected a popupSelect decoration");
+  const option = (await ui.options(
     { sessionId: sourceSessionId as never },
     new AbortController().signal,
   )).find((candidate) => candidate.id === "new");
   assert.ok(option);
-  await decoration.ui.onSelect(option, { sessionId: sourceSessionId as never });
+  await ui.onSelect(option, { sessionId: sourceSessionId as never });
 
   assert.equal(executedLine, `/worktree new ${defaultWorktreeBranch(sourceSessionId)}`);
-  assert.equal(connectedWorkspace, "managed");
-  assert.equal(openedSession, "new-session");
+  assert.equal(openedWorkspace, "managed");
 });
 
 test("host command errors stop before navigation", async () => {
@@ -123,12 +121,12 @@ test("host command errors stop before navigation", async () => {
   const ctx = {
     workspaces: {
       list: { getSnapshot: () => ({ items: [local] }), subscribe: () => () => {} },
-      async connectWorkspace() {
+    },
+    uiWorkspace: {
+      async openWorkspace() {
         navigated = true;
-        return "never";
       },
     },
-    sessions: { open() {} },
     remote: {
       commands: {
         async execute() {
@@ -145,10 +143,12 @@ test("host command errors stop before navigation", async () => {
   } as unknown as ClientContext;
 
   const decoration = createWorktreeDecoration(ctx);
+  const ui = decoration.ui;
+  if (ui.kind !== "popupSelect") throw new Error("expected a popupSelect decoration");
   const option = worktreeOptions([local], sourceSessionId).find((candidate) => candidate.id === "new");
   assert.ok(option);
   await assert.rejects(
-    async () => decoration.ui.onSelect(option, { sessionId: sourceSessionId as never }),
+    async () => ui.onSelect(option, { sessionId: sourceSessionId as never }),
     /branch already exists/,
   );
   assert.equal(navigated, false);

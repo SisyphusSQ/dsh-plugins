@@ -15,6 +15,8 @@ function invocation(cwd: string, rawInput: string, sessionId = "session-123"): C
       session: { header: { id: sessionId, cwd } },
     } as CommandInvocation["agent"],
     rawInput,
+    // 0.2 CommandInvocation always carries the admitted attachment blocks.
+    attachments: [],
     signal: new AbortController().signal,
   };
 }

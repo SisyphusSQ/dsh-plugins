@@ -3,6 +3,11 @@ import test from 'node:test'
 import type { Agent } from '@deepseek-ai/dsh-agent'
 import { createUserMessage, type CallId, type UserMessage } from '@deepseek-ai/dsh-llm'
 import { SessionId, type SessionHeader } from '@deepseek-ai/dsh-session'
+import type {
+  SessionCreateRequest,
+  SessionForkRequest,
+  SessionRenameRequest,
+} from '@deepseek-ai/dsh-api-session-controller'
 import type { ToolDefinition, ToolRunContext } from '@deepseek-ai/dsh-tools'
 import {
   createSessionToolDefinitions,
@@ -191,7 +196,7 @@ test('read_session defers one sourced snapshot after approval without copying it
   assert.equal(JSON.stringify(value).includes('UNTRUSTED SNAPSHOT BODY'), false)
 })
 
-test('create_session asks approval and inherits cwd and agent preset through ApiProxy', async () => {
+test('create_session asks approval and inherits cwd and agent preset through the Session Controller', async () => {
   const caller = agent('current', header('current', { cwd: '/caller/repo', agentPreset: 'code' }))
   const services = baseServices(caller)
   const calls: unknown[] = []
@@ -203,12 +208,9 @@ test('create_session asks approval and inherits cwd and agent preset through Api
   }
   services.sessionsApi = {
     ...services.sessionsApi,
-    create: async (request) => {
-      calls.push({ create: request.payload })
-      return {
-        rpcId: request.rpcId,
-        result: { ok: true, value: { sessionId: SessionId('created'), agentPreset: 'code' } },
-      }
+    create: async (request: SessionCreateRequest) => {
+      calls.push({ create: request })
+      return { sessionId: SessionId('created'), agentPreset: 'code' }
     },
   }
   const definitions = createSessionToolDefinitions(services, defaultSessionToolsConfig)
@@ -232,12 +234,9 @@ test('rename_session renames the current session without approval by default', a
   const requests: unknown[] = []
   services.sessionsApi = {
     ...services.sessionsApi,
-    rename: async (request) => {
-      requests.push(request.payload)
-      return {
-        rpcId: request.rpcId,
-        result: { ok: true, value: { title: 'New title', seq: 7 } },
-      }
+    rename: async (request: SessionRenameRequest) => {
+      requests.push(request)
+      return { title: 'New title', seq: 7 }
     },
   }
   const definitions = createSessionToolDefinitions(services, defaultSessionToolsConfig)
@@ -263,12 +262,9 @@ test('rename_session requires approval before renaming another session', async (
   }
   services.sessionsApi = {
     ...services.sessionsApi,
-    rename: async (request) => {
-      calls.push(request.payload.sessionId)
-      return {
-        rpcId: request.rpcId,
-        result: { ok: true, value: { title: 'Other title', seq: 4 } },
-      }
+    rename: async (request: SessionRenameRequest) => {
+      calls.push(request.sessionId)
+      return { title: 'Other title', seq: 4 }
     },
   }
   const definitions = createSessionToolDefinitions(services, defaultSessionToolsConfig)
@@ -282,7 +278,7 @@ test('rename_session requires approval before renaming another session', async (
   assert.deepEqual(value, { sessionId: 'other', title: 'Other title', seq: 4 })
 })
 
-test('fork_session asks approval and delegates completed-turn selection to ApiProxy', async () => {
+test('fork_session asks approval and delegates completed-turn selection to the Session Controller', async () => {
   const caller = agent('current')
   const services = baseServices(caller)
   const calls: unknown[] = []
@@ -294,12 +290,9 @@ test('fork_session asks approval and delegates completed-turn selection to ApiPr
   }
   services.sessionsApi = {
     ...services.sessionsApi,
-    fork: async (request) => {
-      calls.push({ fork: request.payload })
-      return {
-        rpcId: request.rpcId,
-        result: { ok: true, value: { sessionId: SessionId('forked') } },
-      }
+    fork: async (request: SessionForkRequest) => {
+      calls.push({ fork: request })
+      return { sessionId: SessionId('forked') }
     },
   }
   const definitions = createSessionToolDefinitions(services, defaultSessionToolsConfig)

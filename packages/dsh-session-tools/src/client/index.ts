@@ -1,8 +1,9 @@
+import type { Context as ClientContext } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/dsh-api-remotes/client'
-import type {
-  ClientContext,
-  ISessions,
-} from '@deepseek-ai/dsh-client-runtime/client'
+// 0.2: `dsh-client-runtime` no longer exists. Each owning package merges its
+// Client service onto Cordis `Context` through its own `/client` type entry —
+// here the Client Session object layer that owns `ctx.sessions`.
+import type { ISessions } from '@deepseek-ai/dsh-api-session-controller/client'
 
 import { createSessionMentionSource } from './source.js'
 

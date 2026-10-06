@@ -1,4 +1,4 @@
-import type { ConversationLocation, StepLocation } from '@deepseek-ai/dsh-client-runtime/client'
+import type { ConversationLocation, StepLocation } from '@deepseek-ai/dsh-client-ui-conversation/client'
 import { describe, expect, it } from 'vitest'
 import {
   collectTurnActivityItems,

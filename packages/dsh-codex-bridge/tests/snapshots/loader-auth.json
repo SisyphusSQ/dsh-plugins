@@ -1,0 +1,14 @@
+{
+  "schemas": [
+    { "name": "<DSH_AUTH_TOOL>", "description": "", "parameters": { "type": "object" } },
+    { "name": "<IMPORTED_TOOL>", "description": "", "parameters": { "type": "object" } }
+  ],
+  "wire": [
+    { "path": "/plain", "methods": ["server/discover", "initialize", "notifications/initialized", "tools/list", "tools/call"] },
+    { "path": "/dsh", "methods": ["server/discover", "initialize", "notifications/initialized", "tools/list", "tools/call"] }
+  ],
+  "outputs": [
+    { "isError": false, "content": [{ "type": "text", "text": "authenticated-loader-result" }] },
+    { "isError": false, "content": [{ "type": "text", "text": "authenticated-loader-result" }] }
+  ]
+}

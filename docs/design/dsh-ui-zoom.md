@@ -2,17 +2,17 @@
 
 ## 1. 状态
 
-已交付：插件包本体（host + client 双半边）、快捷键命令、设置页行、profile config 长期默认值、单元与注册契约测试。
+已交付：插件包本体（host + client 双半边）、设置页行、profile config 长期默认值、单元与注册契约测试，以及真实桌面 profile 的冷启动与缩放验收（见第 4 节）。首版曾尝试键盘快捷键，但在桌面端实测不触发，已按用户决定移除；设置行是唯一交互入口。
 
-未完成：**真实 DSH 桌面 profile 的冷启动 E2E 尚未执行**。当前所有绿灯均来自类型检查、构建、打包审计和 jsdom 测试，按仓库约定这**不等于**真实 Web/桌面 E2E。
+2026-10-17：仓库源码迁移到 DSH `0.2.1-rc.2`（当前桌面宿主），台账见 [dsh-0.2.1-migration.md](dsh-0.2.1-migration.md)。
 
 ## 2. 兼容边界
 
-- 目标版本：`@deepseek-ai/dsh@0.2.0-rc.2`（与目标机桌面版一致）。
-- DSH peer 声明为 `^0.2.0-rc.1`，devDependencies 精确钉 `0.2.0-rc.2`；`@deepseek-ai/cordis` 为 `~4.0.4`。
-- peer 范围选型依据：升级卡 `DSH-0.2.0-RC1-01` 实测表明，`^0.1.x` 与 `^0.2.0` 都会被 0.2 宿主**拒绝**（`^0.2.0` 展开为 `>=0.2.0 <0.3.0-0`，而 rc 版本小于 `0.2.0`），只有 `^0.2.0-rc.1` 一类范围被接受。
-- 已用桌面版内置的 semver 7.8.5 逐包复核：本仓库 8 个包的全部 DSH peer 在 `0.2.0-rc.2` 上均被接受。
-- 依赖的 DSH 包：`dsh-client-shortcuts`、`dsh-client-store`、`dsh-client-locale`、`dsh-client-ui-renderer`、`dsh-client-ui-settings`、`dsh-client-ui-settings-general`、`dsh-client-ui-slots`、`dsh-host-webserver`、`dsh-settings`。
+- 目标版本：`@deepseek-ai/dsh@0.2.1-rc.2`（与目标机桌面版一致）；`engines.dsh` 为 `>=0.2.0-rc.2 <0.3.0`，同时覆盖 `0.2.0-rc.2`。
+- DSH peer 声明为 `^0.2.0-rc.1 || ^0.2.1-rc.2`，devDependencies 精确钉 `0.2.1-rc.2`；`@deepseek-ai/cordis` 为 `~4.0.5`。
+- peer 范围选型依据：0.2 宿主内置的兼容门禁使用 `semver.satisfies(runtime, range, { includePrerelease: true })`。`^0.2.0-rc.1` 在 0.2.1-rc.2 上仍被接受（下限 `0.2.0-rc.1`、上限 `<0.3.0-0`）；联合范围同时满足 pnpm 默认 semver（无 includePrerelease）对 exact `0.2.1-rc.2` 开发依赖的 peer 校验。
+- 0.2.1-alpha.4 起若声明 `engines.dsh` 则只按它判定；未声明时逐包检查 `@deepseek-ai/dsh*` peer。本包两者同时保留：旧宿主（0.2.0-rc.2）只读 peer。
+- 依赖的 DSH 包：`dsh-client-store`、`dsh-client-locale`、`dsh-client-ui-renderer`、`dsh-client-ui-settings`、`dsh-client-ui-settings-general`、`dsh-client-ui-slots`、`dsh-host-webserver`、`dsh-settings`。
 
 ## 3. 架构
 
@@ -26,7 +26,7 @@
 **Client 半边**（`src/client/index.tsx`）
 
 - 在文档元素上写入内联 `zoom`，用 `ctx.effect` 绑定生命周期，插件卸载时 `removeProperty` 回收。
-- 用 `ctx.shortcuts.register` 注册三条命令，**只声明 `desktop:*` 默认绑定**：浏览器已把 `Mod+=` / `Mod+-` / `Mod+0` 占用为原生页面缩放，声明 Web 默认值既抢键也无意义；需要 Web 的用户可在自带快捷键面板里自行绑定。
+- 不注册任何键盘命令：桌面端实测 `Mod+=` / `Mod+-` / `Mod+0` 不能稳定触发；浏览器又把这些组合占用为原生页面缩放，声明默认值既抢键也无意义。设置行是唯一交互入口。
 - 注册 `settings.general.item` 行（`id: ui-zoom`，`order: 12`），排在自带「外观」(10) 与「字号大小」(11) 之后。
 
 **纯逻辑抽离**（`src/zoom.ts`）：夹取、步进、百分比到 CSS 值的换算、启动样式字符串构造，全部是不依赖 DOM 的纯函数，因此缩放策略可以脱离 jsdom 单测。
@@ -34,7 +34,7 @@
 ### 数据流
 
 ```
-快捷键 / 设置行
+设置行
       ↓ commit()
   夹取 → 写内联 style → store.sync → host.set(zoomPercent)
                                         ↓
@@ -57,6 +57,7 @@
 | 视口补偿的隔离验证 | 通过，见下方「视口单位补偿」的实测表 |
 | 真实桌面 profile 冷启动（8/8 加载） | 通过：渲染进程启动图 URL 列出全部 8 个 `@suqingsq` client bundle，无 `disabling profile plugin row` |
 | 真实桌面 profile 缩放验收 | 通过：用户确认底部账号菜单恢复正确位置；加固前的错位见下方实测表 |
+| DSH `0.2.1-rc.2` 迁移（2026-10-17） | typecheck/构建/单测通过；真实 `dsh web` profile 加载记录见 [dsh-0.2.1-migration.md](dsh-0.2.1-migration.md) |
 
 ### 视口单位补偿（2026-10-06 实测）
 
@@ -96,7 +97,7 @@ CSS `zoom` 会乘算**绝对长度**，视口单位就是绝对长度：缩放�
 
 DSH 版本线仍处于 developer preview。升级到新的 DSH 版本时：
 
-1. 用目标版本内置的 semver 复核所有 `@deepseek-ai/dsh*` peer 是否仍然被接受 —— 这是安装期与启动期的硬门禁。
-2. 复核 `ctx.shortcuts.register` 的 `ShortcutCommand` 字段集合（0.2 要求 `id`/`label`/`aliases`/`defaults`/`regions`/`modals`/`resolve` 全部齐备，且 `id` 是 branded 类型）。
-3. 复核 `settings.general.item` 槽位声明与 `PropsRuntime`/`PropsStore`/`PropsLocale` 的派生契约。
+1. 用目标版本内置的 semver 复核所有 `@deepseek-ai/dsh*` peer 与 `engines.dsh` 是否仍然被接受 —— 这是安装期与启动期的硬门禁。
+2. 复核 `settings.general.item` 槽位声明与 `PropsRuntime`/`PropsStore`/`PropsLocale` 的派生契约。
+3. 复核 `webserver/index-inject` 的注入形状（`kind: 'style'`）仍然有效。
 4. 重新执行真实 profile 冷启动 E2E，并在本文件第 4 节更新记录。

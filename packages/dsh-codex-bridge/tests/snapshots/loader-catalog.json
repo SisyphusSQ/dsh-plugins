@@ -1,0 +1,22 @@
+{
+  "enabled": {
+    "agents": [],
+    "skills": [
+      {
+        "originalName": "fixture",
+        "name": "codex-fixture-b3e5c63785b0",
+        "pluginId": null
+      }
+    ],
+    "plugins": [],
+    "mcp": [],
+    "diagnostics": []
+  },
+  "skillsDisabled": {
+    "agents": [],
+    "skills": [],
+    "plugins": [],
+    "mcp": [],
+    "diagnostics": []
+  }
+}

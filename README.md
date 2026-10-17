@@ -4,7 +4,7 @@ English | [中文](README.zh.md)
 
 Third-party plugins for [DeepSeek Harness (DSH)](https://github.com/deepseek-ai/deepseek-harness). Each directory under `packages/` is an independently installable plugin.
 
-The released `0.2.0` set is verified with `@deepseek-ai/dsh@0.1.0-rc.6`. Repository source targets the `0.2.0-rc.2` line. On 2026-10-06 five packages were retired — `dsh-agent-plugins`, `dsh-thinking-collapse`, `dsh-codex-login-dock`, `dsh-openai-codex-oauth`, and `dsh-composer-skill-mention` — so the three packages below are the maintained set. That source set is not published yet.
+The released `0.2.0` set is verified with `@deepseek-ai/dsh@0.1.0-rc.6`. Repository source targets the `0.2.1-rc.2` line (the installed Desktop host) and declares an `engines.dsh` range that also admits `0.2.0-rc.2`. On 2026-10-06 five packages were retired — `dsh-agent-plugins`, `dsh-thinking-collapse`, `dsh-codex-login-dock`, `dsh-openai-codex-oauth`, and `dsh-composer-skill-mention` — so the three packages below are the maintained set. That source set is not published yet. An additional experimental package, [`dsh-codex-bridge`](packages/dsh-codex-bridge/README.md) (read-only Codex Home compatibility), is tracked in `packages/` but is neither published nor part of that maintained set.
 
 ## Install
 

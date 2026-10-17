@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "policy": "dsh-plugin-naming/v1",
+  "plugin": {
+    "namespace": "suqingsq",
+    "name": "codex-bridge",
+    "coordinate": "suqingsq/codex-bridge",
+    "packageName": "@suqingsq/dsh-codex-bridge"
+  },
+  "names": {
+    "pluginNames": ["dsh-codex-bridge"],
+    "loaderIds": ["suqingsq-codex-bridge"],
+    "services": ["suqingsqCodexBridge"],
+    "tools": ["codex_home_catalog", "codex_agent"],
+    "commands": [],
+    "skills": [],
+    "skillProviders": ["suqingsq-codex-bridge-home"],
+    "events": [],
+    "settingsNamespaces": ["suqingsq-codex-bridge"],
+    "routes": []
+  }
+}

@@ -2,9 +2,9 @@
 
 English | [中文](README.zh.md)
 
-Whole-interface zoom for the DeepSeek Harness GUI, driven from the keyboard and from a Settings row.
+Whole-interface zoom for the DeepSeek Harness GUI, driven from a Settings row.
 
-Verified with `@deepseek-ai/dsh@0.2.0-rc.2` on the macOS Desktop profile: cold start loads the row, and the whole interface scales from it.
+Compiled and package-tested against `@deepseek-ai/dsh@0.2.1-rc.2`, the current Desktop host; the declared `engines.dsh` range also admits `0.2.0-rc.2`. Loading is recorded in the design doc.
 
 ## What it does
 

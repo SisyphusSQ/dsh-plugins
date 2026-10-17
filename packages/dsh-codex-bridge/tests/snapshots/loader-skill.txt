@@ -1,0 +1,11 @@
+<skill_content name="codex-fixture-b3e5c63785b0">
+<skill_resources>
+Base directory for this skill: <HOME>/skills/fixture
+Resolve relative paths mentioned by this skill against the base directory before using them. Load referenced resources only as needed.
+</skill_resources>
+
+<skill_instructions>
+Read-only fixture body.
+
+</skill_instructions>
+</skill_content>

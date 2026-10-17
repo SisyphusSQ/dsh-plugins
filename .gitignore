@@ -1,6 +1,8 @@
 node_modules/
 lib/
 dist/
+# Intermediate client bundle before the loader wrapper is applied.
+.client-build/
 coverage/
 *.tsbuildinfo
 .DS_Store

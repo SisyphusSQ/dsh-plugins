@@ -4,7 +4,7 @@
 
 [DeepSeek Harness (DSH)](https://github.com/deepseek-ai/deepseek-harness) 的第三方插件仓库。`packages/` 下每个目录都是一个可独立安装的插件。
 
-已发布的 `0.2.0` 集合按 `@deepseek-ai/dsh@0.1.0-rc.6` 验证。仓库源码目标线为 `0.2.0-rc.2`。2026-10-06 退役了五个包——`dsh-agent-plugins`、`dsh-thinking-collapse`、`dsh-codex-login-dock`、`dsh-openai-codex-oauth`、`dsh-composer-skill-mention`——下列三个包是保留维护集；该源码集合尚未发布。
+已发布的 `0.2.0` 集合按 `@deepseek-ai/dsh@0.1.0-rc.6` 验证。仓库源码目标线为 `0.2.1-rc.2`（当前安装的桌面宿主），并通过 `engines.dsh` 同时覆盖 `0.2.0-rc.2`。2026-10-06 退役了五个包——`dsh-agent-plugins`、`dsh-thinking-collapse`、`dsh-codex-login-dock`、`dsh-openai-codex-oauth`、`dsh-composer-skill-mention`——下列三个包是保留维护集；该源码集合尚未发布。仓库另有一个已纳入版本管理的实验性包 [`dsh-codex-bridge`](packages/dsh-codex-bridge/README.zh.md)（只读 Codex Home 兼容），既未发布，也不属于上述维护集。
 
 ## 安装
 

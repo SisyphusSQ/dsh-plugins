@@ -1,0 +1,118 @@
+{
+  "name": "@suqingsq/dsh-codex-bridge",
+  "version": "0.1.1",
+  "description": "Read-only Codex Home compatibility for DeepSeek Harness",
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22",
+    "dsh": ">=0.2.0-rc.2 <0.3.0"
+  },
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./client": {
+      "types": "./lib/client/index.d.ts",
+      "default": "./lib/client.js"
+    },
+    "./catalog": {
+      "types": "./lib/catalog.d.ts",
+      "default": "./lib/catalog.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib",
+    "cordis.patch.yml",
+    "dsh-plugin.naming.json",
+    "README.md",
+    "README.zh.md"
+  ],
+  "sideEffects": [
+    "./lib/client.js"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-ui-renderer",
+        "@deepseek-ai/dsh-client-ui-settings"
+      ],
+      "platform": "web"
+    }
+  },
+  "scripts": {
+    "build": "pnpm run build:types && pnpm run build:client && node scripts/build-docs.mjs",
+    "build:types": "tsc -p tsconfig.json",
+    "build:client": "tsdown src/client/index.tsx --format cjs --platform browser --target es2022 --tsconfig tsconfig.json --deps.never-bundle react --deps.never-bundle react/jsx-runtime --out-dir .client-build --clean --logLevel warn && node scripts/build-client.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "pnpm run build && node --test tests/*.test.mjs",
+    "prepack": "pnpm run build"
+  },
+  "dependencies": {
+    "@deepseek-ai/dsh-hook-protocol": "0.2.1-rc.2",
+    "@deepseek-ai/schemastery": "^3.18.5",
+    "smol-toml": "^1.9.0",
+    "yaml": "^2.9.0"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "~4.0.5",
+    "@deepseek-ai/dsh-agent": "^0.2.0-rc.1 || ^0.2.1-rc.2",
+    "@deepseek-ai/dsh-skill": "^0.2.0-rc.1 || ^0.2.1-rc.2",
+    "@deepseek-ai/dsh-settings": "^0.2.0-rc.1 || ^0.2.1-rc.2",
+    "@deepseek-ai/dsh-subagent": "^0.2.0-rc.1 || ^0.2.1-rc.2",
+    "@deepseek-ai/dsh-tools": "^0.2.0-rc.1 || ^0.2.1-rc.2",
+    "@deepseek-ai/dsh-llm": "^0.2.0-rc.1 || ^0.2.1-rc.2",
+    "@deepseek-ai/dsh-mcp-client": "^0.2.0-rc.1 || ^0.2.1-rc.2",
+    "@deepseek-ai/dsh-shell": "^0.2.0-rc.1 || ^0.2.1-rc.2",
+    "@deepseek-ai/dsh-session-projection": "^0.2.0-rc.1 || ^0.2.1-rc.2",
+    "@deepseek-ai/dsh-typert-protocol": "^0.2.0-rc.1 || ^0.2.1-rc.2",
+    "@deepseek-ai/dsh-api-remotes": "^0.2.0-rc.1 || ^0.2.1-rc.2",
+    "@deepseek-ai/dsh-client-locale": "^0.2.0-rc.1 || ^0.2.1-rc.2",
+    "@deepseek-ai/dsh-client-store": "^0.2.0-rc.1 || ^0.2.1-rc.2",
+    "@deepseek-ai/dsh-client-ui-renderer": "^0.2.0-rc.1 || ^0.2.1-rc.2",
+    "@deepseek-ai/dsh-client-ui-settings": "^0.2.0-rc.1 || ^0.2.1-rc.2",
+    "@deepseek-ai/dsh-client-ui-slots": "^0.2.0-rc.1 || ^0.2.1-rc.2",
+    "react": "^18.2.0"
+  },
+  "devDependencies": {
+    "@deepseek-ai/cordis": "~4.0.5",
+    "@deepseek-ai/dsh-agent": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-api-gateway": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-api-remote-access": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-api-remotes": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-bash-local": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-client-connection": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-client-locale": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-client-store": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-client-ui-renderer": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-client-ui-settings": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-client-ui-slots": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-fs-local": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-llm": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-mcp-client": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-session-projection": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-settings": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-shell": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-skill": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-subagent": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-subprocess-local": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-tools": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-typert-protocol": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-typert-registry": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-working-directory": "0.2.1-rc.2",
+    "@types/node": "^24.0.0",
+    "@types/react": "~18.3.1",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "tsdown": "^0.22.14",
+    "typescript": "^5.9.0"
+  }
+}

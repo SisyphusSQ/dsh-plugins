@@ -1,0 +1,3 @@
+- insert:
+    - id: suqingsq-codex-bridge
+      name: '@suqingsq/dsh-codex-bridge'

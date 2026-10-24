@@ -1,0 +1,134 @@
+<section class="dsh-codex-home-page" aria-label="Codex Home">
+<style>[scoped theme styles]</style>
+<h2>Codex Home</h2>
+<p class="ch-muted">只读导入 Codex Home。Skills 和 Plugins 均为整类开关；插件自带技能由 Plugins 控制。</p>
+<section class="ch-group" aria-labelledby="codex-home-bridge">
+<div class="ch-group-heading">
+<h3 id="codex-home-bridge">桥接与目录</h3>
+</div>
+<div class="ch-rows">
+<label class="ch-row">
+<span class="ch-copy">
+<span class="ch-label">启用 Codex Home 桥接</span>
+<span class="ch-muted" id="codex-home-enabled-hint">导入所选类别；关闭桥接会保留各类偏好。</span>
+</span>
+<input class="ch-switch" type="checkbox" role="switch" aria-label="启用 Codex Home 桥接" aria-describedby="codex-home-enabled-hint" checked=""/>
+</label>
+<form class="ch-directory">
+<label class="ch-label" for="codex-home-directory">Codex Home 目录</label>
+<div class="ch-directory-controls">
+<div class="ch-directory-field">
+<input id="codex-home-directory" name="home" type="text" required="" pattern=".*\S.*" aria-describedby="codex-home-directory-hint" aria-errormessage="codex-home-directory-error" value="/fixture/.codex"/>
+<p class="ch-field-error" id="codex-home-directory-error">请输入非空的 Codex Home 目录。</p>
+</div>
+<button type="submit">保存目录</button>
+</div>
+<p class="ch-muted" id="codex-home-directory-hint">编辑 Host 上的目录后保存；仅在 Host 接受后生效。</p>
+</form>
+</div>
+<div class="ch-notice" aria-live="polite">
+</div>
+</section>
+<section class="ch-group" aria-labelledby="codex-home-imports">
+<div class="ch-group-heading">
+<h3 id="codex-home-imports">导入内容</h3>
+</div>
+<div class="ch-rows">
+<label class="ch-row">
+<span class="ch-copy">
+<span class="ch-label">全局指令</span>
+<span class="ch-muted" id="codex-home-instructions-hint">读取 Home 级 AGENTS.override.md 或 AGENTS.md，不读取工作区指令。</span>
+</span>
+<input class="ch-switch" type="checkbox" role="switch" aria-label="全局指令" aria-describedby="codex-home-instructions-hint" checked=""/>
+</label>
+<label class="ch-row">
+<span class="ch-copy">
+<span class="ch-label">独立 Skills</span>
+<span class="ch-muted" id="codex-home-skills-hint">整类导入独立技能。</span>
+</span>
+<input class="ch-switch" type="checkbox" role="switch" aria-label="独立 Skills" aria-describedby="codex-home-skills-hint" checked=""/>
+</label>
+<label class="ch-row">
+<span class="ch-copy">
+<span class="ch-label">Codex Plugins</span>
+<span class="ch-muted" id="codex-home-plugins-hint">整类导入插件及其技能；缓存存在不代表插件已启用。</span>
+</span>
+<input class="ch-switch" type="checkbox" role="switch" aria-label="Codex Plugins" aria-describedby="codex-home-plugins-hint" checked=""/>
+</label>
+<label class="ch-row">
+<span class="ch-copy">
+<span class="ch-label">自定义 Agents</span>
+<span class="ch-muted" id="codex-home-agents-hint">整类导入受支持的自定义 Agent 定义。</span>
+</span>
+<input class="ch-switch" type="checkbox" role="switch" aria-label="自定义 Agents" aria-describedby="codex-home-agents-hint" checked=""/>
+</label>
+</div>
+</section>
+<section class="ch-group" aria-labelledby="codex-home-authorization">
+<div class="ch-group-heading">
+<h3 id="codex-home-authorization">执行授权</h3>
+</div>
+<div class="ch-rows">
+<label class="ch-row">
+<span class="ch-copy">
+<span class="ch-label">授权 MCP 连接</span>
+<span class="ch-muted" id="codex-home-connectMcp-hint">可能启动本地程序、连接外部服务器；启用前需要确认。</span>
+</span>
+<input class="ch-switch" type="checkbox" role="switch" aria-label="授权 MCP 连接" aria-describedby="codex-home-connectMcp-hint"/>
+</label>
+<label class="ch-row">
+<span class="ch-copy">
+<span class="ch-label">授权本地 Hooks</span>
+<span class="ch-muted" id="codex-home-executeHooks-hint">受支持的 Hooks 可能执行本地 shell 命令；启用前需要确认。</span>
+</span>
+<input class="ch-switch" type="checkbox" role="switch" aria-label="授权本地 Hooks" aria-describedby="codex-home-executeHooks-hint"/>
+</label>
+<p class="ch-muted ch-risk">MCP 与 Hooks 可能以 DSH 进程权限执行本地程序。导入器只读，但不会为授权程序提供沙箱。MCP 使用 DSH 原生客户端；鉴权请在 DSH 中独立配置，不导入 Codex 凭据。</p>
+</div>
+</section>
+<section class="ch-group" aria-labelledby="codex-home-diagnostics" aria-busy="false">
+<div class="ch-group-heading">
+<h3 id="codex-home-diagnostics">只读诊断</h3>
+<button type="button">刷新诊断</button>
+</div>
+<div class="ch-diagnostics">
+<p class="ch-muted">目录快照</p>
+<dl class="ch-counts">
+<div>
+<dt>Skills</dt>
+<dd>0</dd>
+</div>
+<div>
+<dt>Plugins</dt>
+<dd>0</dd>
+</div>
+<div>
+<dt>Agents</dt>
+<dd>0</dd>
+</div>
+<div>
+<dt>MCP 条目</dt>
+<dd>0</dd>
+</div>
+<div>
+<dt>Hooks</dt>
+<dd>0</dd>
+</div>
+</dl>
+<p class="ch-muted">数量仅反映本次扫描和所选类别，不代表连接健康或执行成功。Skills 包含插件技能；MCP 条目可能被阻止。</p>
+<div class="ch-scan">
+<p>扫描时间: <time dateTime="2026-10-24T14:30:00Z">2026-10-24T14:30:00Z</time>
+</p>
+<p>扫描目录: /fixture/.codex</p>
+</div>
+<details>
+<summary>插件详情 (0)</summary>
+<p class="ch-muted">本次快照中没有插件。</p>
+</details>
+<details>
+<summary>诊断详情 (0)</summary>
+<p class="ch-muted">本次快照没有诊断消息；这不代表运行健康检查通过。</p>
+</details>
+</div>
+</section>
+</section>

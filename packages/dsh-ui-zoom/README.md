@@ -4,7 +4,7 @@ English | [中文](README.zh.md)
 
 Whole-interface zoom for the DeepSeek Harness GUI, driven from a Settings row.
 
-Compiled and package-tested against `@deepseek-ai/dsh@0.2.1-rc.2`, the current Desktop host; the declared `engines.dsh` range also admits `0.2.0-rc.2`. Loading is recorded in the design doc.
+The compile-time and package-test baseline is `@deepseek-ai/dsh@0.2.1-rc.2`; the declared `engines.dsh` range also admits `0.2.0-rc.2`. Runtime evidence and its exact host versions are recorded in the design doc.
 
 ## What it does
 
@@ -30,7 +30,9 @@ Two details are deliberate.
 
 **Script-positioned overlays are rescaled.** A `getBoundingClientRect()` result is reported in the rendered space, so writing one into the inline `left`/`top`/`bottom`/`right` of a `position: fixed` box applies the factor a second time and the overlay drifts from its trigger. A `MutationObserver` divides those inline offsets by the factor, once per external write; anything positioned from a stylesheet carries no inline offset and is never touched.
 
-The Host half injects the stylesheet through `webserver/index-inject` before any browser plugin runs, so the first paint is already zoomed and the shell never flashes at 100%.
+**Better Sidebar's viewport layer is compensated too.** Its nested `data-dsh-panel-host` uses `100vh`, so it receives the same inverse-height correction. This keeps the layer viewport-sized instead of triggering its degraded positioning loop and growing the document's scrollable area.
+
+The Host half injects the stylesheet through `webserver/index-inject` before any browser plugin runs, so the first paint is already zoomed. The client takes ownership of that same sheet, moves it after the shell stylesheet, updates it on each zoom change, and removes it on unload. Returning to 100% therefore cannot reactivate stale startup compensation.
 
 ## Configuration
 
@@ -55,7 +57,7 @@ They are independent and multiply. A 125% interface zoom with a 16 px conversati
 
 ## Verification
 
-Type-checking, bundling and the unit/registration suites run in this repository. The compatibility boundary, the verification record and the known limits are kept in [`docs/design/dsh-ui-zoom.md`](../../docs/design/dsh-ui-zoom.md).
+Type-checking, bundling and the unit/registration suites run in this repository. After building, `pnpm --filter @suqingsq/dsh-ui-zoom test:browser` runs real Chromium layout regressions from the development checkout, using an installed Chrome/Chromium (`CHROME_BIN` can select it). It checks 50/100/115/150/300%, repeated document scrolling, inner wheel scrolling and live zoom changes. This fixture is not full DSH Web/Desktop E2E. The compatibility boundary, verification record and known limits are kept in [`docs/design/dsh-ui-zoom.md`](../../docs/design/dsh-ui-zoom.md).
 
 ## License
 

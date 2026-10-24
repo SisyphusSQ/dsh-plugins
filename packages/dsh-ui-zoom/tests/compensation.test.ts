@@ -38,6 +38,24 @@ describe('zoomCompensationCss', () => {
     expect(zoomCompensationCss(125)).toContain('body>*{max-height:calc(100vh / 1.25)}')
   })
 
+  it('compensates the nested Better Sidebar viewport layer, not only body children', () => {
+    const style = document.createElement('style')
+    style.textContent = zoomCompensationCss(115)
+    document.head.append(style)
+    const host = document.createElement('div')
+    host.dataset.dshBetterSidebar = ''
+    const layer = document.createElement('div')
+    layer.dataset.dshPanelHost = ''
+    host.append(layer)
+    document.body.append(host)
+    try {
+      expect(Number.parseFloat(getComputedStyle(layer).height)).toBeCloseTo(window.innerHeight / 1.15, 2)
+    } finally {
+      host.remove()
+      style.remove()
+    }
+  })
+
   it('bakes the factor into the numbers so the Host can inject it first', () => {
     // No custom property, no attribute gate: the boot sheet must work before any
     // browser plugin has run.
@@ -55,7 +73,7 @@ describe('bootZoomStyle', () => {
   })
 
   it('stays a single zoom rule at 100%', () => {
-    expect(bootZoomStyle(100)).toBe(':root{zoom:1}')
+    expect(bootZoomStyle(100)).toBe(':root{zoom:1}/* dsh-ui-zoom */')
   })
 })
 

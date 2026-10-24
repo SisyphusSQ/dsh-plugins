@@ -11,6 +11,9 @@ import {
   ZOOM_PERCENT_STEP,
 } from './settings.js'
 
+/** Identifies the Host's boot sheet so the client can adopt and dispose it. */
+export const ZOOM_STYLE_MARKER = '/* dsh-ui-zoom */'
+
 /** Step direction accepted by {@link stepZoomPercent}. */
 export type ZoomDirection = 1 | -1
 
@@ -91,6 +94,9 @@ export function zoomCompensationCss(percent: number): string {
   return [
     `body{width:calc(100vw / ${factor});height:calc(100vh / ${factor})}`,
     `body>*{max-height:calc(100vh / ${factor})}`,
+    // Better Sidebar's layer is nested below its body-level mount. Its 100vh
+    // otherwise triggers degraded absolute positioning and a growing scroll area.
+    `body>[data-dsh-better-sidebar]>[data-dsh-panel-host]{height:calc(100vh / ${factor})}`,
   ].join('')
 }
 
@@ -123,5 +129,5 @@ export function rescaleFixedOffset(value: number, factor: number): number {
  * @returns A stylesheet.
  */
 export function bootZoomStyle(percent: number): string {
-  return `:root{zoom:${zoomCssValue(percent)}}${zoomCompensationCss(percent)}`
+  return `:root{zoom:${zoomCssValue(percent)}}${zoomCompensationCss(percent)}${ZOOM_STYLE_MARKER}`
 }

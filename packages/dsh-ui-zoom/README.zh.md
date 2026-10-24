@@ -4,7 +4,7 @@
 
 DeepSeek Harness 整体界面缩放插件：入口是设置页的「整体界面缩放」行。
 
-编译与包测试目标为 `@deepseek-ai/dsh@0.2.1-rc.2`（当前桌面宿主）；声明的 `engines.dsh` 范围同时覆盖 `0.2.0-rc.2`。
+编译与包测试基线为 `@deepseek-ai/dsh@0.2.1-rc.2`；声明的 `engines.dsh` 范围同时覆盖 `0.2.0-rc.2`。运行验证及其确切宿主版本记录在设计文档中。
 
 ## 它能做什么
 
@@ -26,7 +26,9 @@ DeepSeek Harness 自带的排版控制只有一个「外观 → 字号大小」�
 
 **用 `zoom` 而不是 `transform: scale`。** `zoom` 会成倍地改变实际使用值，因此布局、命中测试、锚点定位和拖拽区域都在同一个坐标系里解析。`transform: scale` 会让布局计算停留在未缩放空间，并为 fixed 定位的后代新建包含块。
 
-Host 半边通过 `webserver/index-inject` 在任何浏览器插件启动前注入样式表，因此首屏就已经是缩放后的画面，不会先闪一下 100%。
+**Better Sidebar 的视口浮层也会补偿。** 嵌套的 `data-dsh-panel-host` 使用 `100vh`，同样需要按缩放倍数反向校正高度，避免触发其降级定位循环并持续撑长文档滚动区。
+
+Host 半边通过 `webserver/index-inject` 在任何浏览器插件启动前注入样式表。客户端接管同一张表，将它移到宿主样式表之后，随缩放变化更新，并在卸载时移除。因此恢复 100% 时不会重新激活旧的启动补偿。
 
 ## 配置
 
@@ -51,7 +53,7 @@ Host 半边通过 `webserver/index-inject` 在任何浏览器插件启动前注�
 
 ## 验证
 
-类型检查、打包和单测/注册契约测试都在本仓库内运行。兼容边界、验证记录和已知限制记录在 [`docs/design/dsh-ui-zoom.md`](../../docs/design/dsh-ui-zoom.md)。
+类型检查、打包和单测/注册契约测试都在本仓库内运行。构建后，可在开发仓库执行 `pnpm --filter @suqingsq/dsh-ui-zoom test:browser`，使用已安装的 Chrome/Chromium（可通过 `CHROME_BIN` 指定）做真实布局回归，覆盖 50/100/115/150/300%、连续整页滚动、内部滚轮和动态缩放。此 fixture 不等于完整 DSH Web/Desktop E2E。兼容边界、验证记录和已知限制记录在 [`docs/design/dsh-ui-zoom.md`](../../docs/design/dsh-ui-zoom.md)。
 
 ## 许可
 

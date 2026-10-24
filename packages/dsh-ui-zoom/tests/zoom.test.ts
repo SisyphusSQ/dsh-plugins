@@ -74,7 +74,7 @@ describe('bootZoomStyle', () => {
   it('targets the document element, never the application root', () => {
     // Menus, modals and toasts portal onto document.body, so a rule scoped to
     // #root would leave every overlay unscaled.
-    expect(bootZoomStyle(DEFAULT_ZOOM_PERCENT)).toBe(':root{zoom:1}')
+    expect(bootZoomStyle(DEFAULT_ZOOM_PERCENT)).toBe(':root{zoom:1}/* dsh-ui-zoom */')
   })
 
   it('carries the configured value', () => {

@@ -22,7 +22,7 @@ import {
   ZOOM_FIELD,
   type UiZoomSettings,
 } from '../settings.js'
-import { bootZoomStyle, clampZoomPercent, zoomCssValue, zoomFactor } from '../zoom.js'
+import { bootZoomStyle, clampZoomPercent, zoomCssValue, zoomFactor, ZOOM_STYLE_MARKER } from '../zoom.js'
 import { en, zh, type UiZoomKey } from './locales.js'
 import { installFixedOffsetCorrection } from './fixed-offsets.js'
 import { createUiZoomRowStore } from './settings-store.js'
@@ -99,12 +99,16 @@ export function apply(ctx: ClientContext): void {
     return () => { document.documentElement.style.removeProperty('zoom') }
   }, 'dsh-ui-zoom: document zoom')
 
-  // The Host injects the boot rules, but they bake the factor in and go stale the
-  // moment the user moves the row, so this element is their live owner.
+  // Take over the Host's first-paint sheet rather than layering a second sheet
+  // above it. At 100% there are no compensation rules, so a forgotten boot sheet
+  // would become active again. The same owner removes all rules on unload.
   ctx.effect(() => {
-    const style = document.createElement('style')
+    const style = [...document.head.querySelectorAll('style')]
+      .find(sheet => sheet.textContent?.includes(ZOOM_STYLE_MARKER))
+      ?? document.createElement('style')
     style.dataset.dshUiZoom = ''
     style.textContent = bootZoomStyle(current)
+    // Move an adopted early boot sheet after the shell's own stylesheet too.
     document.head.append(style)
     compensation = style
     return () => {

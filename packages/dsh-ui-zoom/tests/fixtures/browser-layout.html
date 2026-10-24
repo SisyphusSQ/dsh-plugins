@@ -1,0 +1,166 @@
+<!doctype html>
+<!--
+The Better Sidebar CSS/geometry reproducer below derives from
+https://github.com/omdsh-dev/DSH-better-sidebar, version 0.28.0.
+
+MIT License
+Copyright (c) 2026 dsh-external
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>dsh-ui-zoom browser layout regression (not DSH E2E)</title>
+  <style>
+    /* Host shell contract: do not replace these percentage heights with vh. */
+    html, body, #root { height: 100%; margin: 0; padding: 0; }
+    .main-frame { height: 100%; overflow: hidden; display: flex; }
+    .inner-scroll { flex: 1; min-width: 0; overflow: auto; }
+    .long-content { height: 12000px; width: 100%; }
+    /* Better Sidebar's layer is nested inside its persistent body child.
+       Geometry rules copied from the installed sidebar.module.css (2026-10-24).
+       In particular, body > * does NOT select this layer. */
+    [data-dsh-panel-host] {
+      position: fixed; inset: 0; height: 100vh;
+      z-index: 25; pointer-events: none;
+      overflow: hidden; overflow: clip;
+    }
+    [data-dsh-panel-host][data-dsh-panel-host-degraded] {
+      position: absolute; top: 0; left: 0;
+    }
+    .panel {
+      position: absolute; right: 0; bottom: 0;
+      width: 240px; height: 50%; pointer-events: auto;
+      display: flex; flex-direction: column; contain: layout style;
+    }
+    .panel-scroll { flex: 1; min-height: 0; overflow: auto; }
+  </style>
+  <style id="zoom-style">/*__ZOOM_CSS__*/</style>
+</head>
+<body>
+  <div id="root"><main class="main-frame"><section class="inner-scroll"><div class="long-content">Main content</div></section></main></div>
+  <div data-dsh-better-sidebar><div data-dsh-panel-host><aside class="panel"><div class="panel-scroll"><div class="long-content">Panel content</div></div></aside></div></div>
+  <script>
+    (() => {
+    // Original Better Sidebar geometry fallback, preserving its thresholds,
+    // rendered-coordinate translation and requestAnimationFrame recurrence.
+    // This is a fixture of the external algorithm, not a corrected substitute.
+    let hostCheckFrame = null;
+    let syncFrames = 0;
+    const layer = document.querySelector('[data-dsh-panel-host]');
+    function scheduleHostCheck() {
+      hostCheckFrame ??= requestAnimationFrame(() => {
+        hostCheckFrame = null;
+        const rect = layer.getBoundingClientRect();
+        const mismatched = Math.abs(rect.left) > 8 || Math.abs(rect.top) > 8
+          || Math.abs(rect.width - window.innerWidth) > 8 || Math.abs(rect.height - window.innerHeight) > 8;
+        if (!mismatched) {
+          layer.removeAttribute('data-dsh-panel-host-degraded');
+          layer.style.transform = '';
+          return;
+        }
+        layer.setAttribute('data-dsh-panel-host-degraded', '');
+        let applied = { x: 0, y: 0 };
+        const sync = () => {
+          syncFrames += 1;
+          const r = layer.getBoundingClientRect();
+          const rawLeft = r.left - applied.x;
+          const rawTop = r.top - applied.y;
+          if (Math.abs(rawLeft) <= 1 && Math.abs(rawTop) <= 1
+            && Math.abs(r.width - window.innerWidth) <= 1 && Math.abs(r.height - window.innerHeight) <= 1) {
+            layer.removeAttribute('data-dsh-panel-host-degraded');
+            layer.style.transform = '';
+            return;
+          }
+          const next = { x: -rawLeft, y: -rawTop };
+          if (next.x !== applied.x || next.y !== applied.y) {
+            applied = next;
+            layer.style.transform = `translate(${applied.x}px, ${applied.y}px)`;
+          }
+          hostCheckFrame = requestAnimationFrame(sync);
+        };
+        hostCheckFrame = requestAnimationFrame(sync);
+      });
+    }
+    const frames = async (count = 4) => {
+      for (let i = 0; i < count; i += 1) await new Promise(requestAnimationFrame);
+    };
+    const rect = element => {
+      const { x, y, width, height, right, bottom } = element.getBoundingClientRect();
+      return { x, y, width, height, right, bottom };
+    };
+    window.layoutRegression = {
+      frames,
+      stop() { if (hostCheckFrame !== null) cancelAnimationFrame(hostCheckFrame); },
+      measure() {
+        const root = document.documentElement;
+        return {
+          viewport: { width: innerWidth, height: innerHeight },
+          html: { ...rect(root), clientHeight: root.clientHeight, scrollHeight: root.scrollHeight, clientWidth: root.clientWidth, scrollWidth: root.scrollWidth, overflow: getComputedStyle(root).overflow },
+          body: rect(document.body),
+          frame: rect(document.querySelector('.main-frame')),
+          layer: rect(layer), panel: rect(document.querySelector('.panel')),
+          degraded: layer.hasAttribute('data-dsh-panel-host-degraded'), syncFrames,
+          scroll: { x: scrollX, y: scrollY },
+          mainScroll: document.querySelector('.inner-scroll').scrollTop,
+          panelScroll: document.querySelector('.panel-scroll').scrollTop,
+        };
+      },
+      async probeDocumentScroll() {
+        const positions = [];
+        // Repeated requests catch viewport drift and a self-amplifying fallback,
+        // rather than inspecting scrollHeight once at initial layout.
+        for (let i = 0; i < 12; i += 1) {
+          window.scrollBy(120, 160);
+          await frames(2);
+          positions.push({ x: scrollX, y: scrollY, layer: rect(layer) });
+        }
+        window.scrollTo(0, 0);
+        await frames();
+        return positions;
+      },
+      async probeInnerScroll() {
+        const main = document.querySelector('.inner-scroll');
+        const panel = document.querySelector('.panel-scroll');
+        main.scrollTop = 0;
+        panel.scrollTop = 0;
+        const mainSteps = [], panelSteps = [];
+        for (let i = 0; i < 4; i += 1) {
+          main.scrollBy(0, 80);
+          panel.scrollBy(0, 80);
+          await frames(2);
+          mainSteps.push(main.scrollTop);
+          panelSteps.push(panel.scrollTop);
+        }
+        return { mainSteps, panelSteps };
+      },
+      async update(css) {
+        // Keep the external fallback's state intact: a live stylesheet change
+        // must work without remounting or repairing Better Sidebar for it.
+        window.scrollTo(0, 0);
+        document.querySelector('#zoom-style').textContent = css;
+        await frames(16);
+      },
+    };
+    scheduleHostCheck();
+    })();
+  </script>
+</body>
+</html>

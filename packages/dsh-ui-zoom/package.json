@@ -1,6 +1,6 @@
 {
   "name": "@suqingsq/dsh-ui-zoom",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Whole-interface zoom for the DeepSeek Harness Web and Desktop GUI.",
   "type": "module",
   "engines": {
@@ -24,6 +24,7 @@
     "lib",
     "src",
     "scripts",
+    "tests/fixtures/browser-layout.html",
     "cordis.patch.yml",
     "dsh-plugin.naming.json",
     "README.md",
@@ -107,6 +108,7 @@
     "build:client": "tsdown src/client/index.tsx --format cjs --platform browser --target es2022 --tsconfig tsconfig.json --deps.never-bundle react --deps.never-bundle react/jsx-runtime --out-dir .client-build --clean --sourcemap --logLevel warn && node scripts/build-client.mjs",
     "prepack": "pnpm run build",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:browser": "node scripts/test-browser.mjs"
   }
 }

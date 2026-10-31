@@ -19,7 +19,7 @@ export {
 } from "./protocol.js";
 
 export const name = "worktree-workspaces";
-export const inject = ["tools", "commands", "workspaceRegistry"];
+export const inject = ["tools", "commands", "workspaceRegistry", "workingDirectory", "fs", "subprocess", "sandbox", "sandboxPolicy"];
 
 export interface Config {
   baseDir?: string;

@@ -1,9 +1,9 @@
 /**
  * Whole-interface zoom row registered into the General section's item slot.
  *
- * The row edits the durable preference the browser half applies, so the
- * displayed value always follows the persisted setting rather than the click
- * echo. Styling stays inline on `--dsw-*` tokens: the row renders inside the
+ * The row shows the live chosen zoom while its ordered Host write is pending,
+ * then reconciles to the confirmed setting and reports a failed save inline.
+ * Styling stays inline on `--dsw-*` tokens: the row renders inside the
  * host's settings list, and a v1 plugin carries no stylesheet of its own.
  */
 import type { CSSProperties } from 'react'
@@ -66,11 +66,13 @@ const value: CSSProperties = {
  */
 export function UiZoomRow({ t, setZoomPercent, useStore }: UiZoomRowComponentProps) {
   const zoomPercent = useStore(state => state.zoomPercent)
+  const saveFailed = useStore(state => state.saveFailed)
   return (
     <div style={row}>
       <div style={text}>
         <div style={title}>{t('zoom.title')}</div>
         <div style={description}>{t('zoom.description')}</div>
+        {saveFailed && <div role="alert" style={description}>{t('zoom.saveFailed')}</div>}
       </div>
       <div style={control}>
         <button

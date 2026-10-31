@@ -4,7 +4,7 @@
 
 可独立安装的 DeepSeek Harness 插件。每个包有自己的 README、测试和验证记录。
 
-已发布的 `0.2.0` 集合按 `@deepseek-ai/dsh@0.1.0-rc.6` 验证；仓库源码目标线为 `@deepseek-ai/dsh@0.2.1-rc.2`，`engines.dsh` 范围同时覆盖 `0.2.0-rc.2`。2026-10-06 退役了五个包，下表是保留维护集，另加实验性、未发布的 `dsh-codex-bridge`。
+已发布的 `0.2.0` 集合按 `@deepseek-ai/dsh@0.1.0-rc.6` 验证；仓库源码目标线为 `@deepseek-ai/dsh@0.2.1-rc.5`，`engines.dsh` 范围同时覆盖 `0.2.0-rc.2`。2026-10-06 退役了五个包，下表是保留维护集，另加实验性、未发布的 `dsh-codex-bridge`。
 
 | 包 | 能力 |
 | --- | --- |

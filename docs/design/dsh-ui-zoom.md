@@ -8,10 +8,12 @@
 
 2026-10-24：修复 Better Sidebar 嵌套视口层漏补偿导致的整页滚动增长，以及恢复 100%/卸载后启动样式残留。本机 `sqmc04` 的实际 Desktop 已是 `0.2.1-rc.3`；本轮没有顺带迁移开发依赖，具体证据与生效边界见第 4 节。
 
+2026-10-31：源码依赖对齐 DSH `0.2.1-rc.5`，新增 `0.1.7` 修复真实 Web 连续缩放丢失。原生 ConfigForms 的旧 describe 在新写入排队时可回灌较早值；本包保护最新本地意图至对应写入 settle，再收敛到 Host/最近确认值，拒绝或断线给出行内失败提示。真实 SDK/React 时序回归先 RED 后 GREEN，57 项通过；日常 3080 页面十次点击到 150%、刷新持久化、Tooltip/Menu 几何及恢复 100% 通过。分层证据、产物身份和未覆盖边界见 [rc.5 适配验收记录](dsh-0.2.1-rc.5-adaptation.md)。
+
 ## 2. 兼容边界
 
-- 编译与包测试基线：`@deepseek-ai/dsh@0.2.1-rc.2`；`engines.dsh` 为 `>=0.2.0-rc.2 <0.3.0`，同时覆盖 `0.2.0-rc.2`。
-- DSH peer 声明为 `^0.2.0-rc.1 || ^0.2.1-rc.2`，devDependencies 精确钉 `0.2.1-rc.2`；`@deepseek-ai/cordis` 为 `~4.0.5`。
+- 编译与包测试基线：`@deepseek-ai/dsh@0.2.1-rc.5`（2026-10-31 对齐）；`engines.dsh` 为 `>=0.2.0-rc.2 <0.3.0`，同时覆盖 `0.2.0-rc.2`。
+- DSH peer 声明为 `^0.2.0-rc.1 || ^0.2.1-rc.2`，devDependencies 精确钉 `0.2.1-rc.5`；`@deepseek-ai/cordis` 为 `~4.0.5`。
 - peer 范围选型依据：0.2 宿主内置的兼容门禁使用 `semver.satisfies(runtime, range, { includePrerelease: true })`。`^0.2.0-rc.1` 在 0.2.1-rc.2 上仍被接受（下限 `0.2.0-rc.1`、上限 `<0.3.0-0`）；联合范围同时满足 pnpm 默认 semver（无 includePrerelease）对 exact `0.2.1-rc.2` 开发依赖的 peer 校验。
 - 0.2.1-alpha.4 起若声明 `engines.dsh` 则只按它判定；未声明时逐包检查 `@deepseek-ai/dsh*` peer。本包两者同时保留：旧宿主（0.2.0-rc.2）只读 peer。
 - 依赖的 DSH 包：`dsh-client-store`、`dsh-client-locale`、`dsh-client-ui-renderer`、`dsh-client-ui-settings`、`dsh-client-ui-settings-general`、`dsh-client-ui-slots`、`dsh-host-webserver`、`dsh-settings`。

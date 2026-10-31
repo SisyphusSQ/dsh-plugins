@@ -1,0 +1,37 @@
+[
+  {
+    "name": "create_session",
+    "description": "Create a real persisted DSH session and its idle Agent through the Host business API. By default it inherits this session's effective working directory (including cd changes) and agent preset. The new session is not prompted automatically.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "cwd": {
+          "type": "string",
+          "description": "Optional absolute working directory. Defaults to the calling session's validated effective directory, including cd changes and Host directory recovery/fallback."
+        },
+        "agent_preset": {
+          "type": "string",
+          "description": "Optional Agent preset id. Defaults to the calling session preset, then the deployment default."
+        }
+      }
+    }
+  },
+  {
+    "name": "fork_session",
+    "description": "Fork an ordinary DSH session through the Host business API and create a real idle Agent. An explicit at_seq copies the exact inclusive event prefix; the Host synthetically closes an open tail. Omission uses the latest completed-turn prefix. Source history, directory changes, workspace, lineage, and title seed follow Host semantics; the Host selects the new Agent's model.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "session_id": {
+          "type": "string",
+          "description": "Exact source session id."
+        },
+        "at_seq": {
+          "type": "integer",
+          "description": "Optional exact inclusive source event seq. The event must exist; an open cut receives synthetic fork closers, not later source events. Omission selects the latest completed-turn prefix."
+        }
+      },
+      "required": ["session_id"]
+    }
+  }
+]

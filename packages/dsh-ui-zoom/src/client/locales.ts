@@ -8,6 +8,7 @@ export const zh = {
   'zoom.increase': '放大界面',
   'zoom.decrease': '缩小界面',
   'zoom.reset': '恢复 100%',
+  'zoom.saveFailed': '无法确认缩放已保存，已恢复最近确认的 Host 设置。',
 } satisfies Record<string, string>
 
 /** The `ui-zoom` namespace key union. */
@@ -21,4 +22,5 @@ export const en = {
   'zoom.increase': 'Zoom in the interface',
   'zoom.decrease': 'Zoom out the interface',
   'zoom.reset': 'Reset to 100%',
+  'zoom.saveFailed': 'Zoom could not be confirmed as saved. Restored the last confirmed Host setting.',
 } satisfies Record<UiZoomKey, string>

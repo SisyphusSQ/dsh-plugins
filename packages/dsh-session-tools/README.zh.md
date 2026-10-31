@@ -2,9 +2,9 @@
 
 [English](README.md) | 中文
 
-DeepSeek Harness 的会话能力插件。同一包提供六个模型侧工具，以及 Web 输入框的 `@` 会话候选：选中后把另一会话作为带出处的上下文注入。
+DeepSeek Harness 的会话能力插件。提供六个模型侧工具，并接入 Host 原生 Web `@` 引用，把会话作为带出处的上下文使用。
 
-编译与包测试目标为 `@deepseek-ai/dsh@0.2.1-rc.2`（当前桌面宿主）；已发布的 `0.2.0` 版本按 `@deepseek-ai/dsh@0.1.0-rc.6` 验证。声明的 `engines.dsh` 范围同时覆盖 `0.2.0-rc.2`。
+编译与包测试目标为 `@deepseek-ai/dsh@0.2.1-rc.5`，包含真实 Loader + AgentLoop + Session Controller 组合验证；不将其描述为 Web 或真实模型 E2E 验证。
 
 ## 安装
 
@@ -22,20 +22,22 @@ dsh plugin --profile web add @suqingsq/dsh-session-tools@0.2.0
 | --- | --- |
 | `list_sessions` | 列出普通会话元数据（id、标题、cwd），不搜索正文。不含 subagent 会话。 |
 | `read_session` | 将另一普通会话的受限、不可信快照附加到当前 step。工具调用、思考、内部上下文和未完成片段都会去掉。 |
-| `create_session` | 通过 Host API 创建真实持久会话和 idle Agent。默认继承当前 cwd 与 agent preset。新会话不会自动被提问。 |
+| `create_session` | 通过 Host API 创建真实持久会话和 idle Agent。未显式覆盖时，校验并继承调用者当前有效 cwd（包括 `cd` 和目录恢复）及 agent preset。新会话不会自动被提问。 |
 | `rename_session` | 使用与 Web 相同的业务 API 重命名当前会话或其他普通会话。 |
-| `fork_session` | 在已完成轮次边界 Fork 普通会话，并继承 cwd、模型、Workspace、lineage 和标题种子。 |
+| `fork_session` | 指定 `at_seq` 时精确复制包含该事件的源日志前缀，并为未闭合尾部生成 Fork 结束事件，不复制更晚的源事件；省略时使用最近已完成轮次前缀。Host 保留源历史、目录变更、Workspace、lineage 和标题种子，并负责选择新 Agent 的模型。 |
 | `send_message_to_session` | 给另一普通会话排队一个 follow-up turn，等待对方当前轮结束，只返回投递确认。 |
+
+公开的 `createSessionToolDefinitions()` 工厂仍接受原有 services 结构。可选 `workingDirectory` 服务优先；未提供时，默认目录创建从已认证调用 Agent 的原生 Context 获取该服务。两者都缺失时明确报错，不回退旧 header 或进程 cwd；显式 `cwd` 无需目录服务。
 
 ## `@` 会话提及
 
-Web 输入框的 `@` 会多一组普通会话候选（排除当前会话和 subagent）。与当前 cwd 相同的会话排在前面。
+默认 Web 路径使用 `@deepseek-ai/dsh-client-ui-reference`：单一 `reference` 提供者统一列出文件、目录、子智能体和会话候选。本包不再注册第二组 `session` 候选，也不重复挂载自己的 pre-step 提及适配器。
 
-选中后写入 `@[标题](dsh-session:…)`。Host 在 `agent/pre-step` 解析这些 mention，调用 `sessionReferenceResolver.prepare()`，把不可信快照插到本步消息前面。
+选中会话会生成原生会话引用 chip。原生 codec 在提交和剪贴板操作中保留规范 `@[标题](dsh-session:…)` 值。Host 的 `sessionReferenceResolver` 规范化直接用户提及，并把不可信、只读且带出处的快照放在引用消息之后；工具、推理和内部上下文不会变成引用正文。
 
-人主动 `@` 不走 `read_session` 的 Approval。手打 `@标题` 不会注入；必须选出带 URI 的 markdown，或粘贴规范 `dsh-session:` URI。同一轮若 `read_session` 已经注入同一 `sessionId`，不再重复准备。
+人主动 `@` 不走 `read_session` 的 Approval，单纯 `@标题` 文本不是会话引用。模型主动调用 `read_session` 仍默认需要审批，并通过 `deferContext()` 附加快照；不会将快照提升为直接用户权威。
 
-![会话提及候选](screenshots/mention.png)
+已导出的旧 `createSessionMentionSource`、`listSessionMentionCandidates` 和注入 helpers 对显式调用者保留兼容。候选与 source 工厂已标记 deprecated，默认路径不挂载它们；新集成应使用原生引用提供者，不要与原生提供者并排注册旧 source。
 
 ## 配置
 
@@ -54,7 +56,9 @@ Approval 只有 `allowed-once` 会继续，其他回答全部失败关闭。
 
 ## 验证
 
-兼容边界与验证证据记录在[设计文档](https://github.com/SisyphusSQ/dsh-plugins/blob/main/docs/design/dsh-session-capabilities.md)中。已发布版本的兼容基线为 `@deepseek-ai/dsh@0.1.0-rc.6`；迁移后的源码目标版本为 `@deepseek-ai/dsh@0.2.1-rc.2`。
+包回归以 `@deepseek-ai/dsh@0.2.1-rc.5` 为目标。无需凭据的 Host 组合执行完整的消息 → 工具 → 回复流程，覆盖真实会话创建、有效 cwd 继承、精确未闭合前缀 Fork、审批审计事件、受限 sourced context、原生提及准备和 Loader 卸载清理。另有已发布客户端入口夹具验证单提供者注册及原生 chip/codec 行为；该夹具不渲染浏览器界面。
+
+更早的产品验证记录见[设计文档](https://github.com/SisyphusSQ/dsh-plugins/blob/main/docs/design/dsh-session-capabilities.md)。
 
 ## License
 

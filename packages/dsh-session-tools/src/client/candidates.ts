@@ -31,7 +31,10 @@ function labelOf(row: SessionMentionRow): string {
   return row.title ?? row.displayTitle
 }
 
-/** Rank and filter ordinary sessions for the composer `@` session source. */
+/**
+ * Rank and filter ordinary sessions for the legacy composer source.
+ * @deprecated The default Web path uses DSH's native ui-reference provider.
+ */
 export function listSessionMentionCandidates(
   rows: readonly SessionMentionRow[],
   options: {

@@ -4,6 +4,21 @@
 
 ## Unreleased
 
+- breakingChange
+  - `dsh-worktree-workspaces` 提升为 `0.4.0`：公开客户端 `worktreeOptions` 新增必需的 `WorktreeLocation`，`waitForWorkspace` 改接收 `{ workspaceId, path }` 回执而非标题。调用方通过公开 protocol helpers 解析 Host 命令结果；默认 Web 路径已迁移，不保留按标题猜测的降级。
+- bugFix
+  - 修正 `dsh-session-tools` 与 `dsh-worktree-workspaces` 默认读取会话初始目录的问题；改用 Host 有效工作目录，避免切换目录后在旧仓库创建会话或工作树。
+  - 修正 `fork_session` 对 `at_seq` 的说明与审批文案：显式值按 Host 原生 inclusive event prefix 精确截断；省略时才选择最新已完成轮次，不再承诺把显式序号推进到后续 `turn/end`。
+  - 将 Worktree Host 文件与 Git 执行接入调用会话的沙箱；保留独立 CLI 的本地执行边界。
+  - Worktree Workspace 创建与复用改按稳定身份导航，不再依赖用户可重命名的显示标题。
+  - `codex_agent` 委派读取 Host `maxDepth`，同一次操作的预检与子代理请求使用同一上限。
+  - 修正整体界面缩放在连续点击时被旧 Host describe 回灌覆盖新意图的问题；最新写入完成后再收敛，拒绝或断线显示失败并恢复最近确认值，卸载后的迟到结果不再回写。
+- optimization
+  - 将四包开发依赖及 Bridge 的运行时 `dsh-hook-protocol` 对齐到 DSH `0.2.1-rc.5`；收敛默认 `@session` 候选与注入到宿主原生 reference 能力。
+  - 本轮源码版本为 session-tools `0.3.3`、worktree-workspaces `0.4.0`、codex-bridge `0.1.2`、ui-zoom `0.1.7`；未发布 npm、tag 或 Release。
+- note
+  - 本轮适配与验证边界见 [docs/design/dsh-0.2.1-rc.5-adaptation.md](docs/design/dsh-0.2.1-rc.5-adaptation.md)。已确认缺陷在旧基线存在，不表述为 rc.5 新引入的破坏。
+
 - feature
   - 新增 `@suqingsq/dsh-ui-zoom`：DSH 整体界面缩放，入口为设置页「整体界面缩放」行（−/+ 与重置），以及可写入 profile 的 `zoomPercent` 长期默认值。缩放作用于文档元素，因此菜单、弹窗、toast 等 portal 浮层一并缩放。
     - 解决 CSS `zoom` 放大绝对长度带来的两处错乱：视口单位被再次相乘导致外壳溢出（115% 下 720→828px，底部吸附的账号区与菜单被推出窗口），以及用 `getBoundingClientRect()` 定位的浮层偏移被二次缩放。前者由注入样式把外壳尺寸除以倍数抵消，后者由 `MutationObserver` 把内联偏移除以倍数还原。

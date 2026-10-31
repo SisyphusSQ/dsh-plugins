@@ -33,7 +33,7 @@ test('native Loader role uses real Agent loop/spawn with scripted model and in-m
   const root = await mkdtemp(join(tmpdir(), 'codex-native-role-'))
   const ctx = new Context()
   const loader = ctx.plugin(Loader, { baseUrl: pathToFileURL(root + '/').href })
-  let parent
+  let parent, depthLimitedParent
   try {
     await loader.await()
     const home = join(root, 'home')
@@ -96,6 +96,15 @@ export function apply(ctx) {
     assert.ok(ctx.tools.get('codex_agent'))
     assert.equal(ctx.sessionPersistence, undefined, 'only test-owned in-memory logs, not a user-state backend')
     parent = await ctx.agents.create({ sessionId: 'native-fixture-parent', meta: { cwd: root }, agentOptions: { provider: 'scripted', model: 'parent-model' } })
+    await ctx.loader.update('subagents', { config: { maxDepth: 0 } })
+    await ctx.loader.await()
+    const deniedRoot = await ctx.tools.execute({ name: 'codex_agent', callId: 'native-role-depth-zero', arguments: { role: 'reviewer', prompt: 'Do not start this child.' }, agent: parent.agent, signal: t.signal })
+    assert.equal(deniedRoot.isError, true)
+    assert.match(JSON.stringify(deniedRoot.content), /subagent depth 1 exceeds maxDepth 0/u)
+    assert.equal(requests.length, 0, 'forbidden depth must not reach the real model adapter')
+    assert.equal(starts.length, 0, 'forbidden depth must not publish a real child')
+    await ctx.loader.update('subagents', { config: { maxDepth: 1 } })
+    await ctx.loader.await()
     const output = await ctx.tools.execute({ name: 'codex_agent', callId: 'native-role', arguments: { role: 'reviewer', prompt: 'Perform the native fixture review.' }, agent: parent.agent, signal: t.signal })
     assert.equal(output.isError, false, JSON.stringify(output.content))
     assert.match(JSON.stringify(output.content), /Native role fixture completed/)
@@ -116,6 +125,12 @@ export function apply(ctx) {
     assert.equal(childHeaders[0].origin, 'subagent')
     assert.equal(childHeaders[0].delegationDepth, 1)
     assert.equal(ctx.agents.get(starts[0].id), undefined, 'one-shot child must unregister after RoleBridge finally')
+    depthLimitedParent = await ctx.agents.create({ sessionId: 'native-fixture-depth-limited', meta: { cwd: root, delegationDepth: 1 }, agentOptions: { provider: 'scripted', model: 'parent-model', subagentDepth: 0 } })
+    const deniedNested = await ctx.tools.execute({ name: 'codex_agent', callId: 'native-role-depth-cap', arguments: { role: 'reviewer', prompt: 'Do not exceed the host cap.' }, agent: depthLimitedParent.agent, signal: t.signal })
+    assert.equal(deniedNested.isError, true)
+    assert.match(JSON.stringify(deniedNested.content), /subagent depth 2 exceeds maxDepth 1/u)
+    assert.equal(requests.length, 1, 'persisted depth cannot be reset by fresh runtime options')
+    assert.equal(starts.length, 1)
     // No fake Agent factory, spawn provider, tools executor, or RoleBridge.
     assert.equal(await readFile(join(home, 'config.toml'), 'utf8'), configContent)
     assert.equal(await readFile(join(home, 'agents/reviewer.toml'), 'utf8'), roleContent)
@@ -143,6 +158,7 @@ export function apply(ctx) {
     assert.equal(ctx.tools.get('codex_agent'), undefined)
     assert.equal(await readFile(join(home, 'agents/reviewer.toml'), 'utf8'), roleContent)
   } finally {
+    await depthLimitedParent?.dispose()
     await parent?.dispose()
     ctx.loader.root.stop()
     await ctx.loader.await()

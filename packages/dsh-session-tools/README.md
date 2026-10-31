@@ -2,9 +2,9 @@
 
 English | [中文](README.zh.md)
 
-Session tools for DeepSeek Harness. One package gives the model six session tools, and gives the Web composer `@` session candidates that inject another session as sourced context.
+Session tools for DeepSeek Harness. The package gives the model six session tools and integrates with the Host's native Web `@` references for sourced session context.
 
-Compiled and package-tested against `@deepseek-ai/dsh@0.2.1-rc.2`, the current Desktop host; the declared `engines.dsh` range also admits `0.2.0-rc.2`. Behavioural coverage and limits are in the design doc.
+Compiled and package-tested against `@deepseek-ai/dsh@0.2.1-rc.5`, including a real Loader + AgentLoop + Session Controller composition. This is not a claim of Web or provider-backed E2E verification.
 
 ## Install
 
@@ -22,20 +22,22 @@ The tools run only on the current, running Root Agent driven by the Agent Loop. 
 | --- | --- |
 | `list_sessions` | Lists ordinary session metadata (id, title, cwd). It does not search message bodies. Subagent-owned sessions are excluded. |
 | `read_session` | Attaches a bounded, untrusted snapshot of another ordinary session to the current step. Tool calls, reasoning, internal context, and unfinished chunks are omitted. |
-| `create_session` | Creates a real persisted session and an idle Agent through the Host API. It inherits cwd and agent preset unless you override them. The new session is not prompted automatically. |
+| `create_session` | Creates a real persisted session and an idle Agent through the Host API. Unless overridden, it validates and inherits the caller's effective cwd (including `cd` and directory recovery) and its agent preset. The new session is not prompted automatically. |
 | `rename_session` | Renames the current session or another ordinary session through the same business API as the Web UI. |
-| `fork_session` | Forks an ordinary session at a completed turn boundary, inheriting cwd, model target, workspace, lineage, and title seed. |
+| `fork_session` | With `at_seq`, copies the exact inclusive source-event prefix and synthetically closes an open tail; later source events are not copied. Without it, uses the latest completed-turn prefix. The Host preserves source history, directory changes, workspace, lineage, and title seed, and selects the new Agent's model. |
 | `send_message_to_session` | Queues one follow-up turn on another ordinary session, waits for that session's current turn to finish, and returns delivery confirmation only. |
+
+The public `createSessionToolDefinitions()` factory still accepts its original service shape. An optional `workingDirectory` service takes precedence; otherwise default-cwd creation uses the authenticated caller Agent's native Context service. With neither service, it fails explicitly instead of using a stale header or process cwd. An explicit `cwd` needs no directory service.
 
 ## `@` session mentions
 
-The Web composer `@` menu gains a `session` group of ordinary sessions. The current session and subagent sessions are excluded. Sessions that share the current cwd are ranked first.
+The default Web path uses `@deepseek-ai/dsh-client-ui-reference`: its single `reference` provider combines file, folder, subagent, and session candidates. This package does not register another `session` group or its own pre-step mention adapter.
 
-Picking a candidate inserts `@[title](dsh-session:…)`. On `agent/pre-step`, the host parses those mentions, calls `sessionReferenceResolver.prepare()`, and places the untrusted snapshot ahead of this step's messages.
+Picking a session creates the native session reference chip. The native codec preserves its canonical `@[title](dsh-session:…)` value for submission and clipboard operations. The Host's `sessionReferenceResolver` normalizes direct user mentions and places an untrusted, read-only sourced snapshot immediately after the citing message. Tools, reasoning, and internal context do not become reference content.
 
-A human `@` mention does not go through `read_session` approval. Typing `@title` as plain text does not inject; the draft must contain the markdown mention (or a pasted canonical `dsh-session:` URI). If `read_session` already attached the same `sessionId` in this step, the mention is not prepared again.
+A human `@` mention does not go through `read_session` approval. Plain `@title` text alone is not a session reference. Model-initiated `read_session` still requires approval by default and uses `deferContext()`; snapshots are never promoted to direct-user authority.
 
-![Session mention candidates](screenshots/mention.png)
+The exported legacy `createSessionMentionSource`, `listSessionMentionCandidates`, and injection helpers remain compatible for explicit consumers. The source/candidate factories are deprecated and are not mounted by the default package path; new integrations should use the native reference provider rather than register the legacy source alongside it.
 
 ## Configuration
 
@@ -54,7 +56,9 @@ Only `allowed-once` continues an approval request; any other answer fails closed
 
 ## Verification
 
-The compatibility boundary and verification evidence are recorded in the [design document](https://github.com/SisyphusSQ/dsh-plugins/blob/main/docs/design/dsh-session-capabilities.md). The published release's compatibility baseline is `@deepseek-ai/dsh@0.1.0-rc.6`; the migrated source targets `@deepseek-ai/dsh@0.2.1-rc.2`.
+Package regressions run against `@deepseek-ai/dsh@0.2.1-rc.5`. The credential-free Host composition exercises a full message → tool → reply flow with real session creation, effective-cwd inheritance, exact open-prefix forks, approval audit events, bounded sourced context, native mention preparation, and Loader unload cleanup. A separate published-client-entry fixture checks single-provider registration and native reference chip/codec behavior; it does not render a browser UI.
+
+Earlier product verification is recorded in the [design document](https://github.com/SisyphusSQ/dsh-plugins/blob/main/docs/design/dsh-session-capabilities.md).
 
 ## License
 

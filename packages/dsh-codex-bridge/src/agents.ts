@@ -80,7 +80,10 @@ export class RoleBridge {
       // The subagent service is only a registry seam. Fail before resolving a
       // model (which may contact a provider) when no native spawn exists.
       if (!this.ctx.subagents.getProvider('spawn')) throw new HarnessError('Codex delegation requires a registered DSH spawn provider and Agent implementation. No child was started.', 'CODEX_ROLE_NO_SPAWN_PROVIDER')
-      const options = resolveChildAgentOptions(parent, compiled.agentOptions, resolveChildDepth(parent, undefined))
+      // Capture the live host cap once: preflight and activation must admit the
+      // child under the same policy even if model resolution yields.
+      const maxDepth = this.ctx.subagents.resolveMaxDepth(undefined)
+      const options = resolveChildAgentOptions(parent, compiled.agentOptions, resolveChildDepth(parent, maxDepth))
       if (compiled.agentOptions?.model) {
         if (!options.provider) throw new HarnessError('A DSH model provider is required; no Codex provider/authentication is imported.', 'CODEX_ROLE_MODEL_ROUTE')
         await this.ctx.llm.resolveModelInfo(options.provider, compiled.agentOptions.model, signal)
@@ -91,6 +94,7 @@ export class RoleBridge {
         label: `Codex: ${role.name}`,
         request: {
           parent,
+          ...(maxDepth !== undefined ? { maxDepth } : {}),
           prompt: [{ type: 'text', text: compiled.instructions.trim() === '' ? prompt : `${compiled.instructions}\n\n---\n\n${prompt}` }],
           ...(compiled.agentOptions ? { agentOptions: compiled.agentOptions } : {}),
         },

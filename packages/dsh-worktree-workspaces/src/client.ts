@@ -13,7 +13,10 @@ import type {
 import {
   defaultWorktreeBranch,
   managedWorkspaceTitle,
-  parseManagedWorkspaceTitle,
+  workspaceReceipt,
+  worktreeLocation,
+  type WorkspaceReceipt,
+  type WorktreeLocation,
 } from "./protocol.js";
 
 export { defaultWorktreeBranch, managedWorkspaceTitle };
@@ -47,30 +50,15 @@ function currentWorkspace(
   return items.find((item) => item.sessionIds.some((id) => String(id) === sessionId));
 }
 
-function localWorkspace(
-  items: readonly WorkspaceView[],
-  current: WorkspaceView,
-  repositoryName: string,
-): WorkspaceView | undefined {
-  if (parseManagedWorkspaceTitle(current.title) === undefined) return current;
-  return items.find(
-    (item) =>
-      item.workspaceId !== current.workspaceId &&
-      pathBasename(item.path) === repositoryName &&
-      parseManagedWorkspaceTitle(item.title) === undefined,
-  );
-}
-
 export function worktreeOptions(
   items: readonly WorkspaceView[],
   sessionId: string,
+  location: WorktreeLocation,
 ): readonly SelectOption[] {
-  const current = currentWorkspace(items, sessionId);
-  if (current === undefined) return [];
-
-  const repositoryName = pathBasename(current.path);
-  const managed = parseManagedWorkspaceTitle(current.title);
-  const local = localWorkspace(items, current, repositoryName);
+  if (currentWorkspace(items, sessionId) === undefined) return [];
+  const repositoryName = pathBasename(location.repositoryRoot);
+  const managed = location.repositoryRoot !== location.mainPath;
+  const local = items.find((item) => item.path === location.mainPath);
   const branch = defaultWorktreeBranch(sessionId);
   const options: SelectOption[] = [];
 
@@ -79,14 +67,14 @@ export function worktreeOptions(
       id: `local:${String(local.workspaceId)}`,
       label: `本地 · ${repositoryName}`,
       detail: local.path,
-      active: local.workspaceId === current.workspaceId,
+      active: local.path === location.repositoryRoot,
     });
   }
-  if (managed !== undefined) {
+  if (managed) {
     options.push({
       id: "current",
-      label: `工作树 · ${managed.repositoryName}`,
-      detail: managed.branch,
+      label: `工作树 · ${repositoryName}`,
+      detail: location.branch,
       active: true,
     });
   }
@@ -107,11 +95,11 @@ export function worktreeOptions(
 
 export async function waitForWorkspace(
   source: WorkspaceListSource,
-  title: string,
+  target: WorkspaceReceipt,
   timeoutMs = WORKSPACE_WAIT_MS,
 ): Promise<WorkspaceView> {
   const find = (): WorkspaceView | undefined =>
-    source.getSnapshot().items.find((item) => item.title === title);
+    source.getSnapshot().items.find((item) => String(item.workspaceId) === target.workspaceId && item.path === target.path);
   const immediate = find();
   if (immediate !== undefined) return immediate;
 
@@ -122,7 +110,7 @@ export async function waitForWorkspace(
       if (settled) return;
       settled = true;
       unsubscribe();
-      reject(new Error(`DSH Workspace 未在 ${timeoutMs}ms 内出现：${title}`));
+      reject(new Error(`DSH Workspace 未在 ${timeoutMs}ms 内出现：${target.workspaceId}`));
     }, timeoutMs);
 
     const check = (): void => {
@@ -135,7 +123,8 @@ export async function waitForWorkspace(
       resolve(workspace);
     };
     unsubscribe = source.subscribe(check);
-    check();
+    if (settled) unsubscribe();
+    else check();
   });
 }
 
@@ -158,10 +147,15 @@ export function createWorktreeDecoration(ctx: ClientContext): CommandDecoration 
     },
     ui: {
       kind: "popupSelect",
-      async options(session) {
+      async options(session, signal) {
+        const execution = await ctx.remote.commands.execute(session.sessionId, "/worktree status", [], signal);
+        if (!execution.ok) throw new Error(`执行 /worktree 失败：${remoteFailure(execution.error)}`);
+        if (execution.value === undefined) throw new Error("当前 Host 没有注册 /worktree 命令。");
+        if (execution.value.result.kind === "error") throw new Error(execution.value.result.text);
         return worktreeOptions(
           ctx.workspaces.list.getSnapshot().items,
           String(session.sessionId),
+          worktreeLocation(execution.value.result.text),
         );
       },
       async onSelect(option, session) {
@@ -184,7 +178,6 @@ export function createWorktreeDecoration(ctx: ClientContext): CommandDecoration 
         );
         if (current === undefined) throw new Error("当前会话不属于任何 DSH Workspace。");
 
-        const repositoryName = pathBasename(current.path);
         const branch = defaultWorktreeBranch(String(session.sessionId));
         const execution = await ctx.remote.commands.execute(
           session.sessionId,
@@ -199,7 +192,7 @@ export function createWorktreeDecoration(ctx: ClientContext): CommandDecoration 
 
         const workspace = await waitForWorkspace(
           ctx.workspaces.list,
-          managedWorkspaceTitle(repositoryName, branch),
+          workspaceReceipt(execution.value.result.text),
         );
         await openWorkspace(ctx, workspace);
       },

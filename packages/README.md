@@ -4,7 +4,7 @@ English | [中文](README.zh.md)
 
 Independently installable DeepSeek Harness plugins. Each package has its own README, tests, and verification record.
 
-The released `0.2.0` set is verified with `@deepseek-ai/dsh@0.1.0-rc.6`. Repository source targets `@deepseek-ai/dsh@0.2.1-rc.2` and keeps an `engines.dsh` range that also admits `0.2.0-rc.2`. Five packages were retired on 2026-10-06; the table below lists the maintained set plus the experimental, unpublished `dsh-codex-bridge`.
+The released `0.2.0` set is verified with `@deepseek-ai/dsh@0.1.0-rc.6`. Repository source targets `@deepseek-ai/dsh@0.2.1-rc.5` and keeps an `engines.dsh` range that also admits `0.2.0-rc.2`. Five packages were retired on 2026-10-06; the table below lists the maintained set plus the experimental, unpublished `dsh-codex-bridge`.
 
 | Package | What it does |
 | --- | --- |

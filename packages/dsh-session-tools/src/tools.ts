@@ -9,6 +9,7 @@ import type { SessionQueryEngine } from '@deepseek-ai/dsh-session-query'
 import type { SessionReferenceResolver } from '@deepseek-ai/dsh-session-reference'
 import { defineTool, type ToolDefinition } from '@deepseek-ai/dsh-tools'
 import { remoteErrorOf } from '@deepseek-ai/dsh-typert-protocol'
+import type { WorkingDirectoryService } from '@deepseek-ai/dsh-working-directory'
 import {
   requireApproval,
   requireRootExecution,
@@ -41,6 +42,8 @@ export interface SessionToolServices {
   approval: ApprovalRequester
   sessionQuery: Pick<SessionQueryEngine, 'listSessions' | 'readTitleSnapshots'>
   sessionReferenceResolver: Pick<SessionReferenceResolver, 'prepare'>
+  /** Optional for public-factory compatibility; otherwise resolved from the authenticated caller's Context. */
+  workingDirectory?: Pick<WorkingDirectoryService, 'ensure'>
   sessionsApi: Pick<SessionController, 'create' | 'rename' | 'fork'>
   resolveAgent(sessionId: SessionId): Promise<Agent | undefined>
 }
@@ -210,11 +213,11 @@ export function createSessionToolDefinitions(
     },
   }), defineTool({
     name: 'create_session',
-    description: 'Create a real persisted DSH session and its idle Agent through the Host business API. By default it inherits this session\'s cwd and agent preset. The new session is not prompted automatically.',
+    description: 'Create a real persisted DSH session and its idle Agent through the Host business API. By default it inherits this session\'s effective working directory (including cd changes) and agent preset. The new session is not prompted automatically.',
     parameters: {
       cwd: {
         type: 'string',
-        description: 'Optional absolute working directory. Defaults to the calling session cwd, then the Host cwd.',
+        description: 'Optional absolute working directory. Defaults to the calling session\'s validated effective directory, including cd changes and Host directory recovery/fallback.',
       },
       agent_preset: {
         type: 'string',
@@ -238,7 +241,17 @@ export function createSessionToolDefinitions(
     },
     async execute(args, exec) {
       const caller = requireRootExecution(services.agents, exec)
-      const cwd = args.cwd ?? caller.session.header.cwd
+      let cwd = args.cwd
+      if (cwd === undefined) {
+        const directory = services.workingDirectory ?? caller.ctx?.get('workingDirectory')
+        if (directory === undefined) {
+          throw new HarnessError(
+            'create_session requires the calling Agent\'s native workingDirectory service when cwd is omitted',
+            'SESSION_TOOLS_DIRECTORY_UNAVAILABLE',
+          )
+        }
+        cwd = await directory.ensure(caller, exec.signal)
+      }
       const agentPreset = args.agent_preset ?? caller.session.header.agentPreset
       if (config.approveCreate) {
         await requireApproval(
@@ -311,7 +324,7 @@ export function createSessionToolDefinitions(
     },
   }), defineTool({
     name: 'fork_session',
-    description: 'Fork an ordinary DSH session through the Host business API. The Host cuts only at a completed turn, inherits cwd, model target, workspace, lineage, and title seed, and creates a real idle Agent.',
+    description: 'Fork an ordinary DSH session through the Host business API and create a real idle Agent. An explicit at_seq copies the exact inclusive event prefix; the Host synthetically closes an open tail. Omission uses the latest completed-turn prefix. Source history, directory changes, workspace, lineage, and title seed follow Host semantics; the Host selects the new Agent\'s model.',
     parameters: {
       session_id: {
         type: 'string',
@@ -320,7 +333,7 @@ export function createSessionToolDefinitions(
       },
       at_seq: {
         type: 'integer',
-        description: 'Optional event seq anchor. The Host selects the first turn/end at or after it; omission uses the last completed turn.',
+        description: 'Optional exact inclusive source event seq. The event must exist; an open cut receives synthetic fork closers, not later source events. Omission selects the latest completed-turn prefix.',
       },
     },
     output: {
@@ -351,7 +364,7 @@ export function createSessionToolDefinitions(
           exec,
           args.at_seq === undefined
             ? `Fork session ${sourceId} at its last completed turn`
-            : `Fork session ${sourceId} at or after seq ${args.at_seq}`,
+            : `Fork session ${sourceId} through exact event seq ${args.at_seq} (inclusive); close any open tail synthetically`,
         )
       }
       const forked = await callSessionsApi('fork_session', () => services.sessionsApi.fork({

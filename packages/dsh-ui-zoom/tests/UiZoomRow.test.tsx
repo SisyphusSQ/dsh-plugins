@@ -11,14 +11,17 @@ import { fireEvent } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ZOOM_PERCENT_MAX, ZOOM_PERCENT_MIN, ZOOM_PERCENT_STEP } from '../src/settings.js'
 import { UiZoomRow, type UiZoomRowComponentProps } from '../src/client/UiZoomRow.js'
+import type { UiZoomRowState } from '../src/client/index.js'
 
 afterEach(cleanup)
 
 /** Render the row with a fixed store value and a spy write path. */
 function renderRow(zoomPercent: number) {
   const setZoomPercent = vi.fn()
-  const useStore = ((selector: (state: { zoomPercent: number; revision: number }) => unknown) =>
-    selector({ zoomPercent, revision: 1 })) as unknown as UiZoomRowComponentProps['useStore']
+  // Existing public consumers only supplied these two fields before saveFailed.
+  const state: UiZoomRowState = { zoomPercent, revision: 1 }
+  const useStore = ((selector: (state: UiZoomRowState) => unknown) =>
+    selector(state)) as unknown as UiZoomRowComponentProps['useStore']
   const props = {
     // The row renders the value and the unit label from two separate keys.
     t: (key: string) => (key === 'zoom.unit' ? '%' : key),

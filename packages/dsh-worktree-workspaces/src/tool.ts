@@ -1,5 +1,7 @@
 import type { Context } from "@deepseek-ai/cordis";
-import { defineTool } from "@deepseek-ai/dsh-tools";
+import { defineTool, type ToolRunContext } from "@deepseek-ai/dsh-tools";
+import { hostRuntime } from "./host-runtime.js";
+import type { WorktreeRuntime } from "./runtime.js";
 
 import {
   createWorktree,
@@ -9,6 +11,7 @@ import {
 
 export interface WorktreeToolConfig {
   baseDir: string;
+  execution(exec: ToolRunContext): Promise<WorktreeRuntime>;
 }
 
 interface ToolArguments {
@@ -112,12 +115,10 @@ export function createWorktreeTool(config: WorktreeToolConfig) {
     timeoutMs: 120_000,
     async execute(args, exec) {
       const parsed = args as ToolArguments;
-      const repository = parsed.repository ?? exec.agent?.session.header.cwd;
-      if (repository === undefined) {
-        throw new Error("repository is required when the tool call has no session cwd");
-      }
+      const runtime = await config.execution(exec);
       return createWorktree({
-        repository,
+        repository: parsed.repository ?? runtime.cwd,
+        runtime,
         target: targetFromArguments(parsed),
         baseDir: config.baseDir,
         signal: exec.signal,
@@ -126,6 +127,6 @@ export function createWorktreeTool(config: WorktreeToolConfig) {
   });
 }
 
-export function registerWorktreeTool(ctx: Context, config: WorktreeToolConfig): void {
-  ctx.tools.register(createWorktreeTool(config));
+export function registerWorktreeTool(ctx: Context, config: { baseDir: string }): void {
+  ctx.tools.register(createWorktreeTool({ ...config, execution: (exec) => hostRuntime(ctx, exec) }));
 }

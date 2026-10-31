@@ -10,6 +10,7 @@ import type { Context } from "@deepseek-ai/cordis";
 import { parseWorktreePorcelain } from "../src/git.js";
 import { assertPathInside, expandHome } from "../src/paths.js";
 import { createWorktreeTool } from "../src/tool.js";
+import { standaloneRuntime } from "../src/standalone-runtime.js";
 import * as worktreePlugin from "../src/index.js";
 
 const execFileAsync = promisify(execFile);
@@ -34,7 +35,7 @@ test("path containment rejects the base itself and sibling paths", () => {
 });
 
 test("tool exposes one explicit worktree_create contract", () => {
-  const tool = createWorktreeTool({ baseDir: "/tmp/dsh-worktrees" });
+  const tool = createWorktreeTool({ baseDir: "/tmp/dsh-worktrees", async execution() { return standaloneRuntime(); } });
   assert.equal(tool.name, "worktree_create");
   assert.deepEqual(tool.parameters.required, ["mode"]);
   assert.ok(tool.output.schema);
@@ -63,7 +64,7 @@ test("host plugin registers both tool and slash-command surfaces", () => {
   assert.equal(worktreePlugin.name, "worktree-workspaces");
   assert.deepEqual(tools, ["worktree_create"]);
   assert.deepEqual(commands, ["worktree"]);
-  assert.deepEqual(worktreePlugin.inject, ["tools", "commands", "workspaceRegistry"]);
+  assert.deepEqual(worktreePlugin.inject, ["tools", "commands", "workspaceRegistry", "workingDirectory", "fs", "subprocess", "sandbox", "sandboxPolicy"]);
 });
 
 test("package declares a real DSH bundle patch and web client", async () => {

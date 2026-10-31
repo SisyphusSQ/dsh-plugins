@@ -22,7 +22,7 @@ function createHarness(options: { zoomPercent?: number } = {}) {
     listeners.add(listener)
     return () => { listeners.delete(listener) }
   })
-  const set = vi.fn(async () => undefined)
+  const set = vi.fn(async () => true)
   const snapshot = { value: { zoomPercent: options.zoomPercent ?? 100 } }
   const context = {
     slots: {

@@ -4,13 +4,15 @@ English | [中文](README.zh.md)
 
 Whole-interface zoom for the DeepSeek Harness GUI, driven from a Settings row.
 
-The compile-time and package-test baseline is `@deepseek-ai/dsh@0.2.1-rc.2`; the declared `engines.dsh` range also admits `0.2.0-rc.2`. Runtime evidence and its exact host versions are recorded in the design doc.
+The compile-time and package-test baseline is `@deepseek-ai/dsh@0.2.1-rc.5`; the declared `engines.dsh` range also admits `0.2.0-rc.2`. Runtime evidence and its exact host versions are recorded in the design doc.
 
 ## What it does
 
 DeepSeek Harness ships one typography control — Appearance → Font size — and that one is scoped to conversation content only (`--dsh-content-font-size`, 10–22 px). Sidebars, settings pages, buttons and menus read a separate fixed `--dsw-*` token set that nothing scales.
 
 This plugin scales the **entire interface** instead, from 50% to 300%, driven from **Settings → General → Interface zoom**: the row shows the current percentage with −/+ buttons and a reset. The setting is durable — it lives in the Host user-settings document, so it survives reloads and travels with the profile.
+
+Changes apply immediately, including rapid consecutive clicks. While the latest choice is still being saved, earlier Host refreshes do not replace that choice. After the ordered write settles, the row reconciles with the Host value and accepts external settings changes again. A refused or disconnected save restores the last known Host setting and shows an inline error.
 
 ## How the zoom is applied
 

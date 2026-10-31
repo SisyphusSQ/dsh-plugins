@@ -1,6 +1,6 @@
 // Opt-in packaged-artifact process probe. Uses only an explicitly supplied public runtime.
 import assert from 'node:assert/strict'
-import { mkdtemp, mkdir, writeFile, readFile, realpath, symlink } from 'node:fs/promises'
+import { mkdtemp, mkdir, writeFile, readFile, realpath, symlink, stat } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
@@ -10,17 +10,20 @@ import { createHash } from 'node:crypto'
 const [runtimeArg, artifactArg] = process.argv.slice(2)
 assert(runtimeArg && artifactArg, 'Usage: node scripts/verify-headless.mjs <extracted-public-runtime-root> <tarball>')
 const runtime = await realpath(resolve(runtimeArg))
+assert.ok((await stat(runtime)).isDirectory(), 'Supply a physically extracted public runtime directory, not an ASAR archive; native profile resolution cannot follow ASAR symlinks')
 const artifact = await realpath(resolve(artifactArg))
 const modules = join(runtime, 'dsh/node_modules')
 const cli = join(modules, '@deepseek-ai/dsh/lib/bin.js')
 const manifest = JSON.parse(await readFile(join(modules, '@deepseek-ai/dsh/package.json'), 'utf8'))
-assert.equal(manifest.version, '0.2.0-rc.2')
+const pluginManifest = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'))
+assert.equal(manifest.version, pluginManifest.devDependencies['@deepseek-ai/dsh-agent'], 'public runtime must match the pinned target exactly')
 const root = await mkdtemp(join(tmpdir(), 'codex-headless-proof-'))
 const home = join(root, 'home')
 const dsh = join(home, '.dsh')
 const codex = join(home, 'codex')
 const profile = join(dsh, 'profiles/codex-bridge-test')
 const packageDir = join(profile, 'node_modules/@suqingsq/dsh-codex-bridge')
+const electronNode = process.versions.electron !== undefined
 await mkdir(packageDir, { recursive: true })
 await mkdir(join(codex, 'agents'), { recursive: true })
 await mkdir(join(codex, 'skills/process-skill'), { recursive: true })
@@ -36,6 +39,10 @@ const tar = spawnSync('/usr/bin/tar', ['-xzf', artifact, '-C', packageDir, '--st
 assert.equal(tar.status, 0, tar.stderr)
 await symlink(join(modules, '@deepseek-ai'), join(profile, 'node_modules/@deepseek-ai'))
 await symlink(join(modules, 'yaml'), join(profile, 'node_modules/yaml'))
+// Desktop deliberately omits this optional protocol package. The artifact owns
+// the exact dependency; link that consumer dependency without modifying runtime.
+await mkdir(join(packageDir, 'node_modules/@deepseek-ai'), { recursive: true })
+await symlink(await realpath(new URL('../node_modules/@deepseek-ai/dsh-hook-protocol', import.meta.url)), join(packageDir, 'node_modules/@deepseek-ai/dsh-hook-protocol'))
 const toml = await realpath(new URL('../node_modules/smol-toml', import.meta.url))
 await symlink(toml, join(profile, 'node_modules/smol-toml'))
 const scripted = join(home, 'scripted.mjs')
@@ -82,9 +89,10 @@ export function apply(ctx) {
 const rows = [
   ['llm', 'dsh-llm'], ['session', 'dsh-session'], ['session-projection', 'dsh-session-projection'],
   ['system-prompt', 'dsh-system-prompt'], ['tools', 'dsh-tools'], ['agent', 'dsh-agent'],
+  ['fs', 'dsh-fs-local'], ['working-directory', 'dsh-working-directory'],
   ['skills', 'dsh-skill'], ['loop', 'dsh-agent-loop'], ['subagent', 'dsh-subagent'],
   ['spawn', 'dsh-subagent-spawn-in-process'],
-].map(([id, name]) => `    - id: ${id}\n      name: '@deepseek-ai/${name}'`).join('\n')
+].map(([id, name]) => `    - id: ${id}\n      name: '@deepseek-ai/${name}'${name === 'dsh-working-directory' ? `\n      config:\n        defaultDirectory: ${JSON.stringify(root)}` : ''}`).join('\n')
 await writeFile(join(profile, 'cordis.patch.yml'), `- id: suqingsq-codex-bridge
   config:
     home: ${JSON.stringify(codex)}
@@ -104,8 +112,8 @@ ${rows}
         task: 'Verify fixture catalog and native Codex role.'
         json: true
 `)
-const env = { HOME: home, DSH_HOME: dsh, CODEX_HOME: codex, PATH: '/usr/bin:/bin' }
-const run = spawnSync(process.execPath, [cli, '--profile', 'codex-bridge-test'], { cwd: root, env, encoding: 'utf8', timeout: 60000, maxBuffer: 4 * 1024 * 1024 })
+const env = { HOME: home, DSH_HOME: dsh, CODEX_HOME: codex, PATH: '/usr/bin:/bin', ...(electronNode ? { ELECTRON_RUN_AS_NODE: '1' } : {}) }
+const run = spawnSync(process.execPath, [...(electronNode ? ['--expose-internals'] : []), cli, '--profile', 'codex-bridge-test'], { cwd: root, env, encoding: 'utf8', timeout: 60000, maxBuffer: 4 * 1024 * 1024 })
 await writeFile(join(root, 'stdout.ndjson'), run.stdout ?? '')
 await writeFile(join(root, 'stderr.log'), run.stderr ?? '')
 assert.equal(run.error, undefined)

@@ -1,15 +1,15 @@
 /** Model-facing cross-session capabilities for DeepSeek Harness. */
 import type { Context } from '@deepseek-ai/cordis'
-import type { Agent, PreStepDecision } from '@deepseek-ai/dsh-agent'
+import type { Agent } from '@deepseek-ai/dsh-agent'
 // 0.2 owner of the Host session business API: this type-only edge merges
 // `ctx.sessionController` onto Cordis `Context` (0.1's `dsh-host-apiproxy` is gone).
 import type {} from '@deepseek-ai/dsh-api-session-controller'
 import { HarnessError } from '@deepseek-ai/dsh-llm'
 import type { SessionId } from '@deepseek-ai/dsh-session'
 import type {} from '@deepseek-ai/dsh-session-reference'
+import type {} from '@deepseek-ai/dsh-working-directory'
 import { remoteErrorOf, type RemoteFailure } from '@deepseek-ai/dsh-typert-protocol'
 import z from '@deepseek-ai/schemastery'
-import { injectMentionedSessionReferences } from './inject.js'
 import {
   createSessionToolDefinitions,
   defaultSessionToolsConfig,
@@ -25,6 +25,7 @@ export const inject = [
   'sessionController',
   'sessionQuery',
   'sessionReferenceResolver',
+  'workingDirectory',
   'typert',
 ]
 
@@ -76,35 +77,16 @@ export function apply(ctx: Context, config: Partial<SessionToolsConfig> = {}): v
     approval: ctx.approval,
     sessionQuery: ctx.sessionQuery,
     sessionReferenceResolver: ctx.sessionReferenceResolver,
+    workingDirectory: ctx.workingDirectory,
     sessionsApi: ctx.sessionController,
     resolveAgent: (sessionId) => lookupAgent(ctx, sessionId),
   }, resolvedConfig)
 
   for (const definition of definitions) ctx.tools.register(definition)
 
-  ctx.on(
-    'agent/pre-step',
-    async ({ agent, messages, signal }, next) => {
-      const decision: PreStepDecision = await next()
-      if (decision.kind === 'reject') return decision
-      signal.throwIfAborted()
-      return injectMentionedSessionReferences({
-        agent,
-        claimedMessages: messages,
-        decision,
-        prepare: (target, content, references, prepareSignal) => (
-          ctx.sessionReferenceResolver.prepare(
-            target,
-            content,
-            references,
-            prepareSignal,
-          )
-        ),
-        signal,
-      })
-    },
-    { prepend: true },
-  )
+  // The native session-reference resolver owns direct-user mention preparation.
+  // Do not add a second pre-step adapter: it would diverge from native chip and
+  // per-message context ordering. The exported legacy helper stays opt-in.
 }
 
 export { listSessionMentionCandidates } from './client/candidates.js'

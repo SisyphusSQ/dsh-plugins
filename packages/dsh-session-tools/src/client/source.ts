@@ -43,6 +43,10 @@ export interface SessionMentionSource {
   }): { readonly text: string }
 }
 
+/**
+ * @deprecated Kept for explicit legacy consumers only. The package does not
+ * register this source; use DSH's native ui-reference chips and codec instead.
+ */
 export function createSessionMentionSource(
   options: SessionMentionSourceOptions & {
     readonly subscribe?: (listener: () => void) => () => void

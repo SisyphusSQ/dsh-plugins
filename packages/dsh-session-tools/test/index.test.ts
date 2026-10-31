@@ -33,7 +33,7 @@ test('apply registers the complete six-tool surface', () => {
   } as unknown as Context
 
   apply(context, defaultSessionToolsConfig)
-  assert.deepEqual(events, ['agent/pre-step'])
+  assert.deepEqual(events, [], 'the native resolver alone owns direct-user mention preparation')
 
   assert.equal(name, 'session-tools')
   assert.deepEqual(inject, [
@@ -43,6 +43,7 @@ test('apply registers the complete six-tool surface', () => {
     'sessionController',
     'sessionQuery',
     'sessionReferenceResolver',
+    'workingDirectory',
     'typert',
   ])
   assert.deepEqual(registered.map((definition) => definition.name), [

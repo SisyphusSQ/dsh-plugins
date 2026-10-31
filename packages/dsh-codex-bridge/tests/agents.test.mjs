@@ -1,16 +1,104 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { compileRole, registerAgentTools, RoleBridge } from '../lib/agents.js'
+import { SubagentDepthError } from '@deepseek-ai/dsh-subagent'
 
 const role = config => ({ name: 'reviewer', description: 'Review code', path: '/home/agents/reviewer.toml', developerInstructions: 'Review carefully.', config })
 const deferred = () => { let resolve; const promise = new Promise(done => { resolve = done }); return { promise, resolve } }
 function harness(startActivation, roleConfig = {}) {
   let options = { enabled: true, agents: true, home: '/fixture' }
+  let maxDepth = 1
   const parent = { id: 'parent', options: { provider: 'fixture-provider', model: 'fixture-model' }, session: { header: {}, requestHeader: () => undefined } }
-  const ctx = { agents: { get: () => parent }, subagents: { startActivation, getProvider: () => ({ name: 'spawn' }) }, llm: { resolveModelInfo: async () => ({}) } }
+  const ctx = { agents: { get: () => parent }, subagents: { startActivation, getProvider: () => ({ name: 'spawn' }), resolveMaxDepth: () => maxDepth }, llm: { resolveModelInfo: async () => ({}) } }
   const runtime = { options: () => options, catalog: async () => ({ agents: [role(roleConfig)] }) }
-  return { bridge: new RoleBridge(ctx, runtime), parent, ctx, set: edit => { options = { ...options, ...edit } } }
+  return { bridge: new RoleBridge(ctx, runtime), parent, ctx, set: edit => { options = { ...options, ...edit } }, setMaxDepth: value => { maxDepth = value } }
 }
+
+// Replacing the host cap with undefined must admit these forbidden children and
+// make these cases red, before any provider lookup can perform model I/O.
+for (const { name, cap, persisted, runtime, attempted } of [
+  { name: 'zero host depth cap denies a root delegation', cap: 0, persisted: 0, runtime: 0, attempted: 1 },
+  { name: 'a parent at the host cap cannot delegate again', cap: 1, persisted: 1, runtime: 0, attempted: 2 },
+  { name: 'a resumed parent already above the cap cannot lower its persisted depth', cap: 2, persisted: 3, runtime: 0, attempted: 4 },
+  { name: 'runtime depth can deepen the persisted parent depth', cap: 2, persisted: 0, runtime: 2, attempted: 3 },
+]) {
+  test(name, async () => {
+    let starts = 0, modelLookups = 0
+    const h = harness(async () => {
+      starts++
+      return { result: Promise.resolve({ answer: 'must not start' }), dispose: async () => {} }
+    }, { model: 'other-model' })
+    h.setMaxDepth(cap)
+    h.parent.session.header.delegationDepth = persisted
+    h.parent.options.subagentDepth = runtime
+    h.ctx.llm.resolveModelInfo = async () => { modelLookups++; return {} }
+    try {
+      await assert.rejects(h.bridge.run(h.parent, 'reviewer', 'Task', new AbortController().signal), error => {
+        assert.ok(error instanceof SubagentDepthError)
+        assert.equal(error.attemptedDepth, attempted)
+        assert.equal(error.maxDepth, cap)
+        return true
+      })
+      assert.equal(modelLookups, 0, 'a rejected depth must not contact the model provider')
+      assert.equal(starts, 0, 'a rejected depth must not start an activation')
+    } finally { await h.bridge.close() }
+  })
+}
+
+test('legal delegation at the host cap passes the same numeric cap to activation', async () => {
+  let spec
+  const h = harness(async value => {
+    spec = value
+    return { result: Promise.resolve({ answer: 'at boundary' }), dispose: async () => {} }
+  })
+  h.parent.session.header.delegationDepth = 1
+  h.setMaxDepth(2)
+  try {
+    assert.deepEqual(JSON.parse(await h.bridge.run(h.parent, 'reviewer', 'Task', new AbortController().signal)), { answer: 'at boundary' })
+    assert.equal(spec.request.maxDepth, 2)
+  } finally { await h.bridge.close() }
+})
+
+test('each delegation observes the current host depth cap without remounting the bridge', async () => {
+  const caps = []
+  const h = harness(async spec => {
+    caps.push(spec.request.maxDepth)
+    return { result: Promise.resolve({ answer: 'allowed' }), dispose: async () => {} }
+  })
+  try {
+    await h.bridge.run(h.parent, 'reviewer', 'First', new AbortController().signal)
+    h.setMaxDepth(0)
+    await assert.rejects(h.bridge.run(h.parent, 'reviewer', 'Denied', new AbortController().signal), SubagentDepthError)
+    h.setMaxDepth(2)
+    h.parent.session.header.delegationDepth = 1
+    await h.bridge.run(h.parent, 'reviewer', 'Allowed again', new AbortController().signal)
+    assert.deepEqual(caps, [1, 2], 'only allowed operations reach activation, each with its current cap')
+  } finally { await h.bridge.close() }
+})
+
+test('a delegation captures one host cap for preflight and activation across model lookup', async () => {
+  const entered = deferred(), release = deferred()
+  let reads = 0, spec
+  const h = harness(async value => {
+    spec = value
+    return { result: Promise.resolve({ answer: 'captured' }), dispose: async () => {} }
+  }, { model: 'other-model' })
+  let cap = 2
+  h.ctx.subagents.resolveMaxDepth = configured => { assert.equal(configured, undefined); reads++; return cap }
+  h.ctx.llm.resolveModelInfo = async () => { entered.resolve(); await release.promise }
+  h.parent.session.header.delegationDepth = 1
+  try {
+    const pending = h.bridge.run(h.parent, 'reviewer', 'Task', new AbortController().signal)
+    await entered.promise
+    cap = 0
+    release.resolve()
+    assert.deepEqual(JSON.parse(await pending), { answer: 'captured' })
+    assert.equal(reads, 1, 'preflight and activation must not resolve different cap values')
+    assert.equal(spec.request.maxDepth, 2, 'activation must retain the cap that admitted this operation')
+    await assert.rejects(h.bridge.run(h.parent, 'reviewer', 'Next task', new AbortController().signal), SubagentDepthError)
+    assert.equal(reads, 2, 'the next operation must see the updated cap')
+  } finally { release.resolve(); await h.bridge.close() }
+})
 test('role result success and failure always dispose the owned real-delegation handle', async () => {
   for (const fail of [false, true]) {
     let disposed = 0, spec

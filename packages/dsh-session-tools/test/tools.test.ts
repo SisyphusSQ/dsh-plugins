@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
+import { Context } from '@deepseek-ai/cordis'
 import type { Agent } from '@deepseek-ai/dsh-agent'
-import { createUserMessage, type CallId, type UserMessage } from '@deepseek-ai/dsh-llm'
+import { createUserMessage, HarnessError, type CallId, type UserMessage } from '@deepseek-ai/dsh-llm'
 import { SessionId, type SessionHeader } from '@deepseek-ai/dsh-session'
 import type {
   SessionCreateRequest,
@@ -67,6 +68,9 @@ function baseServices(caller: Agent): SessionToolServices {
       readTitleSnapshots: async () => [],
     },
     sessionReferenceResolver: { prepare: async () => ({ content: [] }) },
+    workingDirectory: {
+      ensure: async () => caller.session.header.cwd ?? '/host/default',
+    },
     sessionsApi: {
       create: async () => { throw new Error('not used') },
       rename: async () => { throw new Error('not used') },
@@ -101,6 +105,7 @@ test('list_sessions returns bounded ordinary-session metadata without approval',
     sessionReferenceResolver: {
       prepare: async () => ({ content: [] }),
     },
+    workingDirectory: { ensure: async () => '/repo' },
     sessionsApi: {
       create: async () => { throw new Error('not used') },
       rename: async () => { throw new Error('not used') },
@@ -196,10 +201,18 @@ test('read_session defers one sourced snapshot after approval without copying it
   assert.equal(JSON.stringify(value).includes('UNTRUSTED SNAPSHOT BODY'), false)
 })
 
-test('create_session asks approval and inherits cwd and agent preset through the Session Controller', async () => {
+test('create_session approves and inherits the effective cwd after cd, not the original header', async () => {
   const caller = agent('current', header('current', { cwd: '/caller/repo', agentPreset: 'code' }))
   const services = baseServices(caller)
   const calls: unknown[] = []
+  services.workingDirectory = {
+    ensure: async (target, signal) => {
+      assert.equal(target, caller)
+      assert.ok(signal)
+      calls.push('ensure')
+      return '/caller/worktree'
+    },
+  }
   services.approval = {
     request: async (request) => {
       calls.push({ approval: request.reason })
@@ -221,10 +234,111 @@ test('create_session asks approval and inherits cwd and agent preset through the
   )
 
   assert.deepEqual(calls, [
-    { approval: 'Create a new session in /caller/repo with agent preset code' },
-    { create: { cwd: '/caller/repo', agentPreset: 'code' } },
+    'ensure',
+    { approval: 'Create a new session in /caller/worktree with agent preset code' },
+    { create: { cwd: '/caller/worktree', agentPreset: 'code' } },
   ])
-  assert.deepEqual(value, { sessionId: 'created', cwd: '/caller/repo', agentPreset: 'code' })
+  assert.deepEqual(value, { sessionId: 'created', cwd: '/caller/worktree', agentPreset: 'code' })
+})
+
+test('create_session honors explicit cwd and preset without validating the caller directory', async () => {
+  const caller = agent('current', header('current', { cwd: '/missing/original', agentPreset: 'old' }))
+  const services = baseServices(caller)
+  services.workingDirectory = { ensure: async () => { throw new Error('explicit cwd must bypass ensure') } }
+  services.sessionsApi.create = async (request) => {
+    assert.deepEqual(request, { cwd: '/explicit', agentPreset: 'new' })
+    return { sessionId: SessionId('explicit'), agentPreset: 'new' }
+  }
+  const definitions = createSessionToolDefinitions(services, defaultSessionToolsConfig)
+  assert.deepEqual(await tool(definitions, 'create_session').execute(
+    { cwd: '/explicit', agent_preset: 'new' }, execution(caller, 'create_session'),
+  ), { sessionId: 'explicit', cwd: '/explicit', agentPreset: 'new' })
+})
+
+test('create_session uses the directory service deployment fallback for a session without original cwd', async () => {
+  const caller = agent('current')
+  const services = baseServices(caller)
+  services.sessionsApi.create = async (request) => {
+    assert.deepEqual(request, { cwd: '/host/default' })
+    return { sessionId: SessionId('fallback') }
+  }
+  const definitions = createSessionToolDefinitions(services, defaultSessionToolsConfig)
+  assert.deepEqual(await tool(definitions, 'create_session').execute(
+    {}, execution(caller, 'create_session'),
+  ), { sessionId: 'fallback', cwd: '/host/default' })
+})
+
+test('create_session stops when directory recovery is cancelled, before approval or creation', async () => {
+  const caller = agent('current')
+  const services = baseServices(caller)
+  const controller = new AbortController()
+  const cancelled = new Error('directory inspection cancelled')
+  services.workingDirectory = {
+    ensure: async (_target, signal) => {
+      assert.equal(signal, controller.signal)
+      controller.abort(cancelled)
+      signal!.throwIfAborted()
+      return '/never'
+    },
+  }
+  services.approval.request = async () => { throw new Error('approval must not be requested') }
+  const exec = execution(caller, 'create_session')
+  exec.signal = controller.signal
+  const definitions = createSessionToolDefinitions(services, defaultSessionToolsConfig)
+  await assert.rejects(tool(definitions, 'create_session').execute({}, exec), (error) => error === cancelled)
+})
+
+test('legacy factory services report a stable error when the authenticated caller has no directory owner', async () => {
+  const ctx = new Context()
+  try {
+    const caller = { ...agent('current', header('current', { cwd: '/stale/original' })), ctx } as Agent
+    const { workingDirectory: _omitted, ...services } = baseServices(caller)
+    services.approval.request = async () => { throw new Error('missing directory must stop before approval') }
+    const definitions = createSessionToolDefinitions(services, defaultSessionToolsConfig)
+    await assert.rejects(tool(definitions, 'create_session').execute({}, execution(caller, 'create_session')),
+      (error: unknown) => error instanceof HarnessError && error.code === 'SESSION_TOOLS_DIRECTORY_UNAVAILABLE')
+  } finally {
+    await ctx.fiber.dispose()
+  }
+})
+
+test('legacy factory services accept explicit cwd without a caller Context directory service', async () => {
+  const caller = agent('current')
+  const { workingDirectory: _omitted, ...services } = baseServices(caller)
+  services.sessionsApi.create = async (request) => {
+    assert.deepEqual(request, { cwd: '/explicit' })
+    return { sessionId: SessionId('explicit-legacy') }
+  }
+  const definitions = createSessionToolDefinitions(services, defaultSessionToolsConfig)
+  assert.deepEqual(await tool(definitions, 'create_session').execute(
+    { cwd: '/explicit' }, execution(caller, 'create_session'),
+  ), { sessionId: 'explicit-legacy', cwd: '/explicit' })
+})
+
+test('legacy factory directory resolution forwards cancellation to the authenticated caller Context', async () => {
+  const ctx = new Context()
+  const controller = new AbortController()
+  const cancelled = new Error('legacy caller directory cancelled')
+  try {
+    ctx.provide('workingDirectory', {
+      ensure: async (target: Agent, signal?: AbortSignal) => {
+        assert.equal(target, caller)
+        assert.equal(signal, controller.signal)
+        controller.abort(cancelled)
+        signal!.throwIfAborted()
+        return '/never'
+      },
+    })
+    const caller = { ...agent('current'), ctx } as Agent
+    const { workingDirectory: _omitted, ...services } = baseServices(caller)
+    services.approval.request = async () => { throw new Error('cancelled directory must stop before approval') }
+    const exec = execution(caller, 'create_session')
+    exec.signal = controller.signal
+    const definitions = createSessionToolDefinitions(services, defaultSessionToolsConfig)
+    await assert.rejects(tool(definitions, 'create_session').execute({}, exec), (error) => error === cancelled)
+  } finally {
+    await ctx.fiber.dispose()
+  }
 })
 
 test('rename_session renames the current session without approval by default', async () => {
@@ -278,7 +392,7 @@ test('rename_session requires approval before renaming another session', async (
   assert.deepEqual(value, { sessionId: 'other', title: 'Other title', seq: 4 })
 })
 
-test('fork_session asks approval and delegates completed-turn selection to the Session Controller', async () => {
+test('fork_session approves the exact inclusive event cut without selecting a later turn end', async () => {
   const caller = agent('current')
   const services = baseServices(caller)
   const calls: unknown[] = []
@@ -303,7 +417,7 @@ test('fork_session asks approval and delegates completed-turn selection to the S
   )
 
   assert.deepEqual(calls, [
-    { approval: 'Fork session source at or after seq 42' },
+    { approval: 'Fork session source through exact event seq 42 (inclusive); close any open tail synthetically' },
     { fork: { sessionId: 'source', atSeq: 42 } },
   ])
   assert.deepEqual(value, { sourceSessionId: 'source', sessionId: 'forked', atSeq: 42 })

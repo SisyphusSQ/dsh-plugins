@@ -34,11 +34,11 @@ test("menu uses native rows for local, current worktree, and new worktree", () =
   const managed = workspace(
     "managed",
     "/worktrees/id/fixture-repo",
-    "fixture-repo · dsh/session-one",
+    "自定义工作树标题",
     ["session-one"],
   );
 
-  const options = worktreeOptions([local, managed], "session-one");
+  const options = worktreeOptions([local, managed], "session-one", { repositoryRoot: managed.path, mainPath: local.path, branch: "dsh/session-one" });
   assert.deepEqual(
     options.map(({ id, label, active }) => ({ id, label, active })),
     [
@@ -76,12 +76,17 @@ test("new option executes host command, waits for Workspace, and opens its sessi
       commands: {
         async execute(_sessionId: string, line: string) {
           executedLine = line;
+          if (line === "/worktree status") return {
+            ok: true as const,
+            value: { commandId: "status", result: { kind: "success" as const, text: '状态\nDSH_WORKTREE_LOCATION_V1 {"repositoryRoot":"/repo/fixture-repo","mainPath":"/repo/fixture-repo","branch":"main"}' } },
+          };
           const branch = defaultWorktreeBranch(sourceSessionId);
           items = [
+            workspace("decoy", "/elsewhere/fixture-repo", managedWorkspaceTitle("fixture-repo", branch), []),
             workspace(
               "managed",
               "/worktrees/id/fixture-repo",
-              managedWorkspaceTitle("fixture-repo", branch),
+              "用户保留的工作区标题",
               [],
             ),
             local,
@@ -91,7 +96,10 @@ test("new option executes host command, waits for Workspace, and opens its sessi
             ok: true as const,
             value: {
               commandId: "command-id",
-              result: { kind: "success" as const },
+              result: {
+                 kind: "success" as const,
+                 text: '已创建 Git worktree 并注册 Workspace。\nDSH_WORKTREE_WORKSPACE_V1 {"workspaceId":"managed","path":"/worktrees/id/fixture-repo"}',
+               },
             },
           };
         },
@@ -145,7 +153,7 @@ test("host command errors stop before navigation", async () => {
   const decoration = createWorktreeDecoration(ctx);
   const ui = decoration.ui;
   if (ui.kind !== "popupSelect") throw new Error("expected a popupSelect decoration");
-  const option = worktreeOptions([local], sourceSessionId).find((candidate) => candidate.id === "new");
+  const option = worktreeOptions([local], sourceSessionId, { repositoryRoot: local.path, mainPath: local.path, branch: "main" }).find((candidate) => candidate.id === "new");
   assert.ok(option);
   await assert.rejects(
     async () => ui.onSelect(option, { sessionId: sourceSessionId as never }),

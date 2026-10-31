@@ -70,20 +70,30 @@ export function apply(ctx: ClientContext): void {
   let revision = 0
   let compensation: HTMLStyleElement | undefined
   let current = host.getSnapshot().value?.zoomPercent ?? DEFAULT_ZOOM_PERCENT
+  let confirmed = current
+  let pendingWrite = 0
+  let writeGeneration = 0
+  let disposed = false
+  let saveFailed = false
 
-  const publish = (percent: number): void => {
+  const publish = (percent: number, failed = false): void => {
     current = clampZoomPercent(percent)
+    saveFailed = failed
     document.documentElement.style.zoom = zoomCssValue(current)
     if (compensation !== undefined) compensation.textContent = bootZoomStyle(current)
     revision += 1
-    bound?.sync(current, revision)
+    bound?.sync(current, revision, saveFailed)
   }
 
-  // Adopt the durable value without writing it back; the write path is commit().
+  // Describe invalidations can expose an earlier write while ConfigForm still
+  // queues newer ones. Remember that Host fact, but keep the latest local intent
+  // live until its own write settles; idle external changes still adopt normally.
   const adopt = (): void => {
     const section = host.getSnapshot().value
-    if (section === undefined || section.zoomPercent === current) return
-    publish(section.zoomPercent)
+    if (disposed || section === undefined) return
+    confirmed = clampZoomPercent(section.zoomPercent)
+    if (pendingWrite !== 0 || confirmed === current) return
+    publish(confirmed)
   }
 
   ctx.effect(
@@ -96,7 +106,11 @@ export function apply(ctx: ClientContext): void {
   // disposer retracts both when the plugin unloads.
   ctx.effect(() => {
     document.documentElement.style.zoom = zoomCssValue(current)
-    return () => { document.documentElement.style.removeProperty('zoom') }
+    return () => {
+      disposed = true
+      bound = undefined
+      document.documentElement.style.removeProperty('zoom')
+    }
   }, 'dsh-ui-zoom: document zoom')
 
   // Take over the Host's first-paint sheet rather than layering a second sheet
@@ -129,19 +143,32 @@ export function apply(ctx: ClientContext): void {
     'dsh-ui-zoom: dictionaries',
   )
 
-  /** Persist and apply a new zoom; the settings echo adopts it back through adopt(). */
+  const settled = (generation: number, accepted: boolean): void => {
+    if (disposed || generation !== pendingWrite) return
+    pendingWrite = 0
+    const section = host.getSnapshot().value
+    if (section !== undefined) confirmed = clampZoomPercent(section.zoomPercent)
+    publish(accepted ? section?.zoomPercent ?? current : confirmed, !accepted)
+  }
+
+  /** Persist each choice without letting an earlier Host echo erase later clicks. */
   const commit = (percent: number): void => {
     const next = clampZoomPercent(percent)
-    if (next === current) return
+    if (disposed || (next === current && !saveFailed)) return
+    const generation = ++writeGeneration
+    pendingWrite = generation
     publish(next)
-    void host.set(ZOOM_FIELD, next)
+    void host.set(ZOOM_FIELD, next).then(
+      accepted => { settled(generation, accepted) },
+      () => { settled(generation, false) },
+    )
   }
 
   const injected = (actions: BoundActions<typeof store>): UiZoomRowInjected => {
     bound = actions
     // Re-sync from the live value so no change is lost between registration
     // and first render; the store's revision guard drops stale duplicates.
-    bound.sync(current, revision)
+    bound.sync(current, revision, saveFailed)
     return { setZoomPercent: (percent) => { commit(percent) } }
   }
 

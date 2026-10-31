@@ -5,6 +5,7 @@ import test from "node:test";
 import type { CommandInvocation } from "@deepseek-ai/dsh-commands";
 
 import { createWorktreeCommand } from "../src/command.js";
+import { standaloneRuntime } from "../src/standalone-runtime.js";
 import { defaultWorktreeBranch, managedWorkspaceTitle } from "../src/protocol.js";
 import { createTestRepository, git } from "./helpers.js";
 
@@ -27,8 +28,10 @@ test("bare /worktree reports status without creating another worktree", async (t
   const registered: string[] = [];
   const command = createWorktreeCommand({
     baseDir: join(fixture.root, "worktrees"),
-    async registerWorkspace(path) {
+    async execution() { return standaloneRuntime(fixture.repository); },
+    async registerWorkspace(path, title) {
       registered.push(path);
+      return { id: "registered", path, title };
     },
   });
 
@@ -44,8 +47,10 @@ test("/worktree new creates a session branch and registers its Workspace", async
   const registered: Array<{ path: string; title: string }> = [];
   const command = createWorktreeCommand({
     baseDir: join(fixture.root, "worktrees"),
+    async execution() { return standaloneRuntime(fixture.repository); },
     async registerWorkspace(path, title) {
       registered.push({ path, title });
+      return { id: "registered", path, title: "用户自定义 Workspace 标题" };
     },
   });
 
@@ -69,6 +74,7 @@ test("/worktree rejects unsupported arguments before touching Git", async (t) =>
   t.after(() => rm(fixture.root, { recursive: true, force: true }));
   const command = createWorktreeCommand({
     baseDir: join(fixture.root, "worktrees"),
+    async execution() { return standaloneRuntime(fixture.repository); },
     async registerWorkspace() {
       assert.fail("invalid input must not register a Workspace");
     },

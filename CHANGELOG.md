@@ -4,6 +4,10 @@
 
 ## Unreleased
 
+- deprecated
+  - 2026-11-04 退役 `@suqingsq/dsh-worktree-workspaces` 并从 `packages/` 删除，停止维护其斜杠命令、模型工具、CLI 与 Web 工作树选择器；当前维护集为 `dsh-session-tools`、`dsh-ui-zoom`，另保留实验性、未发布的 `dsh-codex-bridge`。
+  - 移除当前 README 安装示例和包索引中的 Worktree 插件；设计与迁移记录保留为历史。下列先前适配、验证与发布记录不代表退役后仍提供该包，也不表示此次修改了 npm registry 状态。
+
 - breakingChange
   - `dsh-worktree-workspaces` 提升为 `0.4.0`：公开客户端 `worktreeOptions` 新增必需的 `WorktreeLocation`，`waitForWorkspace` 改接收 `{ workspaceId, path }` 回执而非标题。调用方通过公开 protocol helpers 解析 Host 命令结果；默认 Web 路径已迁移，不保留按标题猜测的降级。
 - bugFix

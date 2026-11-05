@@ -4,7 +4,7 @@ English | [中文](README.zh.md)
 
 Third-party plugins for [DeepSeek Harness (DSH)](https://github.com/deepseek-ai/deepseek-harness). Each directory under `packages/` is an independently installable plugin.
 
-The released `0.2.0` set is verified with `@deepseek-ai/dsh@0.1.0-rc.6`. Repository source targets the `0.2.1-rc.5` line (the installed Desktop host) and declares an `engines.dsh` range that also admits `0.2.0-rc.2`. On 2026-10-06 five packages were retired — `dsh-agent-plugins`, `dsh-thinking-collapse`, `dsh-codex-login-dock`, `dsh-openai-codex-oauth`, and `dsh-composer-skill-mention` — so the three packages below are the maintained set. That source set is not published yet. An additional experimental package, [`dsh-codex-bridge`](packages/dsh-codex-bridge/README.md) (read-only Codex Home compatibility), is tracked in `packages/` but is neither published nor part of that maintained set.
+The released `0.2.0` set is verified with `@deepseek-ai/dsh@0.1.0-rc.6`. Repository source targets the `0.2.1-rc.5` line (the installed Desktop host) and declares an `engines.dsh` range that also admits `0.2.0-rc.2`. On 2026-10-06 five packages were retired — `dsh-agent-plugins`, `dsh-thinking-collapse`, `dsh-codex-login-dock`, `dsh-openai-codex-oauth`, and `dsh-composer-skill-mention` — and `dsh-worktree-workspaces` was retired on 2026-11-04. The two packages below are the maintained set. That source set is not published yet. An additional experimental package, [`dsh-codex-bridge`](packages/dsh-codex-bridge/README.md) (read-only Codex Home compatibility), is tracked in `packages/` but is neither published nor part of that maintained set.
 
 ## Install
 
@@ -12,10 +12,9 @@ Requires Node.js 22 or later and `pnpm` on `PATH`. Install only the plugins you 
 
 ```bash
 dsh plugin --profile web add @suqingsq/dsh-session-tools@0.2.0
-dsh plugin --profile web add @suqingsq/dsh-worktree-workspaces@0.2.0
 ```
 
-Each package is independently installable. The commands pin the plugin release verified with DSH `0.1.0-rc.6`; the full scoped set has also been installed and loaded in the daily DSH `0.1.0-rc.7` Web profile. `dsh-ui-zoom` is not published yet, so it has no install command.
+Each package is independently installable. The command pins the plugin release verified with DSH `0.1.0-rc.6`; the full scoped set was also installed and loaded in the daily DSH `0.1.0-rc.7` Web profile before retirement. `dsh-ui-zoom` is not published yet, so it has no install command.
 
 The previous unscoped package names are deprecated. For the retired packages their scoped replacements are no longer maintained.
 
@@ -26,12 +25,6 @@ The previous unscoped package names are deprecated. For the retired packages the
 Six model-facing session tools, plus Web `@` candidates that inject another session as sourced context.
 
 ![Session mention candidates](packages/dsh-session-tools/screenshots/mention.png)
-
-### [@suqingsq/dsh-worktree-workspaces](packages/dsh-worktree-workspaces/README.md)
-
-Create and archive Git linked worktrees. The same package exposes `/worktree`, a model tool, a CLI, and a Web picker that switches DSH Workspace.
-
-![Git worktree picker](packages/dsh-worktree-workspaces/screenshots/picker.png)
 
 ### [@suqingsq/dsh-ui-zoom](packages/dsh-ui-zoom/README.md)
 

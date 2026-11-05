@@ -1,6 +1,8 @@
-# dsh-worktree-workspaces 设计与验证记录
+# dsh-worktree-workspaces 设计与验证记录（已退役）
 
-- 状态：已完成 rc.6 实现与隔离 profile 验证；`dsh-worktree-workspaces@0.1.0` 于 2026-08-15 首发，当前 `@suqingsq/dsh-worktree-workspaces@0.2.0` 已发布并在日常 rc.7 Web profile 中激活
+> **2026-11-04 退役**：`dsh-worktree-workspaces` 已停止维护并从 `packages/` 删除。本文仅保留历史设计、发布与验证事实，不再作为当前安装或验证指南；已删除包内测试与截图的本地链接，原文件可从 Git 历史追溯。当前维护范围见 [packages/README.zh.md](../../packages/README.zh.md)。
+
+- 历史状态：已完成 rc.6 实现与隔离 profile 验证；`dsh-worktree-workspaces@0.1.0` 于 2026-08-15 首发，`@suqingsq/dsh-worktree-workspaces@0.2.0` 曾发布并在日常 rc.7 Web profile 中激活
 - 目标包：`dsh-worktree-workspaces`
 - 验证基线：`@deepseek-ai/dsh@0.1.0-rc.6`
 - 记录日期：2026-08-15
@@ -36,7 +38,7 @@
 - 归档候选、路径围栏、preview/apply 与 manifest；
 - bundle 静态契约和 Web client bundle 入口。
 
-对应入口位于 [`packages/dsh-worktree-workspaces/tests/`](../../packages/dsh-worktree-workspaces/tests/)。
+退役前的测试入口位于 `packages/dsh-worktree-workspaces/tests/`，随包删除；仅可从 Git 历史追溯。
 
 ## rc.6 profile 验证记录
 
@@ -49,11 +51,11 @@
 5. 新 Workspace 会话在 linked worktree 中工作，源 checkout 的未提交状态不被复制或改写；
 6. 归档 preview、apply 和 `git worktree move` 恢复路径在真实 linked worktree 上可用。
 
-Web 选择器的当前界面证据见 [`picker.png`](../../packages/dsh-worktree-workspaces/screenshots/picker.png)。自动验证、构建或配置 dump 不能单独替代上述真实 profile 验证。
+当时的 Web 选择器界面证据保存于包内 `screenshots/picker.png`，现随包删除，可从 Git 历史追溯。自动验证、构建或配置 dump 不能单独替代上述真实 profile 验证。
 
 ## 兼容与发布边界
 
-- 当前声明兼容 `@deepseek-ai/dsh@^0.2.0-rc.1 || ^0.2.1-rc.2`，并以 `engines.dsh` `>=0.2.0-rc.2 <0.3.0` 覆盖 0.2.0-rc.2 与 0.2.1-rc.2（本轮迁移前为 `0.1.0-rc.6`）。0.1.0-rc.6 → 0.2.0-rc.2 迁移的台账见 [dsh-0.2-migration.md](dsh-0.2-migration.md)；0.2.0-rc.2 → 0.2.1-rc.2 迁移与验证见 [dsh-0.2.1-migration.md](dsh-0.2.1-migration.md)。
+- 该迁移阶段曾声明兼容 `@deepseek-ai/dsh@^0.2.0-rc.1 || ^0.2.1-rc.2`，并以 `engines.dsh` `>=0.2.0-rc.2 <0.3.0` 覆盖 0.2.0-rc.2 与 0.2.1-rc.2（本轮迁移前为 `0.1.0-rc.6`）。0.1.0-rc.6 → 0.2.0-rc.2 迁移的台账见 [dsh-0.2-migration.md](dsh-0.2-migration.md)；0.2.0-rc.2 → 0.2.1-rc.2 迁移与验证见 [dsh-0.2.1-migration.md](dsh-0.2.1-migration.md)。
 - DSH developer preview 升级后，必须重新核对命令、工具、Workspace 与 client-runtime 契约，并重做真实 profile 验证。
 - 2026-08-15 已完成 npm tarball 内容、registry 安装和 registry 版本回读；GitHub Release 以同一 `v0.1.0` tag 记录首发结果。
 - 2026-08-18 已完成 scoped 包迁移、registry tar 内容回读与日常 rc.7 Web profile 加载回读；旧 unscoped 包已弃用并指向 `@suqingsq/dsh-worktree-workspaces@0.2.0`。

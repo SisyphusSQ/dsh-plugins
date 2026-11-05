@@ -1,4 +1,6 @@
 import test from 'node:test'
+import { executeTool } from './tool-batch.mjs'
+import * as nativeExecutor from '@deepseek-ai/dsh-tool-executor-native'
 import assert from 'node:assert/strict'
 import { Context } from '@deepseek-ai/cordis'
 import { ToolRuntime } from '@deepseek-ai/dsh-tools'
@@ -14,7 +16,7 @@ const require = createRequire(import.meta.url)
 const toolsRequire = createRequire(require.resolve('@deepseek-ai/dsh-tools'))
 const { SystemPrompt } = await import(pathToFileURL(toolsRequire.resolve('@deepseek-ai/dsh-system-prompt')).href)
 
-test('real rc.2 stdio MCP discovers, executes and revokes an owned fixture server', { timeout: 15000 }, async t => {
+test('target stdio MCP discovers, executes and revokes an owned fixture server', { timeout: 15000 }, async t => {
   const root = await mkdtemp(join(tmpdir(), 'codex-mcp-test-'))
   const ctx = new Context()
   let bridge
@@ -44,6 +46,8 @@ createInterface({input:process.stdin}).on('line', line => {
     await fibers.at(-1).await()
     fibers.push(ctx.plugin(ToolRuntime, {}))
     await fibers.at(-1).await()
+    fibers.push(ctx.plugin(nativeExecutor))
+    await fibers.at(-1).await()
     const options = { enabled: true, connectMcp: true, plugins: true }
     const row = { id: 'fixture:echo', name: 'fixture', root, source: 'fixture', enabled: true, config: { command: process.execPath, args: [server, calls, pidFile] } }
     const name = `mcp__${mcpServerName(row.id)}__echo`
@@ -60,7 +64,7 @@ createInterface({input:process.stdin}).on('line', line => {
     await discovered
     pid = Number(await readFile(pidFile, 'utf8'))
     assert.ok(pid > 0)
-    const call = text => ctx.tools.execute({ callId: 'fixture-call', name, arguments: { text }, signal: new AbortController().signal })
+    const call = text => executeTool(ctx, { callId: 'fixture-call', name, arguments: { text }, signal: new AbortController().signal })
     const result = await call('first')
     assert.equal(result.isError, false)
     assert.ok(JSON.stringify(result.content).includes('echo:first'))

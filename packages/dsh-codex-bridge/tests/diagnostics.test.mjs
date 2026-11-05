@@ -9,7 +9,7 @@ import { isRemoteJsonValue, remoteMethods } from '@deepseek-ai/dsh-typert-protoc
 import { DiagnosticsService } from '../lib/diagnostics.js'
 import { TYPERT_REMOTE } from '../lib/remote.js'
 
-test('real rc.2 Gateway discovers sanitized diagnostics and unload removes its service', async () => {
+test('real target Gateway discovers sanitized diagnostics and unload removes its service', async () => {
   const ctx = new Context()
   const registryFiber = ctx.plugin(TypertRegistry)
   await registryFiber

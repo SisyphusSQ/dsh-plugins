@@ -1,116 +1,127 @@
-/**
- * Restores viewport coordinates for overlays that DSH positions from
- * `getBoundingClientRect()`.
- *
- * A rect is reported in the *rendered* space, so it already carries the zoom
- * factor. DSH's popup code writes such a value straight into the inline
- * `left`/`bottom` of a `position: fixed` box, and the browser then multiplies the
- * offset by the factor a second time — so a popover anchored near the window
- * bottom drifts further from its trigger as the factor grows.
- *
- * Only inline-styled offsets are touched. Anything positioned from a stylesheet
- * carries no inline value and is left alone, which keeps this corrector off the
- * ordinary layout path entirely.
- */
+/** Rescale script-owned viewport pixel coordinates without changing CSS-relative lengths. */
 import { rescaleFixedOffset } from '../zoom.js'
 
-/** Inline offset properties a positioning script may write. */
 const OFFSET_PROPERTIES = ['left', 'top', 'right', 'bottom'] as const
-
-/** Records the values this module wrote, so its own writes are not corrected twice. */
+// DSH 0.2.2's anchored hook writes these limits from visualViewport in rendered pixels.
+const ANCHORED_LIMITS = ['--dsh-anchored-max-width', '--dsh-anchored-max-height'] as const
 const WRITTEN = 'data-ui-zoom-offsets'
+const PIXELS = /^-?(?:\d+\.?\d*|\.\d+)px$/
 
-/** The signature of an element carrying no inline offset at all. */
-const EMPTY_OFFSETS = 'left:;top:;right:;bottom:'
+interface Correction {
+  source: string
+  written: string
+  priority: string
+}
 
-/** A disposable corrector. */
+/** A disposable corrector which also follows live zoom changes. */
 export interface FixedOffsetCorrection {
-  /** Stop observing and drop every bookkeeping attribute. */
+  /** Reapply mounted overlays from their latest source coordinates. */
+  refresh(): void
+  /** Stop observing and restore values still owned by the corrector. */
   dispose(): void
 }
 
 /**
- * Read the four inline offsets as one comparable string.
- * @param style - The element's inline style declaration.
- * @returns A stable signature of the current inline offsets.
- */
-function offsetSignature(style: CSSStyleDeclaration): string {
-  return OFFSET_PROPERTIES.map((property) => `${property}:${style.getPropertyValue(property)}`).join(';')
-}
-
-/**
- * Divide an element's inline offsets by the factor, once per external write.
- * @param element - Candidate overlay.
- * @param factor - The active zoom factor.
- */
-function correctElement(element: HTMLElement, factor: number): void {
-  if (factor === 1) return
-  const style = element.style
-  const signature = offsetSignature(style)
-  // Cheap rejection: a stylesheet-positioned box has no inline offset at all.
-  if (signature === EMPTY_OFFSETS) return
-  // Skip our own previous write; a fresh external write differs from it.
-  if (element.getAttribute(WRITTEN) === signature) return
-  if (style.position !== '' && style.position !== 'fixed') return
-  if (typeof element.ownerDocument.defaultView?.getComputedStyle === 'function') {
-    const computed = element.ownerDocument.defaultView.getComputedStyle(element).position
-    if (computed !== 'fixed') return
-  }
-  let changed = false
-  for (const property of OFFSET_PROPERTIES) {
-    const text = style.getPropertyValue(property)
-    if (text === '') continue
-    const value = Number.parseFloat(text)
-    if (!Number.isFinite(value)) continue
-    const next = rescaleFixedOffset(value, factor)
-    if (next === value) continue
-    style.setProperty(property, `${next}px`)
-    changed = true
-  }
-  if (changed) element.setAttribute(WRITTEN, offsetSignature(style))
-}
-
-/**
- * Watch the document for script-positioned overlays and rescale their offsets.
- *
- * The correction is idempotent per external write: each pass records the values
- * it wrote, so the mutation it causes is recognised and skipped, while a later
- * write from the positioning script still differs and is corrected again.
+ * Observe fixed overlays. Track each property independently: a Host update of
+ * `top` must not divide an already corrected `left` again. Relative CSS values
+ * are not viewport pixels and stay untouched. Only anchored panels have their
+ * hook-owned min-width corrected; ordinary design minimums remain unchanged.
  * @param doc - Document to observe.
- * @param factor - Reads the zoom factor currently in force.
- * @returns A disposable corrector.
+ * @param factor - Reads the active document zoom.
+ * @returns A corrector owned by the calling plugin's lifecycle.
  */
-export function installFixedOffsetCorrection(
-  doc: Document,
-  factor: () => number,
-): FixedOffsetCorrection {
-  const observer = new MutationObserver((records) => {
+export function installFixedOffsetCorrection(doc: Document, factor: () => number): FixedOffsetCorrection {
+  const tracked = new Map<HTMLElement, Map<string, Correction>>()
+  let disposed = false
+
+  const restore = (element: HTMLElement, properties: Map<string, Correction>): void => {
+    for (const [property, previous] of properties) {
+      // A newer external write wins, including writes not yet delivered by the observer.
+      if (element.style.getPropertyValue(property) === previous.written
+        && element.style.getPropertyPriority(property) === previous.priority) {
+        element.style.setProperty(property, previous.source, previous.priority)
+      }
+    }
+    element.removeAttribute(WRITTEN)
+    tracked.delete(element)
+  }
+
+  const correct = (element: HTMLElement): void => {
+    const style = element.style
+    const previous = tracked.get(element)
     const active = factor()
-    if (active === 1) return
-    for (const record of records) {
-      if (record.type === 'attributes' && record.target instanceof HTMLElement) {
-        correctElement(record.target, active)
+    if (active === 1) {
+      if (previous !== undefined) restore(element, previous)
+      return
+    }
+    const anchored = ANCHORED_LIMITS.some(property => style.getPropertyValue(property) !== '')
+    if (previous === undefined && !anchored && OFFSET_PROPERTIES.every(property => style.getPropertyValue(property) === '')) return
+    const fixed = (style.position === '' || style.position === 'fixed')
+      && doc.defaultView?.getComputedStyle(element).position === 'fixed'
+    if (!fixed) {
+      if (previous !== undefined) restore(element, previous)
+      return
+    }
+    const properties = previous ?? new Map<string, Correction>()
+    const candidates: readonly string[] = [...OFFSET_PROPERTIES, ...ANCHORED_LIMITS, ...anchored ? ['min-width'] : []]
+    for (const property of candidates) {
+      const text = style.getPropertyValue(property)
+      const priority = style.getPropertyPriority(property)
+      const entry = properties.get(property)
+      const source = entry !== undefined && text === entry.written && priority === entry.priority ? entry.source : text
+      if (!PIXELS.test(source.trim())) {
+        properties.delete(property)
         continue
       }
+      const next = `${rescaleFixedOffset(Number.parseFloat(source), active)}px`
+      if (text !== next) style.setProperty(property, next, priority)
+      properties.set(property, { source, written: style.getPropertyValue(property), priority })
+    }
+    if (properties.size > 0) {
+      tracked.set(element, properties)
+      element.setAttribute(WRITTEN, '')
+    } else {
+      tracked.delete(element)
+      element.removeAttribute(WRITTEN)
+    }
+  }
+
+  const refresh = (): void => {
+    if (disposed) return
+    for (const element of doc.body.querySelectorAll<HTMLElement>('[style]')) correct(element)
+    for (const [element, properties] of tracked) {
+      if (!doc.body.contains(element)) restore(element, properties)
+    }
+  }
+
+  const observer = new MutationObserver(records => {
+    if (disposed) return
+    const candidates = new Set<HTMLElement>()
+    let removed = false
+    for (const record of records) {
+      if (record.type === 'attributes' && record.target instanceof HTMLElement) candidates.add(record.target)
       for (const node of record.addedNodes) {
         if (!(node instanceof HTMLElement)) continue
-        correctElement(node, active)
-        for (const nested of node.querySelectorAll<HTMLElement>('[style]')) {
-          correctElement(nested, active)
-        }
+        candidates.add(node)
+        for (const nested of node.querySelectorAll<HTMLElement>('[style]')) candidates.add(nested)
+      }
+      removed ||= record.removedNodes.length > 0
+    }
+    for (const element of candidates) correct(element)
+    if (removed) {
+      for (const [element, properties] of tracked) {
+        if (!doc.body.contains(element)) restore(element, properties)
       }
     }
   })
-  observer.observe(doc.body, {
-    subtree: true,
-    childList: true,
-    attributes: true,
-    attributeFilter: ['style'],
-  })
+  observer.observe(doc.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['style'] })
+  refresh()
   return {
+    refresh,
     dispose: () => {
+      disposed = true
       observer.disconnect()
-      for (const marked of doc.querySelectorAll(`[${WRITTEN}]`)) marked.removeAttribute(WRITTEN)
+      for (const [element, properties] of tracked) restore(element, properties)
     },
   }
 }

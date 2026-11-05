@@ -1,4 +1,6 @@
 import test from 'node:test'
+import { executeTool } from './tool-batch.mjs'
+import * as nativeExecutor from '@deepseek-ai/dsh-tool-executor-native'
 import assert from 'node:assert/strict'
 import { createServer } from 'node:http'
 import { createRequire } from 'node:module'
@@ -11,7 +13,7 @@ const require = createRequire(import.meta.url)
 const toolsRequire = createRequire(require.resolve('@deepseek-ai/dsh-tools'))
 const { SystemPrompt } = await import(pathToFileURL(toolsRequire.resolve('@deepseek-ai/dsh-system-prompt')).href)
 
-test('real rc.2 Streamable HTTP MCP calls, revokes and unregisters its tools', { timeout: 15000 }, async t => {
+test('target Streamable HTTP MCP calls, revokes and unregisters its tools', { timeout: 15000 }, async t => {
   const requests = []
   const calls = []
   const sessionId = 'credential-free-fixture'
@@ -49,6 +51,8 @@ test('real rc.2 Streamable HTTP MCP calls, revokes and unregisters its tools', {
     await fibers.at(-1).await()
     fibers.push(ctx.plugin(ToolRuntime, {}))
     await fibers.at(-1).await()
+    fibers.push(ctx.plugin(nativeExecutor))
+    await fibers.at(-1).await()
     const options = { home: '/fixture-home', enabled: true, connectMcp: true, plugins: true }
     const row = { id: 'http:echo', name: 'http-fixture', root: '/fixture-home', source: 'fixture', enabled: true, config: { url: `http://127.0.0.1:${server.address().port}/mcp` } }
     const name = `mcp__${mcpServerName(row.id)}__echo`
@@ -62,7 +66,7 @@ test('real rc.2 Streamable HTTP MCP calls, revokes and unregisters its tools', {
     })
     await bridge.reconcile()
     await discovered
-    const call = text => ctx.tools.execute({ callId: 'http-fixture-call', name, arguments: { text }, signal: t.signal })
+    const call = text => executeTool(ctx, { callId: 'http-fixture-call', name, arguments: { text }, signal: t.signal })
     const result = await call('first')
     assert.equal(result.isError, false)
     assert.ok(JSON.stringify(result.content).includes('http-echo:first'))
@@ -75,7 +79,7 @@ test('real rc.2 Streamable HTTP MCP calls, revokes and unregisters its tools', {
     await bridge.reconcile()
     assert.equal(ctx.tools.get(name), undefined)
     assert.deepEqual(bridge.snapshot(), [])
-    // rc.2 closes the local client transport; it does not send HTTP DELETE to
+    // The target closes the local client transport; it does not send HTTP DELETE to
     // terminate server-side sessions. Do not claim remote session destruction.
     const requestCount = requests.length
     const removed = await call('after-disposal')

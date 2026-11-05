@@ -2,6 +2,7 @@
 
 - 状态：`dsh-session-tools` 已完成 rc.6 工具与 `@会话` Live E2E；`@suqingsq/dsh-session-tools@0.2.0` 已发布并在日常 rc.7 Web profile 中激活；分屏仍等待 DSH Core API
 - 首个验证目标：`@deepseek-ai/dsh@0.1.0-rc.6`
+- 当前源码适配与验证边界：见 [DSH 0.2.2 迁移记录](dsh-0.2.2-migration.md)。下文保留原始设计与历史产品证据，不代表当前接口。
 本轮 0.1.0-rc.6 → 0.2.0-rc.2 迁移的台账、根因与验证状态见 [dsh-0.2-migration.md](dsh-0.2-migration.md)；0.2.0-rc.2 → 0.2.1-rc.2 迁移与验证见 [dsh-0.2.1-migration.md](dsh-0.2.1-migration.md)。
 - 设计日期：2026-08-14
 - 对应插件包：`dsh-session-tools`（工具、`@会话` 菜单与 pre-step 注入；分屏就绪后也落本包）

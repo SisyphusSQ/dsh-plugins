@@ -24,7 +24,7 @@ import {
 } from '../settings.js'
 import { bootZoomStyle, clampZoomPercent, zoomCssValue, zoomFactor, ZOOM_STYLE_MARKER } from '../zoom.js'
 import { en, zh, type UiZoomKey } from './locales.js'
-import { installFixedOffsetCorrection } from './fixed-offsets.js'
+import { installFixedOffsetCorrection, type FixedOffsetCorrection } from './fixed-offsets.js'
 import { createUiZoomRowStore } from './settings-store.js'
 import { UiZoomRow, type UiZoomRowInjected } from './UiZoomRow.js'
 
@@ -69,6 +69,7 @@ export function apply(ctx: ClientContext): void {
   let bound: BoundActions<typeof store> | undefined
   let revision = 0
   let compensation: HTMLStyleElement | undefined
+  let fixedCorrection: FixedOffsetCorrection | undefined
   let current = host.getSnapshot().value?.zoomPercent ?? DEFAULT_ZOOM_PERCENT
   let confirmed = current
   let pendingWrite = 0
@@ -81,6 +82,7 @@ export function apply(ctx: ClientContext): void {
     saveFailed = failed
     document.documentElement.style.zoom = zoomCssValue(current)
     if (compensation !== undefined) compensation.textContent = bootZoomStyle(current)
+    fixedCorrection?.refresh()
     revision += 1
     bound?.sync(current, revision, saveFailed)
   }
@@ -133,10 +135,14 @@ export function apply(ctx: ClientContext): void {
 
   // Overlays DSH positions from a rect land one factor too far, for the same
   // reason the viewport units overflow; put their offsets back.
-  ctx.effect(
-    () => installFixedOffsetCorrection(document, () => zoomFactor(current)).dispose,
-    'dsh-ui-zoom: fixed-offset correction',
-  )
+  ctx.effect(() => {
+    const correction = installFixedOffsetCorrection(document, () => zoomFactor(current))
+    fixedCorrection = correction
+    return () => {
+      fixedCorrection = undefined
+      correction.dispose()
+    }
+  }, 'dsh-ui-zoom: fixed-offset correction')
 
   ctx.effect(
     () => ctx.locale.register(UI_ZOOM_NS, { zh, en }),

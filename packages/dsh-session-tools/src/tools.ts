@@ -178,10 +178,16 @@ export function createSessionToolDefinitions(
       if (config.approveRead) {
         await requireApproval(services.approval, caller, exec, `Read an untrusted snapshot of session ${sourceId}`)
       }
+      // Budget against the request that produced this call, not a future model selection.
+      const route = caller.session.requestHeader()?.config
+      if (route === undefined) {
+        throw new HarnessError('read_session requires an active model request', 'SESSION_TOOLS_REQUEST_REQUIRED')
+      }
       const prepared = await services.sessionReferenceResolver.prepare(
         caller,
         [],
         [{ sessionId: sourceId }],
+        route,
         exec.signal,
       )
       const context = prepared.additionalContext

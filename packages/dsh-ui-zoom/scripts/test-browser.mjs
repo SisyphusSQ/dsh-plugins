@@ -12,6 +12,7 @@ import { access, mkdtemp, readFile, realpath, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { basename, dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { runAnchoredBrowser } from './anchored-browser.mjs'
 
 const packageDir = fileURLToPath(new URL('../', import.meta.url))
 const artifact = new URL('../lib/zoom.js', import.meta.url)
@@ -230,6 +231,7 @@ try {
   }
   if (failures.length) throw new Error(`Layout regression failed (${failures.length} assertions):\n${failures.join('\n')}`)
   console.log(`PASS ${percentages.join('/')}% initial + live updates, viewport/panel/document geometry, repeated document scroll, main/panel inner scrolling`)
+  await runAnchoredBrowser({ evaluate, send, bootZoomStyle })
 } catch (error) {
   console.error(error.stack ?? error)
   process.exitCode = 1

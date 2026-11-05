@@ -4,13 +4,13 @@
 
 DeepSeek Harness 整体界面缩放插件：入口是设置页的「整体界面缩放」行。
 
-编译与包测试基线为 `@deepseek-ai/dsh@0.2.1-rc.5`；声明的 `engines.dsh` 范围同时覆盖 `0.2.0-rc.2`。运行验证及其确切宿主版本记录在设计文档中。
+`0.2.0` 面向 DSH `0.2.2-rc.1`、Cordis `4.1.0` 和 Node `>=24.9.0`。声明的 DSH 范围为 `>=0.2.2-rc.1 <0.3.0`；仓库检查使用精确的 `0.2.2-rc.1` DSH 依赖群，不代表已验证范围内每个版本。包测试和浏览器 fixture 不等于真实 DSH profile 启动或产品 E2E。
 
 ## 它能做什么
 
 DeepSeek Harness 自带的排版控制只有一个「外观 → 字号大小」，而且它**只作用于会话内容**（`--dsh-content-font-size`，10–22 px）。侧边栏、设置页、按钮和菜单读的是另一套固定的 `--dsw-*` 令牌，没有任何东西会缩放它们。
 
-本插件缩放的是**整个界面**，范围 50%–300%，入口是**设置 → 通用 → 整体界面缩放**：该行显示当前百分比，带 −/+ 按钮和重置。设置是持久的——它存在 Host 的用户设置文档里，因此重启后保留、并跟随 profile。
+本插件缩放的是**整个界面**，范围 50%–300%，入口是**设置 → 通用 → 整体界面缩放**：该行显示当前百分比，带 −/+ 按钮和重置。设置是持久的——它存在当前 profile 的 `ui-zoom` 插件配置中，因此重启后保留、并跟随 profile。
 
 选择会立即生效，支持快速连续点击。最新选择尚在保存时，较早的 Host 刷新不会覆盖该选择；有序写入结束后，设置行以 Host 值收敛，并继续采纳外部设置变更。保存被拒绝或连接中断时，会恢复最近已知的 Host 设置并显示行内错误。
 
@@ -26,9 +26,13 @@ DeepSeek Harness 自带的排版控制只有一个「外观 → 字号大小」�
 
 **挂在文档元素上，而不是应用根节点。** 菜单、弹窗、悬浮卡片、toast 和灯箱全部通过 `createPortal` 挂到 `document.body`。如果规则只作用于 `#root`，所有浮层都会保持原尺寸不变，所以缩放要挂高一层，让整个页面都在它里面。
 
-**用 `zoom` 而不是 `transform: scale`。** `zoom` 会成倍地改变实际使用值，因此布局、命中测试、锚点定位和拖拽区域都在同一个坐标系里解析。`transform: scale` 会让布局计算停留在未缩放空间，并为 fixed 定位的后代新建包含块。
+**用 `zoom` 而不是 `transform: scale`。** `zoom` 会连同内容一起缩放布局和命中测试；脚本输出的视口坐标仍需下述补偿，缩放本身不会转换它们。`transform: scale` 会让布局计算停留在未缩放空间，并为 fixed 定位的后代新建包含块。
 
-**Better Sidebar 的视口浮层也会补偿。** 嵌套的 `data-dsh-panel-host` 使用 `100vh`，同样需要按缩放倍数反向校正高度，避免触发其降级定位循环并持续撑长文档滚动区。
+**视口单位反向补偿。** 注入样式将壳层尺寸设为 `100vh / z`，并限制直接使用视口高度的子节点，抵消 CSS `zoom` 对视口长度的再次放大。
+
+**脚本拥有的视口像素会补偿。** `MutationObserver` 校正 fixed 浮层明确的 `px` 偏移，以及 DSH 的 `--dsh-anchored-max-width` / `--dsh-anchored-max-height` 可视视口上限。锚点派生的行内最小宽度同步校正；无关的设计最小宽度和 `%`、`em`、`calc(...)` 等相对长度保持原样。按属性独立记录，动态缩放时重新计算，卸载时恢复仍由插件拥有的值，不覆盖外部新写入。这不会替换 Host 的定位算法。
+
+**Better Sidebar 的视口浮层也会补偿。 嵌套的 `data-dsh-panel-host` 使用 `100vh`，同样需要按缩放倍数反向校正高度，避免触发其降级定位循环并持续撑长文档滚动区。
 
 Host 半边通过 `webserver/index-inject` 在任何浏览器插件启动前注入样式表。客户端接管同一张表，将它移到宿主样式表之后，随缩放变化更新，并在卸载时移除。因此恢复 100% 时不会重新激活旧的启动补偿。
 
@@ -55,7 +59,11 @@ Host 半边通过 `webserver/index-inject` 在任何浏览器插件启动前注�
 
 ## 验证
 
-类型检查、打包和单测/注册契约测试都在本仓库内运行。构建后，可在开发仓库执行 `pnpm --filter @suqingsq/dsh-ui-zoom test:browser`，使用已安装的 Chrome/Chromium（可通过 `CHROME_BIN` 指定）做真实布局回归，覆盖 50/100/115/150/300%、连续整页滚动、内部滚轮和动态缩放。此 fixture 不等于完整 DSH Web/Desktop E2E。兼容边界、验证记录和已知限制记录在 [`docs/design/dsh-ui-zoom.md`](../../docs/design/dsh-ui-zoom.md)。
+在精确 DSH `0.2.2-rc.1` 依赖群上运行类型检查、构建和单测/注册契约测试。Host fixture 使用真实 Cordis/Settings 服务检查 raw 与 effective 配置、默认值、更新和清理；有序写入测试执行已发布的 settings 客户端工厂，仅控制 Remote 传输。
+
+构建后，可在开发仓库执行 `pnpm --filter @suqingsq/dsh-ui-zoom test:browser`，使用已安装的 Chrome/Chromium（可通过 `CHROME_BIN` 指定）做真实布局回归。这是依赖 TypeScript 等开发工具链的开发入口，不是消费者运行入口。覆盖 50/100/115/150/300%、连续整页滚动、内部滚轮和动态缩放；锚点 fixture 还通过受控 effect/state 适配器和可视视口输入执行精确目标 hook 与菜单 CSS，检查尺寸上限、锚点最小宽度及内部滚动可达。来源、校验值、许可证和证据边界见 [`tests/fixtures/README.md`](tests/fixtures/README.md)。
+
+这些检查不等于真实 DSH Web/Desktop 启动、全部菜单定位正确或产品 E2E；更广的兼容记录仍在 [`docs/design/dsh-ui-zoom.md`](../../docs/design/dsh-ui-zoom.md)。
 
 ## 许可
 

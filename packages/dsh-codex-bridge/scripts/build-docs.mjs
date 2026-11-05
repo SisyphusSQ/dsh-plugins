@@ -6,3 +6,7 @@ await copyFile(
   new URL('../../../docs/design/codex-home-bridge.md', import.meta.url),
   new URL('../lib/compatibility.md', import.meta.url),
 )
+await copyFile(
+  new URL('../../../docs/design/dsh-0.2.2-migration.md', import.meta.url),
+  new URL('../lib/dsh-0.2.2-migration.md', import.meta.url),
+)

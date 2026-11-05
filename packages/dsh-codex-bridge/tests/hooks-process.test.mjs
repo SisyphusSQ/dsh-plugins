@@ -19,7 +19,7 @@ function alive(pid) { try { process.kill(pid, 0); return true } catch (error) { 
 
 // Actual published providers, not a replacement shell. This is a process-level composition,
 // not product Loader/Web E2E and does not read the real user's Codex Home.
-test('real rc.2 shell cancels a hook and its child on aggregate revocation', { timeout: 15000, skip: process.platform === 'win32' }, async t => {
+test('real target shell cancels a hook and its child on aggregate revocation', { timeout: 15000, skip: process.platform === 'win32' }, async t => {
   const directory = await mkdtemp(join(tmpdir(), 'dsh-codex-hook-process-'))
   assert.ok(directory.startsWith(join(tmpdir(), 'dsh-codex-hook-process-')))
   const script = join(directory, 'fixture.mjs'), marker = join(directory, 'pids.json')

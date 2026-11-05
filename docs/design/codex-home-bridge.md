@@ -1,5 +1,7 @@
 # Codex Home bridge
 
+Current source targets DSH `0.2.2-rc.1` / Cordis `4.1.0` / Node.js `>=24.9.0`. See the [current migration and verification record](dsh-0.2.2-migration.md); the dated acceptance sections below remain historical evidence, not new-version acceptance.
+
 ## Agreed scope
 
 A read-only external plugin for DSH 0.2.1-rc.2 (migrated from 0.2.0-rc.2; see [dsh-0.2.1-migration.md](dsh-0.2.1-migration.md)). Input is CODEX_HOME (default ~/.codex), not workspace configuration. No model-login or unrelated credentials, sessions, history, state databases, remote downloads or writes into Codex Home. The user's latest direction supersedes Codex OAuth reuse and private authentication adapters: use DSH's own authentication system. Import only credential-free MCP configuration through the native DSH client; configure authenticated servers independently in DSH. Do not read Codex grants, use Keychain, implement a second store or initiate login/refresh. Skills and Plugins are whole-category switches; there are no item toggles. Plugin-owned skills follow Plugins, standalone Home skills follow Skills. Agents and global AGENTS instructions have separate switches. Connecting MCP and executing hooks require separate category-wide grants, disabled by default.

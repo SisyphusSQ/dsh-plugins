@@ -1,4 +1,5 @@
 import test from 'node:test'
+import { executeTool } from './tool-batch.mjs'
 import assert from 'node:assert/strict'
 import { Context } from '@deepseek-ai/cordis'
 import { renderSkillContent } from '@deepseek-ai/dsh-skill'
@@ -62,6 +63,8 @@ test('native Loader owns MCP authentication while the bridge ignores Codex grant
     await writeFile(credentialFile, original, { mode: 0o600 })
     await writeFile(join(home, 'config.toml'), `mcp_oauth_credentials_store = "file"\n[mcp_servers.plain]\nurl = "${url}/plain"\n[mcp_servers.oauth]\nurl = "${url}/oauth"\noauth_resource = "${url}/not-a-stored-binding"\n[mcp_servers.header]\nurl = "${url}/header"\n[mcp_servers.header.http_headers]\nX-Custom = "fixture-header-only"\n`)
     const config = [
+      { id: 'projections', name: moduleUrl('@deepseek-ai/dsh-session-projection') },
+      { id: 'executor', name: moduleUrl('@deepseek-ai/dsh-tool-executor-native') },
       { id: 'agents', name: moduleUrl('@deepseek-ai/dsh-agent') }, { id: 'skills', name: moduleUrl('@deepseek-ai/dsh-skill') },
       { id: 'system-prompt', name: systemPromptUrl }, { id: 'tools', name: moduleUrl('@deepseek-ai/dsh-tools') },
       { id: 'bridge', name: hostEntry, config: { home, enabled: true, connectMcp: true } },
@@ -79,7 +82,7 @@ test('native Loader owns MCP authentication while the bridge ignores Codex grant
     await discovered
     const outputs = []
     for (const name of names) {
-      const output = await ctx.tools.execute({ name, callId: name, arguments: {}, signal: t.signal })
+      const output = await executeTool(ctx, { name, callId: name, arguments: {}, signal: t.signal })
       assert.equal(output.isError, false)
       assert.match(JSON.stringify(output.content), /authenticated-loader-result/)
       outputs.push({ isError: output.isError, content: output.content })
@@ -93,7 +96,7 @@ test('native Loader owns MCP authentication while the bridge ignores Codex grant
     assert.deepEqual(snapshot, expected, 'reviewed authenticated Loader schema/wire/result snapshot')
     assert.equal(requests.filter(request => request.method === 'tools/call').length, 2)
     assert.equal(await readFile(credentialFile, 'utf8'), original)
-    const catalog = await ctx.tools.execute({ name: 'codex_home_catalog', callId: 'auth-catalog', arguments: {}, signal: t.signal })
+    const catalog = await executeTool(ctx, { name: 'codex_home_catalog', callId: 'auth-catalog', arguments: {}, signal: t.signal })
     assert.ok(!JSON.stringify(catalog).includes('fixture-oauth-only'))
     assert.ok(!JSON.stringify(catalog).includes('fixture-header-only'))
     const catalogData = JSON.parse(catalog.content.find(item => item.type === 'text').text)
@@ -106,7 +109,7 @@ test('native Loader owns MCP authentication while the bridge ignores Codex grant
     assert.equal(unauthorizedRequests, 0)
     assert.ok(requests.every(request => ['/plain', '/dsh'].includes(request.path)))
     await ctx.loader.update('bridge', { config: { home, enabled: true, connectMcp: false } })
-    const denied = await ctx.tools.execute({ name: names[0], callId: 'revoked-import', arguments: {}, signal: t.signal })
+    const denied = await executeTool(ctx, { name: names[0], callId: 'revoked-import', arguments: {}, signal: t.signal })
     assert.equal(denied.isError, true)
     assert.equal(requests.filter(request => request.method === 'tools/call').length, 2)
     const bridgeFiber = ctx.loader.resolve('bridge').fiber
@@ -137,6 +140,8 @@ test('native Loader mounts Home skill provider and commits volatile category cha
     const skillFile = join(home, 'skills', 'fixture', 'SKILL.md')
     await writeFile(skillFile, content)
     const config = [
+      { id: 'projections', name: moduleUrl('@deepseek-ai/dsh-session-projection') },
+      { id: 'executor', name: moduleUrl('@deepseek-ai/dsh-tool-executor-native') },
       { id: 'agents', name: moduleUrl('@deepseek-ai/dsh-agent') },
       { id: 'skills', name: moduleUrl('@deepseek-ai/dsh-skill') },
       { id: 'system-prompt', name: systemPromptUrl },
@@ -157,7 +162,7 @@ test('native Loader mounts Home skill provider and commits volatile category cha
     assert.equal(ctx.llm, undefined)
     assert.ok(ctx.tools.get('codex_home_catalog'), 'catalog must not require subagents or llm')
     assert.equal(ctx.tools.get('codex_agent'), undefined, 'delegation must wait for its required services')
-    const result = await ctx.tools.execute({ name: 'codex_home_catalog', callId: 'loader-catalog', arguments: {}, signal: t.signal })
+    const result = await executeTool(ctx, { name: 'codex_home_catalog', callId: 'loader-catalog', arguments: {}, signal: t.signal })
     assert.equal(result.isError, false)
     assert.ok(JSON.stringify(result.content).includes(list[0].name))
     const catalogSnapshot = JSON.parse(await readFile(new URL('./snapshots/loader-catalog.json', import.meta.url), 'utf8'))
@@ -180,20 +185,22 @@ test('native Loader mounts Home skill provider and commits volatile category cha
     assert.equal(entry.fiber, previousFiber, 'volatile edits must not remount the owner')
     assert.deepEqual(await ctx.skills.list(), [])
     assert.equal(await ctx.skills.get(list[0].name), undefined)
-    const disabledCatalog = await ctx.tools.execute({ name: 'codex_home_catalog', callId: 'loader-catalog-disabled', arguments: {}, signal: t.signal })
+    const disabledCatalog = await executeTool(ctx, { name: 'codex_home_catalog', callId: 'loader-catalog-disabled', arguments: {}, signal: t.signal })
     assert.equal(disabledCatalog.isError, false)
     assert.deepEqual(report(disabledCatalog), catalogSnapshot.skillsDisabled, 'reviewed whole-category retraction snapshot')
     assert.equal(JSON.stringify(disabledCatalog.content).includes(list[0].name), false, 'catalog must observe the same category revision')
     assert.equal(await readFile(skillFile, 'utf8'), content)
+    const toolsFiber = ctx.loader.resolve('tools').fiber
     ctx.loader.remove('tools')
+    await toolsFiber.await()
     await ctx.loader.await()
-    assert.equal(ctx.tools, undefined)
+    assert.equal(Boolean(ctx.tools), false, 'tools must retract after owned executor and contributions drain')
     await ctx.loader.root.update(config.map(row => row.id === 'bridge' ? { ...row, config: { home, enabled: true, skills: false } } : row))
     await ctx.loader.await()
     assert.equal(ctx.loader.resolve('bridge').fiber, previousFiber, 'optional service reload must not remount bridge')
     assert.ok(ctx.tools.get('codex_home_catalog'), 'catalog contribution must recover when tools returns')
     assert.equal(ctx.tools.get('codex_agent'), undefined)
-    const recovered = await ctx.tools.execute({ name: 'codex_home_catalog', callId: 'loader-catalog-recovered', arguments: {}, signal: t.signal })
+    const recovered = await executeTool(ctx, { name: 'codex_home_catalog', callId: 'loader-catalog-recovered', arguments: {}, signal: t.signal })
     assert.equal(recovered.isError, false)
     assert.deepEqual(report(recovered), catalogSnapshot.skillsDisabled)
     ctx.loader.remove('bridge')

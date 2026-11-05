@@ -1,7 +1,6 @@
 import type { Context } from '@deepseek-ai/cordis'
 import type { Agent } from '@deepseek-ai/dsh-agent'
 import type {} from '@deepseek-ai/dsh-shell'
-import type {} from '@deepseek-ai/dsh-session-projection'
 import { createUserMessage } from '@deepseek-ai/dsh-llm'
 import { appendHookInvoked, appendHookResult, matcherDiagnostic, matchesMatcher, mergeHookOutputs, runHook } from '@deepseek-ai/dsh-hook-protocol'
 import type { CommandHook, HookOutput, RunHookResult } from '@deepseek-ai/dsh-hook-protocol'
@@ -101,7 +100,7 @@ declare module '@deepseek-ai/dsh-llm' { interface MessageSourceMap { 'suqingsq-c
 const context = (texts: string[]) => texts.length ? createUserMessage({ content: texts.map(text => ({ type: 'text', text })), source: { kind: 'suqingsq-codex-hook' } }) : undefined
 /** Mount hook events through the target host's public interception seams. */
 export function registerHooks(ctx: Context, bridge: HookBridge): void {
-  const lastTurn = (agent?: Agent) => agent ? ctx.sessionProjections.stateOf(agent.session, 'turnBoundary')?.lastTurn ?? 0 : 0
+  const lastTurn = (agent?: Agent) => agent ? ctx.agents.turnBoundaryOf(agent.session).lastTurn : 0
   const base = (agent: Agent | undefined, point: string) => ({ session_id: agent?.session.header.id ?? '', transcript_path: null, cwd: agent?.session.header.cwd ?? process.cwd(), hook_event_name: point, permission_mode: 'default', model: '' })
   ctx.on('agent/created', async ({ agent, source, signal }) => {
     const result = await bridge.run('SessionStart', source, { ...base(agent, 'SessionStart'), source }, { agent, signal })

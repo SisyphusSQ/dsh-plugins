@@ -88,7 +88,7 @@ export function apply(ctx) {
 `)
 const rows = [
   ['llm', 'dsh-llm'], ['session', 'dsh-session'], ['session-projection', 'dsh-session-projection'],
-  ['system-prompt', 'dsh-system-prompt'], ['tools', 'dsh-tools'], ['agent', 'dsh-agent'],
+  ['system-prompt', 'dsh-system-prompt'], ['tools', 'dsh-tools'], ['executor', 'dsh-tool-executor-native'], ['agent', 'dsh-agent'],
   ['fs', 'dsh-fs-local'], ['working-directory', 'dsh-working-directory'],
   ['skills', 'dsh-skill'], ['loop', 'dsh-agent-loop'], ['subagent', 'dsh-subagent'],
   ['spawn', 'dsh-subagent-spawn-in-process'],
@@ -132,7 +132,9 @@ assert.equal(catalog.skills[0].originalName, 'process-skill')
 assert.equal(catalog.agents[0].policyCompatible, true)
 assert.deepEqual(JSON.parse(results[1].result), { output: [{ type: 'text', text: 'PROCESS_CHILD_OK' }], stopReason: 'completed' })
 assert.deepEqual(events.find(event => event.phase === 'turn_end').reason, { kind: 'completed' })
-assert.deepEqual(events.at(-1), { type: 'final', text: 'PROCESS_PARENT_OK' })
+const final = events.at(-1)
+assert.match(final.sessionId, /^session-[0-9a-f-]+$/u)
+assert.deepEqual(final, { type: 'final', sessionId: final.sessionId, reason: { kind: 'completed' }, text: 'PROCESS_PARENT_OK' })
 for (const [name, text] of Object.entries(fixture)) assert.equal(await readFile(join(codex, name), 'utf8'), text, 'Home fixture mutated: ' + name)
 const report = { target: manifest.version, node: process.version, artifactSha256: createHash('sha256').update(await readFile(artifact)).digest('hex'), eventCount: events.length, fixtureUnchanged: true, root, boundaries: ['scripted LLM only', 'tarball materialized with linked dependencies, not package-manager installation', 'in-memory sessions; no durable backend', 'no Web browser or credentials'] }
 await writeFile(join(root, 'report.json'), JSON.stringify(report, null, 2) + '\n')

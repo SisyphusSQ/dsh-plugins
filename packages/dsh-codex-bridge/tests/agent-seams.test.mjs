@@ -2,6 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { Context } from '@deepseek-ai/cordis'
 import { AgentRegistry } from '@deepseek-ai/dsh-agent'
+import { SessionProjectionRegistry } from '@deepseek-ai/dsh-session-projection'
 import { SubagentRuntime } from '@deepseek-ai/dsh-subagent'
 
 // This deliberately tests the public native seams WITHOUT manufacturing an
@@ -19,6 +20,9 @@ test('native Agent/Subagent seams alone cannot execute imported roles', { timeou
     } })
     fibers.push(workingDirectory)
     await workingDirectory.await()
+    const projections = ctx.plugin(SessionProjectionRegistry)
+    fibers.push(projections)
+    await projections.await()
     const agents = ctx.plugin(AgentRegistry)
     fibers.push(agents)
     await agents.await()

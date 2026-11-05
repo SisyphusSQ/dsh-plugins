@@ -4,11 +4,11 @@
 
 [DeepSeek Harness (DSH)](https://github.com/deepseek-ai/deepseek-harness) 的第三方插件仓库。`packages/` 下每个目录都是一个可独立安装的插件。
 
-已发布的 `0.2.0` 集合按 `@deepseek-ai/dsh@0.1.0-rc.6` 验证。仓库源码目标线为 `0.2.1-rc.5`（当前安装的桌面宿主），并通过 `engines.dsh` 同时覆盖 `0.2.0-rc.2`。2026-10-06 退役了五个包：`dsh-agent-plugins`、`dsh-thinking-collapse`、`dsh-codex-login-dock`、`dsh-openai-codex-oauth`、`dsh-composer-skill-mention`；2026-11-04 又退役了 `dsh-worktree-workspaces`。下列两个包是保留维护集；该源码集合尚未发布。仓库另有一个已纳入版本管理的实验性包 [`dsh-codex-bridge`](packages/dsh-codex-bridge/README.zh.md)（只读 Codex Home 兼容），既未发布，也不属于上述维护集。
+已发布的 `0.2.0` 集合按 `@deepseek-ai/dsh@0.1.0-rc.6` 验证。仓库源码目标为 DSH `0.2.2-rc.1`、Cordis `4.1.0`、Node.js `>=24.9.0`，不再声明支持旧 DSH cohort；验证范围见[兼容记录](docs/design/dsh-0.2.2-migration.md)。2026-10-06 退役了五个包：`dsh-agent-plugins`、`dsh-thinking-collapse`、`dsh-codex-login-dock`、`dsh-openai-codex-oauth`、`dsh-composer-skill-mention`；2026-11-04 又退役了 `dsh-worktree-workspaces`。下列两个包是保留维护集；该源码集合尚未发布。仓库另有一个已纳入版本管理的实验性包 [`dsh-codex-bridge`](packages/dsh-codex-bridge/README.zh.md)（只读 Codex Home 兼容），既未发布，也不属于上述维护集。
 
 ## 安装
 
-需要 Node.js 22 或更高版本，并确保 `pnpm` 在 `PATH` 中。按需将插件安装到 DSH Web profile：
+以下历史已发布版本需要 Node.js 22 或更高版本，并确保 `pnpm` 在 `PATH` 中；它不是当前 DSH `0.2.2-rc.1` 源码适配版。按需安装到与该版本匹配的 DSH Web profile：
 
 ```bash
 dsh plugin --profile web add @suqingsq/dsh-session-tools@0.2.0

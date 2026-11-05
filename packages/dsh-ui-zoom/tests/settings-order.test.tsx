@@ -37,7 +37,7 @@ async function settle(runtime: Runtime) {
   while (runtime.pending() > 0) await act(async () => { await runtime.accept() })
 }
 
-describe('zoom intent versus real rc5 settings invalidations', () => {
+describe('zoom intent versus published target settings invalidations', () => {
   it('keeps ten clicks when older Host describes arrive between later local intents', async () => {
     const runtime = await mount()
     await increase(3)

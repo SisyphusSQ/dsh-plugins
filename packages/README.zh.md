@@ -4,7 +4,7 @@
 
 可独立安装的 DeepSeek Harness 插件。每个包有自己的 README、测试和验证记录。
 
-已发布的 `0.2.0` 集合按 `@deepseek-ai/dsh@0.1.0-rc.6` 验证；仓库源码目标线为 `@deepseek-ai/dsh@0.2.1-rc.5`，`engines.dsh` 范围同时覆盖 `0.2.0-rc.2`。2026-10-06 退役了五个包，2026-11-04 又退役了 `dsh-worktree-workspaces`；下表是保留维护的两个包，另加实验性、未发布的 `dsh-codex-bridge`。
+已发布的 `0.2.0` 集合按 `@deepseek-ai/dsh@0.1.0-rc.6` 验证；仓库源码目标为 `@deepseek-ai/dsh@0.2.2-rc.1`、Cordis `4.1.0`、Node.js `>=24.9.0`，DSH peer 起点为 `^0.2.2-rc.1`；[兼容记录](../docs/design/dsh-0.2.2-migration.md)区分包/组合验证与产品验收。2026-10-06 退役了五个包，2026-11-04 又退役了 `dsh-worktree-workspaces`；下表是保留维护的两个包，另加实验性、未发布的 `dsh-codex-bridge`。
 
 | 包 | 能力 |
 | --- | --- |

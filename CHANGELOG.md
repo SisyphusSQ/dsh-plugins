@@ -4,6 +4,16 @@
 
 ## Unreleased
 
+- breakingChange
+  - 2026-11-05 将现存三个插件源码适配 DSH `0.2.2-rc.1`，最低 Node.js 提升到 `24.9.0`、Cordis 提升到 `~4.1.0`；DSH peer 起点为 `^0.2.2-rc.1`，不再声明支持旧 cohort。源码版本为 Session Tools `0.4.0`、UI Zoom `0.2.0`、实验性 Codex Bridge `0.2.0`，尚未发布。
+  - 可选导出 helper `injectMentionedSessionReferences` 新增必需的当前 step `modelSelection`；默认原生 `@session` 链不受该 helper 调用签名影响。
+- bugFix
+  - Session 引用快照显式传入当前模型请求路由并保留取消信号，避免目标 resolver 参数错位或误用未来模型选择。
+  - Bridge turn 边界改由 owning AgentRegistry handle 读取，适配异步 session projection；真实组合显式装配 native batch executor 并验证工具 scope 隔离。
+  - Zoom 校正目标 anchored viewport 的像素上限与 anchor min-width，修复逐属性重复缩放、动态 zoom 重算和卸载恢复；不改写 Host 原生 placement 算法。
+- note
+  - 本轮 API 破坏、RED/GREEN 与产品验收边界见 [DSH 0.2.2 迁移记录](docs/design/dsh-0.2.2-migration.md)。Fixture、真实 Loader/native kernel 与 Chrome DOM 证据不替代日常 Web 或真实模型服务商验收；下文保留先前迭代的历史，不代表恢复退役插件或重复部署。
+
 - deprecated
   - 2026-11-04 退役 `@suqingsq/dsh-worktree-workspaces` 并从 `packages/` 删除，停止维护其斜杠命令、模型工具、CLI 与 Web 工作树选择器；当前维护集为 `dsh-session-tools`、`dsh-ui-zoom`，另保留实验性、未发布的 `dsh-codex-bridge`。
   - 移除当前 README 安装示例和包索引中的 Worktree 插件；设计与迁移记录保留为历史。下列先前适配、验证与发布记录不代表退役后仍提供该包，也不表示此次修改了 npm registry 状态。

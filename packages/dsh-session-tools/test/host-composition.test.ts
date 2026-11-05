@@ -6,6 +6,7 @@ import test from 'node:test'
 import { Context } from '@deepseek-ai/cordis'
 import Loader from '@deepseek-ai/cordis-plugin-loader'
 import SessionController from '@deepseek-ai/dsh-api-session-controller'
+import TypertGateway from '@deepseek-ai/dsh-api-gateway'
 import { mountAgentLoopTestDependencies, mountAgentLoopTestHarness } from '@deepseek-ai/dsh-agent-loop-testkit'
 import { LlmAdapter, createUserMessage } from '@deepseek-ai/dsh-llm'
 import { SessionId } from '@deepseek-ai/dsh-session'
@@ -67,7 +68,10 @@ async function harness() {
     ctx.provide('workspaceRegistry', { archivedSessionIds: [], list: () => [] })
     await ctx.plugin(SessionReferenceResolver)
     const loop = await mountAgentLoopTestHarness(ctx)
-    await ctx.plugin(SessionController, { nativeOpen: false })
+    await ctx.plugin(TypertGateway)
+    const controller = await ctx.plugin(SessionController, { nativeOpen: false })
+    await controller.await()
+    assert.ok(ctx.sessionController, 'the target Host controller must be active')
     const model = new ScriptedModel()
     ctx.llm.registerAdapter(['scripted'], model)
     await ctx.plugin(Loader, { baseUrl: new URL('../', import.meta.url).href })
@@ -119,12 +123,13 @@ test('Loader tool flow creates in the effective cwd and forks an exact open pref
 
     const children = ctx.sessions.list().filter((session) => !['source', 'caller'].includes(session.id))
     assert.equal(children.length, 2, JSON.stringify(caller.session.snapshotEvents().filter((event) => event.type === 'tool/result'), null, 2))
-    const created = children.find((session) => session.header.parentSession === undefined)!
-    const forked = children.find((session) => session.header.parentSession === source.id)!
+    const created = children.find((session) => !session.header.isSeeded)!
+    const forked = children.find((session) => session.header.isSeeded)!
     assert.ok(created)
     assert.equal(created.header.cwd, cwd)
     assert.equal(ctx.agents.get(created.id)?.status, 'idle')
     assert.deepEqual(forked.snapshotEvents().slice(0, cut + 1), sourceEvents.slice(0, cut + 1))
+    assert.equal(forked.header.parentSession, undefined, 'ordinary forks are seeded, not subagent children')
     assert.equal(forked.inheritedEventCount, cut + 1)
     assert.equal(forked.eventAt(cut + 1)?.type, 'session/end-seed')
     assert.equal(forked.snapshotEvents().some((event) => event.type === 'assistant/message'), false)
@@ -163,8 +168,8 @@ test('Loader tool flow creates in the effective cwd and forks an exact open pref
     caller.followup(user('Create after directory removal and fork the default prefix.'))
     await caller.whenIdle()
     const recoveredChildren = ctx.sessions.list().filter((session) => !beforeRecovery.has(session.id))
-    const recovered = recoveredChildren.find((session) => session.header.parentSession === undefined)!
-    const defaultFork = recoveredChildren.find((session) => session.header.parentSession === source.id)!
+    const recovered = recoveredChildren.find((session) => !session.header.isSeeded)!
+    const defaultFork = recoveredChildren.find((session) => session.header.isSeeded)!
     assert.equal(recoveredChildren.length, 2)
     assert.equal(recovered.header.cwd, await realpath(original))
     assert.equal(ctx.workingDirectory.get(caller.session), await realpath(original))

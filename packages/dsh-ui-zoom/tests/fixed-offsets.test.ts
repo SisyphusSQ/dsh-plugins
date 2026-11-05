@@ -71,6 +71,76 @@ describe('installFixedOffsetCorrection', () => {
     expect(Number.parseFloat(element.style.left)).toBeCloseTo(160)
   })
 
+  it('rescales target anchored viewport caps and anchor-derived minimum width', async () => {
+    const element = await place(1.5, 'left:120px;top:60px;--dsh-anchored-max-width:776px;--dsh-anchored-max-height:576px;min-width:240px')
+    expect(Number.parseFloat(element.style.getPropertyValue('--dsh-anchored-max-height'))).toBeCloseTo(384)
+    expect(Number.parseFloat(element.style.getPropertyValue('--dsh-anchored-max-width'))).toBeCloseTo(776 / 1.5)
+    expect(element.style.minWidth).toBe('160px')
+  })
+
+  it('does not divide an untouched offset again when only the other offset changes', async () => {
+    const element = await place(1.25, 'left:100px;top:200px')
+    element.style.top = '300px'
+    await settle()
+    expect(element.style.left).toBe('80px')
+    expect(element.style.top).toBe('240px')
+  })
+
+  it('preserves non-pixel offsets and unrelated minimum widths', async () => {
+    const element = await place(1.5, 'left:25%;top:calc(100% - 40px);right:2em;min-width:120px')
+    expect(element.style.left).toBe('25%')
+    expect(element.style.top).toBe('calc(100% - 40px)')
+    expect(element.style.right).toBe('2em')
+    expect(element.style.minWidth).toBe('120px')
+  })
+
+  it('restores the latest source values and priorities on dispose', async () => {
+    const element = await place(1.25, 'left:100px !important;top:200px')
+    element.style.top = '300px'
+    await settle()
+    dispose?.()
+    dispose = undefined
+    expect(element.style.left).toBe('100px')
+    expect(element.style.getPropertyPriority('left')).toBe('important')
+    expect(element.style.top).toBe('300px')
+  })
+
+  it('does not overwrite a newer external value when disposing before observer delivery', async () => {
+    const element = await place(1.25, 'left:100px;top:200px')
+    element.style.left = '175px'
+    dispose?.()
+    dispose = undefined
+    expect(element.style.left).toBe('175px')
+    expect(element.style.top).toBe('200px')
+  })
+
+  it('reapplies existing overlays from source coordinates when the zoom changes', async () => {
+    let factor = 1.5
+    const correction = installFixedOffsetCorrection(document, () => factor)
+    dispose = correction.dispose
+    const element = document.createElement('div')
+    element.setAttribute('style', 'position:fixed;left:150px;--dsh-anchored-max-height:576px')
+    document.body.append(element)
+    await settle()
+    factor = 1
+    correction.refresh()
+    expect(element.style.left).toBe('150px')
+    expect(element.style.getPropertyValue('--dsh-anchored-max-height')).toBe('576px')
+    factor = 0.5
+    correction.refresh()
+    expect(element.style.left).toBe('300px')
+    expect(element.style.getPropertyValue('--dsh-anchored-max-height')).toBe('1152px')
+  })
+
+  it('corrects an overlay already mounted when the plugin activates', async () => {
+    const element = document.createElement('div')
+    element.setAttribute('style', 'position:fixed;left:150px;--dsh-anchored-max-height:576px')
+    document.body.append(element)
+    dispose = installFixedOffsetCorrection(document, () => 1.5).dispose
+    expect(element.style.left).toBe('100px')
+    expect(element.style.getPropertyValue('--dsh-anchored-max-height')).toBe('384px')
+  })
+
   it('drops its bookkeeping attribute on dispose', async () => {
     const element = await place(1.25, 'left:100px;bottom:200px')
     expect(element.hasAttribute('data-ui-zoom-offsets')).toBe(true)

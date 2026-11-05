@@ -7,6 +7,7 @@ import { injectMentionedSessionReferences } from '../lib/inject.js'
 import { formatSessionReferenceMention } from '../lib/uri.js'
 
 const caller = { id: SessionId('session-current') } as unknown as Agent
+const modelSelection = { provider: 'step-provider', model: 'step-model' }
 
 function snapshotMessage(sessionId: string) {
   return createUserMessage({
@@ -41,12 +42,18 @@ test('prepends prepared snapshot context ahead of the claimed prompt', async () 
     source: { kind: 'user' },
   })
   const snapshot = snapshotMessage('session-listed')
+  const controller = new AbortController()
   const result = await injectMentionedSessionReferences({
     agent: caller,
+    modelSelection,
     claimedMessages: [userMessage],
     decision: { kind: 'enter', messages: [userMessage] },
-    prepare: async () => ({ content: userMessage.content, additionalContext: snapshot }),
-    signal: new AbortController().signal,
+    prepare: async (_agent, _content, _references, route, signal) => {
+      assert.equal(route, modelSelection)
+      assert.equal(signal, controller.signal)
+      return { content: userMessage.content, additionalContext: snapshot }
+    },
+    signal: controller.signal,
   })
 
   assert.deepEqual(result, {
@@ -68,6 +75,7 @@ test('does not duplicate a snapshot already injected by read_session', async () 
   let prepared = 0
   const result = await injectMentionedSessionReferences({
     agent: caller,
+    modelSelection,
     claimedMessages: [userMessage],
     decision: { kind: 'enter', messages: [snapshot, userMessage] },
     prepare: async () => {
@@ -96,6 +104,7 @@ test('propagates prepare failures instead of swallowing them', async () => {
   await assert.rejects(
     injectMentionedSessionReferences({
       agent: caller,
+      modelSelection,
       claimedMessages: [userMessage],
       decision: { kind: 'enter', messages: [userMessage] },
       prepare: async () => {
@@ -110,6 +119,7 @@ test('propagates prepare failures instead of swallowing them', async () => {
 test('returns reject decisions unchanged', async () => {
   const result = await injectMentionedSessionReferences({
     agent: caller,
+    modelSelection,
     claimedMessages: [],
     decision: { kind: 'reject' },
     prepare: async () => {

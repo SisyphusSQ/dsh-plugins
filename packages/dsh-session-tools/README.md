@@ -4,9 +4,13 @@ English | [中文](README.zh.md)
 
 Session tools for DeepSeek Harness. The package gives the model six session tools and integrates with the Host's native Web `@` references for sourced session context.
 
-Compiled and package-tested against `@deepseek-ai/dsh@0.2.1-rc.5`, including a real Loader + AgentLoop + Session Controller composition. This is not a claim of Web or provider-backed E2E verification.
+Compiled and package-tested against `@deepseek-ai/dsh@0.2.2-rc.1`, including a real Loader + AgentLoop + Session Controller composition. This is not a claim of Web or provider-backed E2E verification.
 
-## Install
+Requires DSH `>=0.2.2-rc.1 <0.3.0`, Cordis `~4.1.0`, and Node.js `>=24.9.0` for this source version. `read_session` sizes snapshots using the active model request and forwards its cancellation signal.
+
+## Historical release
+
+The command below installs the earlier release verified with DSH `0.1.0-rc.6`, not this unpublished source adaptation:
 
 ```bash
 dsh plugin --profile web add @suqingsq/dsh-session-tools@0.2.0
@@ -37,7 +41,7 @@ Picking a session creates the native session reference chip. The native codec pr
 
 A human `@` mention does not go through `read_session` approval. Plain `@title` text alone is not a session reference. Model-initiated `read_session` still requires approval by default and uses `deferContext()`; snapshots are never promoted to direct-user authority.
 
-The exported legacy `createSessionMentionSource`, `listSessionMentionCandidates`, and injection helpers remain compatible for explicit consumers. The source/candidate factories are deprecated and are not mounted by the default package path; new integrations should use the native reference provider rather than register the legacy source alongside it.
+The exported legacy `createSessionMentionSource` and `listSessionMentionCandidates` remain available for explicit consumers. The opt-in `injectMentionedSessionReferences` helper now requires the `modelSelection` captured by `agent/pre-step`, so reference budgets follow that step's route rather than a future model choice. The source/candidate factories are deprecated and are not mounted by the default package path; new integrations should use the native reference provider rather than register the legacy source alongside it.
 
 ## Configuration
 
@@ -56,7 +60,7 @@ Only `allowed-once` continues an approval request; any other answer fails closed
 
 ## Verification
 
-Package regressions run against `@deepseek-ai/dsh@0.2.1-rc.5`. The credential-free Host composition exercises a full message → tool → reply flow with real session creation, effective-cwd inheritance, exact open-prefix forks, approval audit events, bounded sourced context, native mention preparation, and Loader unload cleanup. A separate published-client-entry fixture checks single-provider registration and native reference chip/codec behavior; it does not render a browser UI.
+Package regressions run against `@deepseek-ai/dsh@0.2.2-rc.1`. The credential-free Host composition exercises a full message → tool → reply flow with real session creation, effective-cwd inheritance, exact open-prefix forks, approval audit events, bounded sourced context, native mention preparation, and Loader unload cleanup. A separate published-client-entry fixture checks single-provider registration and native reference chip/codec behavior; it does not render a browser UI.
 
 Earlier product verification is recorded in the [design document](https://github.com/SisyphusSQ/dsh-plugins/blob/main/docs/design/dsh-session-capabilities.md).
 

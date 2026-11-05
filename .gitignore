@@ -1,4 +1,6 @@
 node_modules/
+# Local pnpm content-addressable dependency cache.
+.pnpm-store/
 lib/
 dist/
 # Intermediate client bundle before the loader wrapper is applied.

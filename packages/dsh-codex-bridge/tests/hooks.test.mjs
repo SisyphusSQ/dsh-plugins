@@ -12,6 +12,27 @@ function setup(rows, runner) {
   const bridge = new HookBridge(ctx, runtime, 600000, runner)
   return { bridge, ctx, listeners, warnings, set: next => { options = { ...options, ...next } } }
 }
+test('tool hooks read the owning Agent turn boundary through the registered handle', async () => {
+  const listeners = new Map(), observed = []
+  const session = { header: { id: 'turn-fixture', cwd: '/fixture' } }
+  const agent = { session }
+  const ctx = {
+    on: (name, listener) => listeners.set(name, listener),
+    agents: { turnBoundaryOf: value => { assert.equal(value, session); return { lastTurn: 7 } } },
+    sessionProjections: { stateOf: () => { throw new Error('Deprecated string-key projection lookup must not be used') } },
+  }
+  registerHooks(ctx, { run: async (point, _subject, payload, invocation) => {
+    observed.push({ point, turn: invocation.turn, turnId: payload.turn_id })
+    return { additionalContext: [] }
+  } })
+  const exec = { agent, name: 'read', arguments: {}, callId: 'turn-call', signal: new AbortController().signal }
+  await listeners.get('tools/pre-execute')(exec, async () => ({ kind: 'allow' }))
+  await listeners.get('tools/post-execute')(exec, { content: [] }, async () => ({}))
+  assert.deepEqual(observed, [
+    { point: 'PreToolUse', turn: 7, turnId: '7' },
+    { point: 'PostToolUse', turn: 7, turnId: '7' },
+  ])
+})
 test('hook compiler rejects non-equivalent execution without revealing commands', () => {
   assert.equal(compileHook(row('Stop', { timeout: 1 })).command.timeoutSec, 1)
   for (const r of [row('Unknown'), row('PreToolUse', { async: true }), row('PreToolUse', { env: {} }), row('PreToolUse', { type: 'prompt' }), row('PreToolUse', { timeout: -1 }), { ...row(), matcher: '[' }]) assert.throws(() => compileHook(r), error => !error.message.includes('test-only-command'))
@@ -68,7 +89,7 @@ test('unsupported approval and rewrites fail closed, as does continue false', as
     await s.bridge.close()
   }
 })
-test('actual rc.2 runner preserves Codex framing and parses blocking stdout', async () => {
+test('actual target runner preserves Codex framing and parses blocking stdout', async () => {
   let request
   const s = setup([row('PreToolUse', { timeout: 2 })])
   s.ctx.shell = {

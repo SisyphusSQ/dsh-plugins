@@ -1,4 +1,4 @@
-import type { Agent, PreStepDecision } from '@deepseek-ai/dsh-agent'
+import type { Agent, ModelSelection, PreStepDecision } from '@deepseek-ai/dsh-agent'
 import type { ContentBlock, UserMessage } from '@deepseek-ai/dsh-llm'
 import type { SessionReferenceResolver } from '@deepseek-ai/dsh-session-reference'
 
@@ -6,6 +6,8 @@ import { injectedSessionIds, sessionReferencesFromMessages } from './mentions.js
 
 export interface InjectMentionedSessionReferencesOptions {
   readonly agent: Agent
+  /** Route captured by agent/pre-step; future model selections must not change this budget. */
+  readonly modelSelection: Readonly<ModelSelection>
   readonly claimedMessages: readonly UserMessage[]
   readonly decision: PreStepDecision
   readonly prepare: SessionReferenceResolver['prepare']
@@ -25,6 +27,7 @@ function claimedContent(messages: readonly UserMessage[]): ContentBlock[] {
 export async function injectMentionedSessionReferences({
   agent,
   claimedMessages,
+  modelSelection,
   decision,
   prepare,
   signal,
@@ -43,6 +46,7 @@ export async function injectMentionedSessionReferences({
     agent,
     claimedContent(claimedMessages),
     references,
+    modelSelection,
     signal,
   )
   const context = prepared.additionalContext

@@ -1,5 +1,5 @@
 /// <reference types="node" />
-/** Real rc5 configuration form/mirror and zoom row store; only the wire is controlled. */
+/** Published target configuration form/mirror and zoom row store; only the wire is controlled. */
 import { readFile } from 'node:fs/promises'
 import { runInThisContext } from 'node:vm'
 import * as cordis from '@deepseek-ai/cordis'

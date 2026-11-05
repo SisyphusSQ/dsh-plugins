@@ -30,7 +30,11 @@ function agent(id: string, sessionHeader: SessionHeader = header(id)): Agent {
     id: SessionId(id),
     status: 'running',
     options: {},
-    session: { header: sessionHeader },
+    session: {
+      header: sessionHeader,
+      requestHeader: () => ({ config: { provider: 'step-provider', model: 'step-model' } }),
+    },
+    model: { current: () => ({ provider: 'next-provider', model: 'next-model' }) },
   }
   return value as unknown as Agent
 }
@@ -146,7 +150,9 @@ test('read_session defers one sourced snapshot after approval without copying it
     },
   }
   services.sessionReferenceResolver = {
-    prepare: async (_agent, _content, references) => {
+    prepare: async (_agent, _content, references, route, signal) => {
+      assert.deepEqual(route, { provider: 'step-provider', model: 'step-model' })
+      assert.equal(signal, exec.signal)
       requested.push(references[0]?.sessionId ?? '')
       return {
         content: [],
@@ -199,6 +205,18 @@ test('read_session defers one sourced snapshot after approval without copying it
     truncated: true,
   })
   assert.equal(JSON.stringify(value).includes('UNTRUSTED SNAPSHOT BODY'), false)
+})
+
+test('read_session refuses a missing active request instead of using the next model selection', async () => {
+  const caller = agent('current')
+  caller.session.requestHeader = () => undefined
+  const services = baseServices(caller)
+  services.sessionReferenceResolver.prepare = async () => { throw new Error('must not prepare') }
+  const definitions = createSessionToolDefinitions(services, defaultSessionToolsConfig)
+  await assert.rejects(
+    tool(definitions, 'read_session').execute({ session_id: 'other' }, execution(caller, 'read_session')),
+    (error: unknown) => error instanceof HarnessError && error.code === 'SESSION_TOOLS_REQUEST_REQUIRED',
+  )
 })
 
 test('create_session approves and inherits the effective cwd after cd, not the original header', async () => {

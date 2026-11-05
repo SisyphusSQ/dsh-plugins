@@ -1,4 +1,5 @@
 import test from 'node:test'
+import { executeTool } from './tool-batch.mjs'
 import assert from 'node:assert/strict'
 import { Context } from '@deepseek-ai/cordis'
 import { createRequire } from 'node:module'
@@ -48,6 +49,8 @@ export function apply(ctx) {
     const directory = join(root, 'directory.mjs')
     await writeFile(directory, `export function apply(ctx) { ctx.provide('workingDirectory', { ensure: async () => ${JSON.stringify(root)} }); }\n`)
     const config = [
+      { id: 'projections', name: moduleUrl('@deepseek-ai/dsh-session-projection') },
+      { id: 'executor', name: moduleUrl('@deepseek-ai/dsh-tool-executor-native') },
       { id: 'agents', name: moduleUrl('@deepseek-ai/dsh-agent') },
       { id: 'skills', name: moduleUrl('@deepseek-ai/dsh-skill') },
       { id: 'system-prompt', name: systemPromptUrl },
@@ -66,7 +69,7 @@ export function apply(ctx) {
     assert.ok(ctx.tools.get('codex_agent'))
     const parent = ctx.agents.get('depth-fixture-parent')
     assert.ok(parent, `fixture must publish its caller (fiber state ${ctx.loader.resolve('fixture').fiber.state})`)
-    const execute = callId => ctx.tools.execute({ name: 'codex_agent', callId, arguments: { role: 'reviewer', prompt: 'Check depth.' }, agent: parent, signal: t.signal })
+    const execute = callId => executeTool(ctx, { name: 'codex_agent', callId, arguments: { role: 'reviewer', prompt: 'Check depth.' }, agent: parent, signal: t.signal })
     const denied = await execute('depth-zero')
     assert.equal(denied.isError, true, 'native maxDepth=0 must deny a top-level role call')
     assert.match(JSON.stringify(denied.content), /subagent depth 1 exceeds maxDepth 0/u)

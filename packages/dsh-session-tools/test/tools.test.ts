@@ -64,7 +64,6 @@ function baseServices(caller: Agent): SessionToolServices {
     agents: {
       get: () => caller,
       currentInitiator: () => caller,
-      roots: () => [caller],
     },
     approval: { request: async () => 'allowed-once' },
     sessionQuery: {
@@ -91,7 +90,6 @@ test('list_sessions returns bounded ordinary-session metadata without approval',
     agents: {
       get: () => caller,
       currentInitiator: () => caller,
-      roots: () => [caller],
     },
     approval: {
       request: async () => {

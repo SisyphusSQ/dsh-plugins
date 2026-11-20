@@ -97,6 +97,8 @@ export function zoomCompensationCss(percent: number): string {
     // Better Sidebar's layer is nested below its body-level mount. Its 100vh
     // otherwise triggers degraded absolute positioning and a growing scroll area.
     `body>[data-dsh-better-sidebar]>[data-dsh-panel-host]{height:calc(100vh / ${factor})}`,
+    // The native CSS-anchored Menu uses layout viewport units, not inline pixel limits.
+    ...(factor > 1 ? [`body>[data-anchor-side][data-anchor-align]{max-height:calc(100dvh / ${factor} - 12px - var(--dsh-menu-window-top))}`] : []),
   ].join('')
 }
 

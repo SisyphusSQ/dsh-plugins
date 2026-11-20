@@ -4,9 +4,9 @@
 
 DeepSeek Harness 的会话能力插件。提供六个模型侧工具，并接入 Host 原生 Web `@` 引用，把会话作为带出处的上下文使用。
 
-编译与包测试目标为 `@deepseek-ai/dsh@0.2.2-rc.1`，包含真实 Loader + AgentLoop + Session Controller 组合验证；不将其描述为 Web 或真实模型 E2E 验证。
+编译与包测试目标为 `@deepseek-ai/dsh@0.2.2-rc.5`，包含真实 Loader + AgentLoop + Session Controller 组合验证；不将其描述为 Web 或真实模型 E2E 验证。
 
-当前源码版本要求 DSH `>=0.2.2-rc.1 <0.3.0`、Cordis `~4.1.0` 和 Node.js `>=24.9.0`；`read_session` 使用当前模型请求决定快照预算，并传递取消信号。
+当前源码版本要求 DSH `>=0.2.2-rc.5 <0.3.0`、Cordis `~4.1.0` 和 Node.js `>=24.9.0`；`read_session` 使用当前模型请求决定快照预算，并传递取消信号。
 
 ## 历史已发布版本
 
@@ -60,7 +60,7 @@ Approval 只有 `allowed-once` 会继续，其他回答全部失败关闭。
 
 ## 验证
 
-包回归以 `@deepseek-ai/dsh@0.2.2-rc.1` 为目标。无需凭据的 Host 组合执行完整的消息 → 工具 → 回复流程，覆盖真实会话创建、有效 cwd 继承、精确未闭合前缀 Fork、审批审计事件、受限 sourced context、原生提及准备和 Loader 卸载清理。另有已发布客户端入口夹具验证单提供者注册及原生 chip/codec 行为；该夹具不渲染浏览器界面。
+包回归以 `@deepseek-ai/dsh@0.2.2-rc.5` 为目标。无需凭据的 Host 组合执行完整的消息 → 工具 → 回复流程，覆盖真实会话创建、有效 cwd 继承、精确未闭合前缀 Fork、审批审计事件、受限 sourced context、原生提及准备和 Loader 卸载清理。另有已发布客户端入口夹具验证单提供者注册及原生 chip/codec 行为；该夹具不渲染浏览器界面。
 
 更早的产品验证记录见[设计文档](https://github.com/SisyphusSQ/dsh-plugins/blob/main/docs/design/dsh-session-capabilities.md)。
 

@@ -11,10 +11,11 @@ import {
   type ApprovalRequester,
 } from '../lib/authority.js'
 
-function agent(id: string): Agent {
+function agent(id: string, header: Partial<Agent['session']['header']> = {}): Agent {
   const value = {
     id: SessionId(id),
     status: 'running',
+    session: { header },
   }
   return value as unknown as Agent
 }
@@ -33,13 +34,11 @@ function execution(caller: Agent): ToolRunContext {
   }
 }
 
-test('requireRootExecution rejects a live subagent caller', () => {
-  const root = agent('root')
-  const child = agent('child')
-  const registry: AgentAuthorityRegistry = {
-    get: (id) => id === child.id ? child : root,
+test('requireRootExecution rejects a live subagent even without a live parent', () => {
+  const child = agent('child', { origin: 'subagent', parentSession: SessionId('offline-parent') })
+  const registry = {
+    get: (id: SessionId) => id === child.id ? child : undefined,
     currentInitiator: () => child,
-    roots: () => [root],
   }
 
   assert.throws(
@@ -48,13 +47,18 @@ test('requireRootExecution rejects a live subagent caller', () => {
   )
 })
 
+test('requireRootExecution permits ordinary forks with historical parent metadata', () => {
+  const fork = agent('fork', { isSeeded: true, parentSession: SessionId('source') })
+  const registry = { get: () => fork, currentInitiator: () => fork }
+  assert.equal(requireRootExecution(registry, execution(fork)), fork)
+})
+
 test('requireRootExecution rejects a stale root agent object', () => {
   const caller = agent('root')
   const replacement = agent('root')
   const registry: AgentAuthorityRegistry = {
     get: () => replacement,
     currentInitiator: () => caller,
-    roots: () => [caller],
   }
 
   assert.throws(

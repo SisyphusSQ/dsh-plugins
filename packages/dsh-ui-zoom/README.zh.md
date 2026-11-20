@@ -4,7 +4,7 @@
 
 DeepSeek Harness 整体界面缩放插件：入口是设置页的「整体界面缩放」行。
 
-`0.2.0` 面向 DSH `0.2.2-rc.1`、Cordis `4.1.0` 和 Node `>=24.9.0`。声明的 DSH 范围为 `>=0.2.2-rc.1 <0.3.0`；仓库检查使用精确的 `0.2.2-rc.1` DSH 依赖群，不代表已验证范围内每个版本。包测试和浏览器 fixture 不等于真实 DSH profile 启动或产品 E2E。
+`0.3.0` 面向 DSH `0.2.2-rc.5`、Cordis `4.1.0` 和 Node `>=24.9.0`。声明的 DSH 范围为 `>=0.2.2-rc.5 <0.3.0`；仓库检查使用精确的 `0.2.2-rc.5` DSH 依赖群，不代表已验证范围内每个版本。包测试和浏览器 fixture 不等于真实 DSH profile 启动或产品 E2E。
 
 ## 它能做什么
 
@@ -59,7 +59,7 @@ Host 半边通过 `webserver/index-inject` 在任何浏览器插件启动前注�
 
 ## 验证
 
-在精确 DSH `0.2.2-rc.1` 依赖群上运行类型检查、构建和单测/注册契约测试。Host fixture 使用真实 Cordis/Settings 服务检查 raw 与 effective 配置、默认值、更新和清理；有序写入测试执行已发布的 settings 客户端工厂，仅控制 Remote 传输。
+在精确 DSH `0.2.2-rc.5` 依赖群上运行类型检查、构建和单测/注册契约测试。Host fixture 使用真实 Cordis/Settings 服务检查 raw 与 effective 配置、默认值、更新和清理；有序写入测试执行已发布的 settings 客户端工厂，仅控制 Remote 传输。
 
 构建后，可在开发仓库执行 `pnpm --filter @suqingsq/dsh-ui-zoom test:browser`，使用已安装的 Chrome/Chromium（可通过 `CHROME_BIN` 指定）做真实布局回归。这是依赖 TypeScript 等开发工具链的开发入口，不是消费者运行入口。覆盖 50/100/115/150/300%、连续整页滚动、内部滚轮和动态缩放；锚点 fixture 还通过受控 effect/state 适配器和可视视口输入执行精确目标 hook 与菜单 CSS，检查尺寸上限、锚点最小宽度及内部滚动可达。来源、校验值、许可证和证据边界见 [`tests/fixtures/README.md`](tests/fixtures/README.md)。
 

@@ -92,12 +92,10 @@ export class RoleBridge {
       const activation = await this.ctx.subagents.startActivation({
         provider: 'spawn',
         label: `Codex: ${role.name}`,
-        request: {
-          parent,
-          ...(maxDepth !== undefined ? { maxDepth } : {}),
-          prompt: [{ type: 'text', text: compiled.instructions.trim() === '' ? prompt : `${compiled.instructions}\n\n---\n\n${prompt}` }],
-          ...(compiled.agentOptions ? { agentOptions: compiled.agentOptions } : {}),
-        },
+        parent,
+        ...(maxDepth !== undefined ? { maxDepth } : {}),
+        prompt: [{ type: 'text', text: compiled.instructions.trim() === '' ? prompt : `${compiled.instructions}\n\n---\n\n${prompt}` }],
+        ...(compiled.agentOptions ? { agentOptions: compiled.agentOptions } : {}),
         signal,
         delivery: 'caller',
       })

@@ -31,10 +31,11 @@ test('Loader role delegation follows volatile native subagent depth policy', { t
     await writeFile(join(home, 'config.toml'), '[agents.reviewer]\nconfig_file = "agents/reviewer.toml"\ndescription = "Depth fixture reviewer"\n')
     await writeFile(join(home, 'agents/reviewer.toml'), roleContent)
     const fixture = join(root, 'fixture.mjs')
-    await writeFile(fixture, `export const inject = ['agents', 'subagents'];
+    await writeFile(fixture, `export const inject = ['agents', 'sessions', 'subagents'];
 export function apply(ctx) {
-  const parent = { id: 'depth-fixture-parent', ctx, options: { provider: 'fixture', model: 'fixture' }, session: { id: 'depth-fixture-parent', header: {}, requestHeader: () => undefined } };
-  ctx.effect(() => ctx.agents.enter(parent, undefined));
+  const id = 'depth-fixture-parent';
+  const parent = { id, ctx, options: { provider: 'fixture', model: 'fixture' }, session: ctx.sessions.create(id) };
+  ctx.effect(() => ctx.agents.enter(parent));
   let sequence = 0;
   ctx.subagents.registerProvider({
     name: 'spawn', inheritsParentContext: false,
@@ -49,6 +50,7 @@ export function apply(ctx) {
     const directory = join(root, 'directory.mjs')
     await writeFile(directory, `export function apply(ctx) { ctx.provide('workingDirectory', { ensure: async () => ${JSON.stringify(root)} }); }\n`)
     const config = [
+      { id: 'sessions', name: moduleUrl('@deepseek-ai/dsh-session') },
       { id: 'projections', name: moduleUrl('@deepseek-ai/dsh-session-projection') },
       { id: 'executor', name: moduleUrl('@deepseek-ai/dsh-tool-executor-native') },
       { id: 'agents', name: moduleUrl('@deepseek-ai/dsh-agent') },

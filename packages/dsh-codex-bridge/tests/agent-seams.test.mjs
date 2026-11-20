@@ -29,15 +29,14 @@ test('native Agent/Subagent seams alone cannot execute imported roles', { timeou
     const subagents = ctx.plugin(SubagentRuntime, {})
     fibers.push(subagents)
     await subagents.await()
-    assert.deepEqual(ctx.subagents.list(), [])
     assert.equal(ctx.subagents.getProvider('spawn'), undefined)
     await assert.rejects(ctx.agents.create({ sessionId: 'readonly-codex-prerequisite-probe' }), /no agent factory registered/)
     // NO_PROVIDER must happen before request validation or parent/session work.
     await assert.rejects(
-      ctx.subagents.startActivation({ provider: 'spawn', label: 'prerequisite probe', request: {}, signal: new AbortController().signal, delivery: 'caller' }),
+      ctx.subagents.startActivation({ provider: 'spawn', label: 'prerequisite probe', signal: new AbortController().signal, delivery: 'caller' }),
       error => error.code === 'NO_PROVIDER',
     )
-    assert.deepEqual(ctx.subagents.list(), [], 'failed start must not register a provider')
+    assert.equal(ctx.subagents.getProvider('spawn'), undefined, 'failed start must not register a provider')
   } finally {
     for (const fiber of fibers.reverse()) await fiber.dispose()
   }

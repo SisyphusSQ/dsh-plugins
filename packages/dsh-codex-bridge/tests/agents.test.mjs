@@ -55,14 +55,14 @@ test('legal delegation at the host cap passes the same numeric cap to activation
   h.setMaxDepth(2)
   try {
     assert.deepEqual(JSON.parse(await h.bridge.run(h.parent, 'reviewer', 'Task', new AbortController().signal)), { answer: 'at boundary' })
-    assert.equal(spec.request.maxDepth, 2)
+    assert.equal(spec.maxDepth, 2)
   } finally { await h.bridge.close() }
 })
 
 test('each delegation observes the current host depth cap without remounting the bridge', async () => {
   const caps = []
   const h = harness(async spec => {
-    caps.push(spec.request.maxDepth)
+    caps.push(spec.maxDepth)
     return { result: Promise.resolve({ answer: 'allowed' }), dispose: async () => {} }
   })
   try {
@@ -94,7 +94,7 @@ test('a delegation captures one host cap for preflight and activation across mod
     release.resolve()
     assert.deepEqual(JSON.parse(await pending), { answer: 'captured' })
     assert.equal(reads, 1, 'preflight and activation must not resolve different cap values')
-    assert.equal(spec.request.maxDepth, 2, 'activation must retain the cap that admitted this operation')
+    assert.equal(spec.maxDepth, 2, 'activation must retain the cap that admitted this operation')
     await assert.rejects(h.bridge.run(h.parent, 'reviewer', 'Next task', new AbortController().signal), SubagentDepthError)
     assert.equal(reads, 2, 'the next operation must see the updated cap')
   } finally { release.resolve(); await h.bridge.close() }
@@ -111,8 +111,8 @@ test('role result success and failure always dispose the owned real-delegation h
     else assert.deepEqual(JSON.parse(await pending), { answer: 'fixture' })
     assert.equal(spec.provider, 'spawn')
     assert.equal(spec.delivery, 'caller')
-    assert.equal(spec.request.parent, h.parent)
-    assert.match(spec.request.prompt[0].text, /^Review carefully\.\n\n---\n\nTask$/u)
+    assert.equal(spec.parent, h.parent)
+    assert.match(spec.prompt[0].text, /^Review carefully\.\n\n---\n\nTask$/u)
     assert.equal(disposed, 1)
     await h.bridge.close()
   }

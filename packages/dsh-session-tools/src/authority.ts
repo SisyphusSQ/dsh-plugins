@@ -7,7 +7,6 @@ import type { ApprovalOutcome, ApprovalRequest } from '@deepseek-ai/dsh-user-app
 export interface AgentAuthorityRegistry {
   get(id: SessionId): Agent | undefined
   currentInitiator(): Agent | undefined
-  roots(): Agent[]
 }
 
 export interface ApprovalRequester {
@@ -26,7 +25,8 @@ export function requireRootExecution(
       'SESSION_TOOLS_DRIVER_REQUIRED',
     )
   }
-  if (!_registry.roots().includes(agent)) {
+  // Match Host session routing: a historical fork can have a parent without being a subagent.
+  if (agent.session.header.origin === 'subagent') {
     throw new HarnessError('session tools are available only to root agents', 'SESSION_TOOLS_ROOT_REQUIRED')
   }
   return agent

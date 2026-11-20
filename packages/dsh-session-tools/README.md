@@ -4,9 +4,9 @@ English | [中文](README.zh.md)
 
 Session tools for DeepSeek Harness. The package gives the model six session tools and integrates with the Host's native Web `@` references for sourced session context.
 
-Compiled and package-tested against `@deepseek-ai/dsh@0.2.2-rc.1`, including a real Loader + AgentLoop + Session Controller composition. This is not a claim of Web or provider-backed E2E verification.
+Compiled and package-tested against `@deepseek-ai/dsh@0.2.2-rc.5`, including a real Loader + AgentLoop + Session Controller composition. This is not a claim of Web or provider-backed E2E verification.
 
-Requires DSH `>=0.2.2-rc.1 <0.3.0`, Cordis `~4.1.0`, and Node.js `>=24.9.0` for this source version. `read_session` sizes snapshots using the active model request and forwards its cancellation signal.
+Requires DSH `>=0.2.2-rc.5 <0.3.0`, Cordis `~4.1.0`, and Node.js `>=24.9.0` for this source version. `read_session` sizes snapshots using the active model request and forwards its cancellation signal.
 
 ## Historical release
 
@@ -60,7 +60,7 @@ Only `allowed-once` continues an approval request; any other answer fails closed
 
 ## Verification
 
-Package regressions run against `@deepseek-ai/dsh@0.2.2-rc.1`. The credential-free Host composition exercises a full message → tool → reply flow with real session creation, effective-cwd inheritance, exact open-prefix forks, approval audit events, bounded sourced context, native mention preparation, and Loader unload cleanup. A separate published-client-entry fixture checks single-provider registration and native reference chip/codec behavior; it does not render a browser UI.
+Package regressions run against `@deepseek-ai/dsh@0.2.2-rc.5`. The credential-free Host composition exercises a full message → tool → reply flow with real session creation, effective-cwd inheritance, exact open-prefix forks, approval audit events, bounded sourced context, native mention preparation, and Loader unload cleanup. A separate published-client-entry fixture checks single-provider registration and native reference chip/codec behavior; it does not render a browser UI.
 
 Earlier product verification is recorded in the [design document](https://github.com/SisyphusSQ/dsh-plugins/blob/main/docs/design/dsh-session-capabilities.md).
 

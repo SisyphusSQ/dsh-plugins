@@ -11,6 +11,7 @@ test('MCP mapper uses safe names, root interpolation and explicit timeout', () =
   assert.equal(config.cwd, '/plugin/root')
   assert.equal(config.toolCallTimeoutMs, 5000)
   assert.equal(config.reconnect.enabled, false)
+  assert.equal(config.expandTemplates, false, 'imported configuration must never resolve DSH credential templates')
   assert.match(config.serverName, /^[A-Za-z0-9_-]{1,32}$/)
   assert.notEqual(mcpServerName('one:server'), mcpServerName('two:server'))
 })

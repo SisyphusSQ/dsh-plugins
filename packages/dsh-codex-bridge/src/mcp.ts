@@ -8,7 +8,7 @@ import type { HomeRuntime } from './runtime.js'
 export function mcpServerName(id: string): string { return `codex_${digest(id).slice(0, 20)}` }
 
 /** Translate credential-free Codex transport fields; never silently discard policy. */
-export function compileMcp(row: HomeMcp): mcpClient.Config {
+export function compileMcp(row: HomeMcp): Schemastery.TypeS<typeof mcpClient.Config> {
   const config = row.config
   const blocked = mcpBlockedReason(config)
   if (blocked) throw new Error(blocked)
@@ -19,7 +19,7 @@ export function compileMcp(row: HomeMcp): mcpClient.Config {
   if (Object.keys(config).some(key => !supported.has(key))) throw new Error('MCP has unsupported configuration fields; no connection was opened.')
   const timeout = config.tool_timeout_sec === undefined ? 60 : config.tool_timeout_sec
   if (typeof timeout !== 'number' || !Number.isFinite(timeout) || timeout <= 0 || timeout > 2147483) throw new Error('Invalid MCP tool timeout.')
-  const common = { serverName: mcpServerName(row.id), toolCallTimeoutMs: timeout * 1000, failOnStartupError: true, reconnect: { enabled: false } }
+  const common = { serverName: mcpServerName(row.id), toolCallTimeoutMs: timeout * 1000, expandTemplates: false, failOnStartupError: true, reconnect: { enabled: false } }
   if (config.url !== undefined) {
     if (typeof config.url !== 'string') throw new Error('Invalid MCP URL.')
     return { ...common, transport: 'streamable-http', url: config.url, headers: {} }
@@ -63,7 +63,7 @@ export class McpBridge {
   private async update(): Promise<void> {
     const catalog = await this.runtime.catalog()
     const options = { ...this.runtime.options() }
-    const desired = new Map<string, { row: HomeMcp; config: mcpClient.Config; serverName: string; key: string }>()
+    const desired = new Map<string, { row: HomeMcp; config: ReturnType<typeof compileMcp>; serverName: string; key: string }>()
     this.statuses.clear()
     if (options.enabled && options.connectMcp && !this.closed) {
       for (const row of catalog.mcp) {

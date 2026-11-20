@@ -5,6 +5,11 @@
 ## Unreleased
 
 - breakingChange
+  - 2026-11-20 将三个现存插件的 DSH 支持起点提升到 `0.2.2-rc.5`；源码版本为 Session Tools `0.5.0`、UI Zoom `0.3.0` 和实验性 Codex Bridge `0.3.0`，均未发布。
+- bugFix
+  - 修复新版 Session Tools 的调用方校验、Codex Bridge 的委派与 MCP 配置兼容性，以及放大后新版根菜单页脚超出视口的问题。见 [rc.5 兼容记录](docs/design/dsh-0.2.2-rc.5-adaptation.md)。
+
+- breakingChange
   - 2026-11-05 将现存三个插件源码适配 DSH `0.2.2-rc.1`，最低 Node.js 提升到 `24.9.0`、Cordis 提升到 `~4.1.0`；DSH peer 起点为 `^0.2.2-rc.1`，不再声明支持旧 cohort。源码版本为 Session Tools `0.4.0`、UI Zoom `0.2.0`、实验性 Codex Bridge `0.2.0`，尚未发布。
   - 可选导出 helper `injectMentionedSessionReferences` 新增必需的当前 step `modelSelection`；默认原生 `@session` 链不受该 helper 调用签名影响。
 - bugFix

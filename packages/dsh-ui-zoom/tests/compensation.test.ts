@@ -56,12 +56,11 @@ describe('zoomCompensationCss', () => {
     }
   })
 
-  it('bakes the factor into the numbers so the Host can inject it first', () => {
-    // No custom property, no attribute gate: the boot sheet must work before any
-    // browser plugin has run.
+  it('sets the CSS-anchored menu height from the boot factor and the native margin', () => {
     const css = zoomCompensationCss(115)
-    expect(css).not.toContain('var(')
-    expect(css).toContain('1.15')
+    expect(css).toContain('100dvh / 1.15')
+    expect(css).toContain('var(--dsh-menu-window-top)')
+    expect(zoomCompensationCss(50)).not.toContain('--dsh-menu-window-top')
   })
 })
 

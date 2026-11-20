@@ -2,7 +2,11 @@
 
 These are development-checkout fixtures, not a DSH profile, product-entry E2E, or proof of Desktop/WebKit support.
 
-## Exact DSH 0.2.2-rc.1 anchored placement
+## DSH 0.2.2-rc.5 CSS-anchored menu
+
+`upstream-rc5-menu.css` is the unmodified [Menu.module.css](https://github.com/deepseek-ai/deepseek-harness/blob/9c2670d3bce5275e0d1610272958121af87787bb/packages/client/ui-primitives/src/Menu.module.css) (SHA-256 `ac03c6b4777b1b86e0e2ae09591fd2fe3c0da5718c493b458f67cbc7990b7649`, MIT, see `upstream-LICENSE`). `../../scripts/css-anchor-browser.mjs` pairs it with the upstream anchor attributes and the built zoom stylesheet; it checks layout viewport bounds, footer visibility and internal scrolling in Chromium. This is neither a mounted DSH React menu nor a test of submenus or WebKit.
+
+## Historical DSH 0.2.2-rc.1 JS placement
 
 The following files are unmodified copies from `deepseek-ai/deepseek-harness`, tag `dsh-v0.2.2-rc.1`:
 

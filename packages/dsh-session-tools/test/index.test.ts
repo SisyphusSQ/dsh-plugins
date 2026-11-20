@@ -68,13 +68,13 @@ test('Typert agent lookup policy failures become stable Harness tool errors', as
   const caller = {
     id: SessionId('caller'),
     status: 'running',
+    session: { header: {} },
   } as unknown as Agent
   const context = {
     tools: { register: (definition: ToolDefinition) => registered.push(definition) },
     agents: {
       get: () => caller,
       currentInitiator: () => caller,
-      roots: () => [caller],
     },
     approval: { request: async () => 'allowed-once' },
     sessionController: {},

@@ -22,7 +22,7 @@ export async function runAnchoredBrowser({ evaluate, send, bootZoomStyle }) {
     './settings.js': compiled(await readFile(new URL('../lib/settings.js', import.meta.url), 'utf8')),
     corrector: compiled(await readFile(new URL('../lib/client/fixed-offsets.js', import.meta.url), 'utf8')),
   }
-  console.log(`Exact target anchored hook sha256=${createHash('sha256').update(hook).digest('hex')}; controlled React adapter, NOT product E2E`)
+  console.log(`Historical rc.1 anchored hook sha256=${createHash('sha256').update(hook).digest('hex')}; controlled React adapter, NOT product E2E`)
   const failures = []
   for (const percent of [100, 150, 50, 300, 115]) {
     await evaluate('window.anchorRegression?.stop()')

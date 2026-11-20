@@ -4,7 +4,7 @@ English | [中文](README.zh.md)
 
 Whole-interface zoom for the DeepSeek Harness GUI, driven from a Settings row.
 
-Version `0.2.0` targets DSH `0.2.2-rc.1`, Cordis `4.1.0`, and Node `>=24.9.0`. The declared DSH range is `>=0.2.2-rc.1 <0.3.0`; repository checks use the exact `0.2.2-rc.1` DSH dependency cohort, not every version admitted by that range. Package and browser fixtures are not a real DSH profile startup or product E2E.
+Version `0.3.0` targets DSH `0.2.2-rc.5`, Cordis `4.1.0`, and Node `>=24.9.0`. The declared DSH range is `>=0.2.2-rc.5 <0.3.0`; repository checks use the exact `0.2.2-rc.5` DSH dependency cohort, not every version admitted by that range. Package and browser fixtures are not a real DSH profile startup or product E2E.
 
 ## What it does
 
@@ -59,7 +59,7 @@ They are independent and multiply. A 125% interface zoom with a 16 px conversati
 
 ## Verification
 
-On the exact DSH `0.2.2-rc.1` dependency cohort, typechecking, bundling and the unit/registration suites run in this repository. The Host fixture uses real Cordis/Settings services to check raw versus effective config, defaults, updates and cleanup. Ordered-write tests execute the published settings client factory with a controlled Remote wire.
+On the exact DSH `0.2.2-rc.5` dependency cohort, typechecking, bundling and the unit/registration suites run in this repository. The Host fixture uses real Cordis/Settings services to check raw versus effective config, defaults, updates and cleanup. Ordered-write tests execute the published settings client factory with a controlled Remote wire.
 
 After building, `pnpm --filter @suqingsq/dsh-ui-zoom test:browser` runs real Chromium layout regressions from the development checkout, using an installed Chrome/Chromium (`CHROME_BIN` can select it). This is a developer entry requiring the dev toolchain, including TypeScript; it is not a consumer runtime command. It checks 50/100/115/150/300%, repeated document scrolling, inner wheel scrolling and live zoom changes. The anchored fixture additionally executes the exact target hook and menu CSS with a controlled effect/state adapter and visual viewport inputs, checking size caps, anchor-derived minimum widths and scroll reachability. Sources, hashes, license and the narrow evidence boundary are in [`tests/fixtures/README.md`](tests/fixtures/README.md).
 
